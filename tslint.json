@@ -1,8 +1,3 @@
-/**
- * This starter project recommended using Microsoft TSLint rules.
- * Please see https://github.com/Microsoft/tslint-microsoft-contrib for more details.
- */
-
 {
   "extends": [
     "tslint-microsoft-contrib",
@@ -17,6 +12,12 @@
     "no-void-expression": false,
     "no-redundant-jsdoc": false,
     "prefer-type-cast": false,
+    "interface-name": false,
+    "no-single-line-block-comment": false,
+    "no-parameter-properties": false,
+    "max-classes-per-file": false,
+    "triple-equals": false,
+    "import-name": false,
     "typedef": [
       true,
       "parameter",
