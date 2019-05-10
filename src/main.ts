@@ -12,8 +12,7 @@ export type EntityId = string;
 export abstract class GameEntity {
   constructor(public readonly id: EntityId) {}
   //public abstract applyInput(input: Object): void;
-  public abstract setState(state: Object): void;
-  public abstract interpolate(state1: Object, state2: Object, timeRatio: number): void;
+  public abstract interpolate(state1: this, state2: this, timeRatio: number): void;
 }
 
 type GameEngineEvents = {

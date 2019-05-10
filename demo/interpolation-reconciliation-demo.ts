@@ -11,6 +11,8 @@ class DemoEngine extends GameEngine {
   }
 }
 
+interface 
+
 interface MoveInput extends InputForEntity {
   inputType: 'move',
   payload: {
@@ -83,4 +85,24 @@ export class DemoPlayer extends GameEntity {
   public interpolate(state1: this, state2: this, timeRatio: number): void {
     this.position = state1.position * (1 - timeRatio) + state2.position * timeRatio;
   }
+}
+
+export class DemoGameEngine extends GameEngine {
+  
+  public applyInput(entityId: string, input: DemoInput): void {
+    const entity = this.getEntityById(entityId);
+
+    if (entity instanceof DemoPlayer) {
+      switch (input.inputType) {
+        case ()
+      }
+    }
+
+  }
+  
+  protected step(): void {
+    throw new Error('Method not implemented.');
+  }
+
+  
 }
