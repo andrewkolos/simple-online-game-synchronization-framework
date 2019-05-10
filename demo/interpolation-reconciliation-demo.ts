@@ -1,4 +1,4 @@
-import { GameEngine, InputCollector, InputForEntity, GameEntity } from '../src/main';
+import { GameEngine, InputCollector, InputForEntity, GameEntity, ServerGame } from '../src/main';
 
 class DemoEngine extends GameEngine {
 
@@ -11,16 +11,20 @@ class DemoEngine extends GameEngine {
   }
 }
 
-interface 
+
 
 interface MoveInput extends InputForEntity {
-  inputType: 'move',
+  inputType: DemoInputType.Move,
   payload: {
     distance: number;
   }
 }
 
-type DemoInput = MoveInput;
+export const enum DemoInputType {
+  Move = 'move'
+}
+
+type DemoInput = MoveInput; // Union with new Input types added in the future.
 
 class KeyboardDemoInputCollector implements InputCollector {
 
@@ -64,8 +68,8 @@ class KeyboardDemoInputCollector implements InputCollector {
     }
     
     const input: MoveInput = {
+      inputType: DemoInputType.Move,
       entityId: this.playerEntityId,
-      inputType: 'move',
       payload: {
         distance
       }
@@ -78,6 +82,11 @@ class KeyboardDemoInputCollector implements InputCollector {
 export class DemoPlayer extends GameEntity {
   
   public position: number;
+
+  constructor(id: string) {
+    super(id);
+    this.position = 0;
+  }
   
   public syncTo(state: this): void {
     this.position = state.position;
@@ -89,18 +98,40 @@ export class DemoPlayer extends GameEntity {
 
 export class DemoGameEngine extends GameEngine {
   
+  private playerOne: DemoPlayer;
+  private playerTwo: DemoPlayer;
+
   public applyInput(entityId: string, input: DemoInput): void {
     const entity = this.getEntityById(entityId);
 
     if (entity instanceof DemoPlayer) {
       switch (input.inputType) {
-        case ()
+        case DemoInputType.Move:
+          entity.position += input.payload.distance;
+          break;
       }
     }
 
   }
   
   protected step(): void {
+    if (this.playerOne == null) {
+      
+    }
+  } 
+}
+
+export class DemoServer extends ServerGame {
+
+  protected handlePlayerConnection(): void {
+    
+  }
+  
+  protected validateInput(input: import("../src/network").InputMessage): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  protected getStatesToBroadcastToClients(): import("../src/network").Message[] {
     throw new Error('Method not implemented.');
   }
 
