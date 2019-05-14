@@ -142,7 +142,7 @@ export class DemoGameEngine extends GameEngine {
 
 export class DemoServer extends ServerGame<DemoGameEngine> {
 
-  private players: DemoPlayer[];
+  private players: DemoPlayer[] = [];
 
   protected handlePlayerConnection(clientId: string): void {
     const newPlayer = new DemoPlayer(clientId, { position: 0 });
