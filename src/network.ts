@@ -1,7 +1,5 @@
 /*tslint:disable */
 
-import { Queue } from 'queue-typescript';
-
 export type Timestamp = number;
 
 export interface InputMessage {
@@ -32,16 +30,16 @@ export interface ClientConnection extends Connection<StateMessage, InputMessage>
 
 export class InMemoryClientServerNetwork {
 
-  private inputMessageQueue = new Queue<InputMessage>();
-  private stateMessageQueue = new Queue<StateMessage>();
+  private inputMessageQueue = new Array<InputMessage>();
+  private stateMessageQueue = new Array<StateMessage>();
   
   public getServerConnection(): ServerConnection {
     return {
       send: (message: InputMessage) => {
-        this.inputMessageQueue.enqueue(message);
+        this.inputMessageQueue.push(message);
       },
       receive: () => {
-        return this.stateMessageQueue.dequeue();
+        return unsafePop(this.stateMessageQueue);
       },
       hasNext: () => {
         return this.stateMessageQueue.length > 0;
@@ -52,14 +50,20 @@ export class InMemoryClientServerNetwork {
   public getClientConnection(): ClientConnection {
     return {
       send: (message: StateMessage) => {
-        this.stateMessageQueue.enqueue(message);
+        this.stateMessageQueue.push(message);
       },
       receive: () => {
-        return this.inputMessageQueue.dequeue();
+        return unsafePop(this.inputMessageQueue);
       },
       hasNext: () => {
         return this.inputMessageQueue.length > 0;
       }
     }
   }
+}
+
+function unsafePop<T>(array: Array<T>): T {
+  const val = array.pop();
+  if (val == null) throw Error('Cannot pop element from empty array.');
+  return val;
 }

@@ -1,7 +1,7 @@
 /*tslint:disable */
 import { TypedEventEmitter } from "@elderapo/typed-event-emitter";
 import { Timer } from './timer';
-import {InputMessage, Timestamp, ServerConnection, ClientConnection } from './network';
+import { InputMessage, Timestamp, ServerConnection, ClientConnection } from './network';
 
 type EntityId = string;
 
@@ -11,13 +11,7 @@ type EntityId = string;
  */
 export abstract class GameEntity<Input, State> {
 
-  public get state(): State {
-    return this.state;
-  }
-
-  public set state(value: State) {
-    this.state = value;
-  }
+  public state: State;
 
   public readonly id: EntityId;
 
@@ -278,21 +272,9 @@ export class ClientGame<Game extends GameEngine>  {
 
 export abstract class ServerGame<Game extends GameEngine> {
 
-  public get updateRateHz() {
-    return this.updateRateHz;
-  }
+  public updateRateHz: number;
 
-  public set updateRateHz(value: number) {
-    this.updateRateHz = value;
-  }
-
-  public get game() {
-    return this.game;
-  }
-
-  public set game(value: Game) {
-    this.game = value;
-  }
+  public game: Game;
 
   private clients: ClientInfo[];
 

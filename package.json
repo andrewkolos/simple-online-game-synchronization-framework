@@ -7,7 +7,7 @@
     "node": ">= 8.9.0"
   },
   "scripts": {
-    "demo": "tsc && live-server --open=demo/demo.html"
+    "demo": "rollup -c rollup.config.js && live-server --open=demo/demo.html"
   },
   "author": "Andrew Kolos",
   "license": "APLv2",
@@ -18,18 +18,22 @@
     "jest": "~23.6.0",
     "prettier": "^1.15.3",
     "rimraf": "^2.6.3",
+    "rollup": "^1.11.3",
+    "rollup-plugin-commonjs": "^9.3.4",
+    "rollup-plugin-node-resolve": "^4.2.4",
+    "rollup-plugin-typescript": "^1.0.1",
     "ts-jest": "^23.10.5",
+    "tslib": "^1.9.3",
     "tslint": "~5.12.0",
     "tslint-config-prettier": "1.17.0",
     "tslint-microsoft-contrib": "^6.0.0",
     "tsutils": "~3.7.0",
-    "typescript": "^3.2.4"
+    "typescript": "^3.4.5"
   },
   "dependencies": {
     "@elderapo/typed-event-emitter": "^1.4.1",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
-    "strict-event-emitter-types": "^2.0.0",
-    "tslib": "~1.9.3"
+    "strict-event-emitter-types": "^2.0.0"
   }
 }
