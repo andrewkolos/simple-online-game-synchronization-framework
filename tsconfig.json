@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
+    "target": "es2016",
     "moduleResolution": "node",
+    "module": "commonjs",
     "allowSyntheticDefaultImports": true,
     "allowJs": true,
     "importHelpers": true,
@@ -16,10 +16,10 @@
     "noUnusedParameters": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "outDir": "demo/build"
   },
   "include": [
-    "src/**/*",
-    "__tests__/**/*"
+    "demo/src/interpolation-reconciliation-demo.ts"
   ]
 }
