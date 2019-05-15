@@ -1,7 +1,8 @@
 /*tslint:disable */
-import { TypedEventEmitter } from "@elderapo/typed-event-emitter";
+import StrictEventEmitter from "strict-event-emitter-types";
 import { Timer } from './timer';
 import { InputMessage, Timestamp, ServerConnection, ClientConnection } from './network';
+import { EventEmitter } from 'events';
 
 type EntityId = string;
 
@@ -25,9 +26,9 @@ export abstract class GameEntity<Input, State> {
   public abstract interpolate(state1: State, state2: State, timeRatio: number): State;
 }
 
-type GameEngineEvents = {
-  preStep: void | undefined;
-  postStep: void | undefined;
+interface GameEngineEvents {
+  preStep: void;
+  postStep: void;
 }
 
 /**
@@ -38,7 +39,7 @@ export abstract class GameEngine {
   private entities: Map<EntityId, GameEntity<any, any>> = new Map();
   private stepTimer: Timer = new Timer(this._step.bind(this));
   private stepRateHz: number;
-  private eventEmitter = new TypedEventEmitter<GameEngineEvents>();
+  private eventEmitter: StrictEventEmitter<EventEmitter, GameEngineEvents> = new EventEmitter();
 
   /**
    * Listen for a game event.
@@ -50,6 +51,7 @@ export abstract class GameEngine {
    * @param stepRateHz How often the game should advance its state.
    */
   public start(stepRateHz: number) {
+    this.on('postStep', () => console.log('i am post stepping'));
     this.stepRateHz = stepRateHz;
     this.stepTimer.start(stepRateHz);
   }
@@ -79,9 +81,9 @@ export abstract class GameEngine {
    * Advances game state.
    */
    private _step(): void {
-     this.eventEmitter.emit('preStep', undefined);
+     this.eventEmitter.emit('preStep');
      this.step(this.stepRateHz);
-     this.eventEmitter.emit('postStep', undefined);
+     this.eventEmitter.emit('postStep');
    }
 
    protected abstract step(stepRateHz: number): void;
