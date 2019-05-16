@@ -12,13 +12,6 @@ coverage
 # Transpiled files
 build/
 
-# VS Code
-.vscode
-!.vscode/tasks.js
-
-# JetBrains IDEs
-.idea/
-
 # Optional npm cache directory
 .npm
 
@@ -28,4 +21,4 @@ build/
 # Misc
 .DS_Store
 
-demo/build.js
+demo/build*
