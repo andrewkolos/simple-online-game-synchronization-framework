@@ -32,23 +32,23 @@ class KeyboardDemoInputCollector implements InputCollector {
 
     this.playerEntityId = playerEntityId;
 
-    window.onkeydown = (e: KeyboardEvent) => {
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.keyCode === moveLeftKeyCode) {
         this.leftKeyIsDown = true;
       }
       if (e.keyCode === moveRightKeyCode) {
         this.rightKeyIsDown = true;
       }
-    }
+    });
 
-    window.onkeyup = (e: KeyboardEvent) => {
+    window.addEventListener('keyup', (e: KeyboardEvent) => {
       if (e.keyCode === moveLeftKeyCode) {
         this.leftKeyIsDown = false;
       }
       if (e.keyCode === moveRightKeyCode) {
         this.rightKeyIsDown = false;
       }
-    }
+    });
   }
 
   public getInputs(): DemoInput[] {

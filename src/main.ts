@@ -141,7 +141,9 @@ export class ClientGame<Game extends GameEngine>  {
     this.serverUpdateRateInHz = serverUpdateRateInHz;
     this.inputCollector = inputCollector;
 
-    engine.eventEmitter.on('preStep', () => this.update());
+    engine.eventEmitter.on('preStep', () => {
+      this.update();
+    });
   }
 
   public startGame(updateRateHz: number) {
@@ -268,6 +270,11 @@ export class ClientGame<Game extends GameEngine>  {
   }
 }
 
+export interface EntityStateBroadcastMessage {
+  entityId: string,
+  state: any;
+}
+
 export abstract class ServerGame<Game extends GameEngine> {
 
   public updateRateHz: number;
@@ -314,7 +321,7 @@ export abstract class ServerGame<Game extends GameEngine> {
 
   protected abstract handlePlayerConnection(newClientId: string): void;
 
-  protected abstract getStatesToBroadcastToClients(): { entityId: string; state: any }[];
+  protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
 
   private update() {
     this.processInputs();
