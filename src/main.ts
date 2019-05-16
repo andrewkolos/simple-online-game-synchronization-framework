@@ -1,8 +1,7 @@
 /*tslint:disable */
-import StrictEventEmitter from "strict-event-emitter-types";
 import { Timer } from './timer';
 import { InputMessage, Timestamp, ServerConnection, ClientConnection } from './network';
-import { EventEmitter } from 'events';
+import { EventEmitter } from './eventer-emitter';
 
 type EntityId = string;
 
@@ -27,8 +26,8 @@ export abstract class GameEntity<Input, State> {
 }
 
 interface GameEngineEvents {
-  preStep: void;
-  postStep: void;
+  preStep: () => void;
+  postStep: () => void;
 }
 
 /**
@@ -39,7 +38,7 @@ export abstract class GameEngine {
   private entities: Map<EntityId, GameEntity<any, any>> = new Map();
   private stepTimer: Timer = new Timer(this._step.bind(this));
   private stepRateHz: number;
-  private eventEmitter: StrictEventEmitter<EventEmitter, GameEngineEvents> = new EventEmitter();
+  private eventEmitter = new EventEmitter<GameEngineEvents>();
 
   /**
    * Listen for a game event.

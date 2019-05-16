@@ -1,6 +1,5 @@
 import typescript from 'rollup-plugin-typescript';
 import resolve from 'rollup-plugin-node-resolve';
-import builtins from 'rollup-plugin-node-builtins';
 
 export default {
   input: 'demo/src/interpolation-reconciliation-demo.ts',
@@ -14,7 +13,6 @@ export default {
     typescript({
       sourceMap: true
     }),
-    builtins(),
     resolve()
   ]
 }

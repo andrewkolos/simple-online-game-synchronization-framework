@@ -31,11 +31,9 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@elderapo/typed-event-emitter": "^1.4.1",
     "eventemitter3": "^3.1.2",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
-    "rollup-plugin-node-builtins": "^2.1.2",
     "strict-event-emitter-types": "^2.0.0"
   }
 }
