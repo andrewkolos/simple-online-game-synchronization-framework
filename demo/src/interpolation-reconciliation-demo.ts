@@ -170,7 +170,7 @@ export class DemoServer extends ServerGame<DemoGameEngine> {
 
 export class DemoEntityFactory implements EntityFactory {
 
-  fromStateMessage(entityId: string, state: any): DemoPlayer {
+  public fromStateMessage(entityId: string, state: any): DemoPlayer {
     if (state != null && state.position != null) {
       return new DemoPlayer(entityId, {
         position: state.position
@@ -219,16 +219,15 @@ const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasEleme
 const client1Canvas = document.getElementById('player1_canvas') as HTMLCanvasElement;
 const client2Canvas = document.getElementById('player2_canvas') as HTMLCanvasElement;
 
-
-serverGame.on('postStep', () => {
+serverGame.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(serverCanvas, serverGame.getEntities());
 });
 
-client1Game.on('postStep', () => {
+client1Game.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(client1Canvas, client1Game.getEntities());
 });
 
-client2Game.on('postStep', () => {
+client2Game.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(client2Canvas, client2Game.getEntities());
 });
 

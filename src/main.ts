@@ -1,7 +1,6 @@
-/*tslint:disable */
+import { TypedEventEmitter } from './eventer-emitter';
+import { ClientConnection, InputMessage, ServerConnection, Timestamp } from './network';
 import { Timer } from './timer';
-import { InputMessage, Timestamp, ServerConnection, ClientConnection } from './network';
-import { EventEmitter } from './eventer-emitter';
 
 type EntityId = string;
 
@@ -26,31 +25,26 @@ export abstract class GameEntity<Input, State> {
 }
 
 interface GameEngineEvents {
-  preStep: () => void;
-  postStep: () => void;
+  preStep(): void
+  postStep(): void
 }
 
 /**
  * Contains all state and game logic for a game.
  */
 export abstract class GameEngine {
+
+  public readonly eventEmitter = new TypedEventEmitter<GameEngineEvents>();
   /** These compose the state of the game. */
   private entities: Map<EntityId, GameEntity<any, any>> = new Map();
   private stepTimer: Timer = new Timer(this._step.bind(this));
   private stepRateHz: number;
-  private eventEmitter = new EventEmitter<GameEngineEvents>();
-
-  /**
-   * Listen for a game event.
-   */
-  public readonly on = this.eventEmitter.on;
 
   /**
    * Starts the game.
    * @param stepRateHz How often the game should advance its state.
    */
   public start(stepRateHz: number) {
-    this.on('postStep', () => console.log('i am post stepping'));
     this.stepRateHz = stepRateHz;
     this.stepTimer.start(stepRateHz);
   }
@@ -62,7 +56,9 @@ export abstract class GameEngine {
     this.stepTimer.stop();
   }
 
-  public isRunning = () => this.stepTimer.isRunning();
+  public isRunning() {
+    return this.stepTimer.isRunning();
+  }
 
   public addObject(object: GameEntity<any, any>) {
     this.entities.set(object.id, object);
@@ -72,20 +68,21 @@ export abstract class GameEngine {
     return this.entities.get(id);
   }
 
-  public getEntities(): Array<GameEntity<any, any>> {
+  public getEntities(): GameEntity<any, any>[] {
     return Array.from(this.entities.values());
   }
+
+  protected abstract step(stepRateHz: number): void;
 
   /**
    * Advances game state.
    */
-   private _step(): void {
-     this.eventEmitter.emit('preStep');
-     this.step(this.stepRateHz);
-     this.eventEmitter.emit('postStep');
-   }
-
-   protected abstract step(stepRateHz: number): void;
+  // tslint:disable-next-line:function-name
+  private _step(): void {
+    this.eventEmitter.emit('preStep');
+    this.step(this.stepRateHz);
+    this.eventEmitter.emit('postStep');
+  }
 }
 
 export interface EntityFactory {
@@ -125,26 +122,26 @@ export class ClientGame<Game extends GameEngine>  {
   private serverUpdateRateInHz: number;
   /** Collects user inputs. */
   private inputCollector: InputCollector;
-  
+
   private inputSequenceNumber = 0;
   /**
    * Inputs with sequence numbers later than that of the last server message received.
    */
-  private pendingInputs = new Array<InputMessage>();
+  private pendingInputs: InputMessage[] = [];
   private playerEntityIds: EntityId[] = [];
 
-  private entityStateBuffers = new Map<EntityId, {timestamp: Timestamp, state: Object}[]>();
+  private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
-  constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory, 
-    serverUpdateRateInHz: number, inputCollector: InputCollector) { 
-      
-      this.engine = engine;
-      this.server = server;
-      this.entityFactory = entityFactory;
-      this.serverUpdateRateInHz = serverUpdateRateInHz;
-      this.inputCollector = inputCollector;
+  constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory,
+    serverUpdateRateInHz: number, inputCollector: InputCollector) {
 
-      engine.on('preStep', this.update);
+    this.engine = engine;
+    this.server = server;
+    this.entityFactory = entityFactory;
+    this.serverUpdateRateInHz = serverUpdateRateInHz;
+    this.inputCollector = inputCollector;
+
+    engine.eventEmitter.on('preStep', () => this.update());
   }
 
   public startGame(updateRateHz: number) {
@@ -166,7 +163,7 @@ export class ClientGame<Game extends GameEngine>  {
   public update() {
     this.processServerMessages();
 
-    if (!this.isConnected()) return;
+    if (!this.isConnected()) { return; }
 
     this.processInputs();
 
@@ -180,18 +177,18 @@ export class ClientGame<Game extends GameEngine>  {
    * 
    */
   private processServerMessages() {
-    const isFirstTimeSeeingEntity = (entityId: string) => (this.engine.getEntities().some((ge) => ge.id === entityId));
+    const isFirstTimeSeeingEntity = (entityId: string) => !this.engine.getEntities().some((ge) => ge.id === entityId);
 
-    while(this.server.hasNext()) {
+    while (this.server.hasNext()) {
       const stateMessage = this.server.receive();
 
       if (isFirstTimeSeeingEntity(stateMessage.entityId)) {
-        const entity = this.entityFactory.fromStateMessage(stateMessage.entityId, stateMessage);
+        const entity = this.entityFactory.fromStateMessage(stateMessage.entityId, stateMessage.state);
         this.engine.addObject(entity);
-        this.entityStateBuffers.set(stateMessage.entityId, new Array());
+        this.entityStateBuffers.set(stateMessage.entityId, []);
       }
 
-      if (this.playerEntityIds.includes(stateMessage.entityId)) { 
+      if (this.playerEntityIds.includes(stateMessage.entityId)) {
         // Perform server reconciliation. When the client receives an update about its entities
         // from the server, apply them, and then reapply all local pending inputs (have timestamps
         // later than the timestamp sent by the server).
@@ -201,15 +198,15 @@ export class ClientGame<Game extends GameEngine>  {
 
         inputsNotProcessedByServer.forEach((inputMessage: InputMessage) => {
           const entity = this.engine.getEntityById(inputMessage.entityId);
-          if (entity == null) throw Error("Did not find entity corresponding to a pending input.");
+          if (entity == null) { throw Error("Did not find entity corresponding to a pending input."); }
 
           entity.state = entity.calcNextStateFromInput(entity.state, inputMessage.input);
         });
-      } else { 
+      } else {
         const timestamp = new Date().getTime();
         const stateBuffer = this.entityStateBuffers.get(stateMessage.entityId);
-        if (stateBuffer == null) throw Error(`Did not find state buffer for entity with id ${stateMessage.entityId}.`)
-        stateBuffer.push({timestamp, state: stateMessage.state});
+        if (stateBuffer == null) { throw Error(`Did not find state buffer for entity with id ${stateMessage.entityId}.`) }
+        stateBuffer.push({ timestamp, state: stateMessage.state });
       }
     }
   }
@@ -234,7 +231,7 @@ export class ClientGame<Game extends GameEngine>  {
 
       const playerEntity = this.engine.getEntityById(input.entityId);
 
-      if (playerEntity == null) throw Error(`Received input for unknown entity ${input.entityId}.`);
+      if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
 
       playerEntity.calcNextStateFromInput(playerEntity.state, input.input); // Client-side prediction.
 
@@ -250,11 +247,11 @@ export class ClientGame<Game extends GameEngine>  {
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
     this.engine.getEntities().forEach((entity: GameEntity<any, any>) => {
-      if (this.playerEntityIds.includes(entity.id)) return;
+      if (this.playerEntityIds.includes(entity.id)) { return; }
 
       // Find the two authoritative positions surrounding the timestamp.
       const buffer = this.entityStateBuffers.get(entity.id);
-      if (buffer == undefined) throw Error(`Could not find state buffer for entity ${entity.id}.`)
+      if (buffer == undefined) { throw Error(`Could not find state buffer for entity ${entity.id}.`) }
 
       // Drop older positions.
       while (buffer.length >= 2 && buffer[1].timestamp <= renderTimestamp) {
@@ -293,7 +290,7 @@ export abstract class ServerGame<Game extends GameEngine> {
     // Initialize the state of the entity (e.g. spawn).
     // Add to the server representation of the game, this.game.
 
-    const newClientId = String(this.clients.length);
+    const newClientId = `${this.clients.length}`;
     const client: ClientInfo = {
       clientId: newClientId,
       connection,
@@ -301,13 +298,11 @@ export abstract class ServerGame<Game extends GameEngine> {
     };
 
     this.handlePlayerConnection(newClientId);
-    
+
     this.clients.push(client);
 
     return newClientId;
   }
-  
-  protected abstract handlePlayerConnection(newClientId: string): void;
 
   public startServer(hz: number) {
     this.updateRateHz = hz;
@@ -316,11 +311,15 @@ export abstract class ServerGame<Game extends GameEngine> {
 
     this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
   }
-  
+
+  protected abstract handlePlayerConnection(newClientId: string): void;
+
+  protected abstract getStatesToBroadcastToClients(): { entityId: string; state: any }[];
+
   private update() {
     this.processInputs();
     this.sendWorldState();
-    
+
     // Fire update event, can be used for rendering/logging and such.
   }
 
@@ -334,19 +333,21 @@ export abstract class ServerGame<Game extends GameEngine> {
           return client;
         }
       }
+
       return undefined;
     }
 
+    // tslint:disable-next-line:no-constant-condition
     while (true) {
       const client = getClientWithReadyInput();
-      if (client == null) {
+      if (client == undefined) {
         break;
       }
 
       const input = client.connection.receive();
       const entity = this.game.getEntityById(input.entityId);
 
-      if (entity != null && entity.validateInput(entity.state, input.input)) {
+      if (entity != undefined && entity.validateInput(entity.state, input.input)) {
 
         entity.calcNextStateFromInput(entity.state, input.input);
 
@@ -356,20 +357,18 @@ export abstract class ServerGame<Game extends GameEngine> {
   }
 
   private sendWorldState() {
-    const worldState = this.getStatesToBroadcastToClients();
+    const stateMessages = this.getStatesToBroadcastToClients();
 
     for (const client of this.clients) {
-      for (const state of worldState) {
+      for (const stateMessage of stateMessages) {
         client.connection.send({
-          entityId: state.entityId,
-          state,
+          entityId: stateMessage.entityId,
+          state: stateMessage.state,
           lastProcessedInputSequenceNumber: client.lastProcessedInput
         });
       }
     }
   }
- 
-  protected abstract getStatesToBroadcastToClients(): {entityId: string, state: any}[];
 }
 
 export interface ClientInfo {

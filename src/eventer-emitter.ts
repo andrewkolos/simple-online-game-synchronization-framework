@@ -4,7 +4,7 @@ type Arguments<T> = [T] extends [(...args: infer U) => any]
   ? U
   : [T] extends [void] ? [] : [T];
 
-export class EventEmitter<Events> {
+export class TypedEventEmitter<Events> {
   private handlers: Array<any> = [];
 
   public addEventListener<E extends keyof Events>(type: E, fn: Events[E]) {

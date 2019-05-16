@@ -18,12 +18,9 @@
     "max-classes-per-file": false,
     "triple-equals": false,
     "import-name": false,
-    "typedef": [
-      true,
-      "parameter",
-      "arrow-parameter",
-      "property-declaration",
-      "member-variable-declaration"
-    ]
+    "typedef": false,
+    "no-any": false,
+    "no-unbound-method": true,
+    "no-null-keyword": false
   }
 }
