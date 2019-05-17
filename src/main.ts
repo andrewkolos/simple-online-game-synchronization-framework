@@ -316,7 +316,7 @@ export abstract class ServerGame<Game extends GameEngine> {
 
   public connect(connection: ClientConnection): string {
 
-    const newClientId = `${this.clients.size}`;
+    const newClientId = `c${this.clients.size}`;
     const client: ClientInfo = {
       clientId: newClientId,
       connection,
@@ -352,9 +352,7 @@ export abstract class ServerGame<Game extends GameEngine> {
   }
 
   public getLastProcessedInputForClient(clientId: string) {
-    console.log('client 1', this.clients.get('0')!.lastProcessedInput);
-    console.log('client 2', this.clients.get('1')!.lastProcessedInput);
-    
+
     const client = this.clients.get(clientId);
     if (client != null) {
       return client.lastProcessedInput;
@@ -402,6 +400,11 @@ export abstract class ServerGame<Game extends GameEngine> {
 
       const input = client.connection.receive();
       const entity = this.game.getEntityById(input.entityId);
+
+      // Client sent an input for an entity it does not own.
+      if (!client.ownedEntityIds.includes(input.entityId)) {
+        continue;
+      }
 
       if (entity != undefined && entity.validateInput(entity.state, input.input)) {
 

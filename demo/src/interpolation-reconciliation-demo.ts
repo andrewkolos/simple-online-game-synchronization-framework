@@ -245,14 +245,16 @@ const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<a
   
   canvas.width = canvas.width; // Clears the canvas.
 
-  const colors = ['blue', 'red'];
+  const colors = {
+    c0: 'blue',
+    c1: 'red'
+  };
 
   entities.forEach((entity: GameEntity<any,any>) => {
     if (!(entity instanceof DemoPlayer)) return;
 
     const entityRadius = canvas.height*0.9/2;
     const entityPosition = entity.state.position;
-    const entityIndex = Number(entity.id);
 
     const ctx = canvas.getContext('2d');
 
@@ -260,12 +262,10 @@ const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<a
 
     ctx.beginPath();
     ctx.arc(entityPosition, canvas.height / 2, entityRadius, 0, 2 * Math.PI, false);
-    ctx.fillStyle = colors[entityIndex];
+    ctx.fillStyle = (colors as any)[entity.id];
     ctx.fill();
     ctx.lineWidth = 5;
-    ctx.strokeStyle = 'dark' + colors[entityIndex];
+    ctx.strokeStyle = 'dark' + (colors as any)[entity.id];
     ctx.stroke();
   });
 }
-
-console.log('hi');

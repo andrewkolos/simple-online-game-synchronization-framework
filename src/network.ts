@@ -34,28 +34,32 @@ export class InMemoryClientServerNetwork {
   private inputMessageQueues: InputMessage[][] = [];
   private stateMessageQueues: StateMessage[][] = [];
   
+  /**
+   * Get a connection to the server.
+   */
   public getNewServerConnection(): ServerConnection {
     this.stateMessageQueues.push([]);
-    const smQueueIndex = this.stateMessageQueues.length - 1;
+    const clientIndex = this.stateMessageQueues.length - 1;
 
     return {
       send: (message: InputMessage) => {
-        this.inputMessageQueues.forEach(mq => {
-          mq.push(message);
-        });
+        if (this.inputMessageQueues[clientIndex] == null) {
+          throw Error('Cannot send input to server before the client connection has been created.');
+        }
+        this.inputMessageQueues[clientIndex].push(message);
       },
       receive: () => {
-        return unsafePop(this.stateMessageQueues[smQueueIndex]);
+        return unsafePop(this.stateMessageQueues[clientIndex]);
       },
       hasNext: () => {
-        return this.stateMessageQueues[smQueueIndex].length > 0;
+        return this.stateMessageQueues[clientIndex].length > 0;
       }
     }
   }
 
   public getNewClientConnection(): ClientConnection {
     this.inputMessageQueues.push([]);
-    const imQueueIndex = this.inputMessageQueues.length -1;
+    const imQueueIndex = this.inputMessageQueues.length - 1;
 
     return {
       send: (message: StateMessage) => {
