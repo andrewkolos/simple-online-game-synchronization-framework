@@ -191,13 +191,12 @@ const server = new DemoServer(serverGame);
 server.startServer(serverGameUpdateRate, serverSyncUpdateRate);
 const network = new InMemoryClientServerNetwork();
 
-const clientConnection = network.getClientConnection();
-const client1Id = server.connect(clientConnection);
-const client2Id = server.connect(clientConnection);
+const client1Id = server.connect(network.getNewClientConnection());
+const client2Id = server.connect(network.getNewClientConnection());
 
 const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) => {
 
-  const serverConnection = network.getServerConnection();
+  const serverConnection = network.getNewServerConnection();
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
@@ -229,7 +228,7 @@ serverGame.eventEmitter.on('postStep', () => {
   const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
 
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
-    `Player 2: #${lastProcessedInputForClient2}`;
+    ` Player 2: #${lastProcessedInputForClient2}`;
 });
 
 client1Game.eventEmitter.on('postStep', () => {

@@ -31,33 +31,43 @@ export interface ClientConnection extends Connection<StateMessage, InputMessage>
 
 export class InMemoryClientServerNetwork {
 
-  private inputMessageQueue = new Array<InputMessage>();
-  private stateMessageQueue = new Array<StateMessage>();
+  private inputMessageQueues: InputMessage[][] = [];
+  private stateMessageQueues: StateMessage[][] = [];
   
-  public getServerConnection(): ServerConnection {
+  public getNewServerConnection(): ServerConnection {
+    this.stateMessageQueues.push([]);
+    const smQueueIndex = this.stateMessageQueues.length - 1;
+
     return {
       send: (message: InputMessage) => {
-        this.inputMessageQueue.push(message);
+        this.inputMessageQueues.forEach(mq => {
+          mq.push(message);
+        });
       },
       receive: () => {
-        return unsafePop(this.stateMessageQueue);
+        return unsafePop(this.stateMessageQueues[smQueueIndex]);
       },
       hasNext: () => {
-        return this.stateMessageQueue.length > 0;
+        return this.stateMessageQueues[smQueueIndex].length > 0;
       }
     }
   }
 
-  public getClientConnection(): ClientConnection {
+  public getNewClientConnection(): ClientConnection {
+    this.inputMessageQueues.push([]);
+    const imQueueIndex = this.inputMessageQueues.length -1;
+
     return {
       send: (message: StateMessage) => {
-        this.stateMessageQueue.push(message);
+        for (const mq of this.stateMessageQueues) {
+          mq.push(message);
+        }
       },
       receive: () => {
-        return unsafePop(this.inputMessageQueue);
+        return unsafePop(this.inputMessageQueues[imQueueIndex]);
       },
       hasNext: () => {
-        return this.inputMessageQueue.length > 0;
+        return this.inputMessageQueues[imQueueIndex].length > 0;
       }
     }
   }

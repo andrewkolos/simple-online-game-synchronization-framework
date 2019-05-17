@@ -352,6 +352,9 @@ export abstract class ServerGame<Game extends GameEngine> {
   }
 
   public getLastProcessedInputForClient(clientId: string) {
+    console.log('client 1', this.clients.get('0')!.lastProcessedInput);
+    console.log('client 2', this.clients.get('1')!.lastProcessedInput);
+    
     const client = this.clients.get(clientId);
     if (client != null) {
       return client.lastProcessedInput;
@@ -416,12 +419,14 @@ export abstract class ServerGame<Game extends GameEngine> {
       for (const stateMessage of stateMessages) {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
-        client.connection.send({
+        const networkedStateMessage = {
           entityId: stateMessage.entityId,
           state: stateMessage.state,
           lastProcessedInputSequenceNumber: client.lastProcessedInput,
           entityBelongsToRecipientClient: entityBelongsToClient
-        });
+        };
+
+        client.connection.send(networkedStateMessage);
       }
     }
   }
