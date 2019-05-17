@@ -132,6 +132,10 @@ export class ClientGame<Game extends GameEngine>  {
 
   private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
+  public get numberOfPendingInputs() {
+    return this.pendingInputs.length;
+  }
+
   constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory,
     serverUpdateRateInHz: number, inputCollector: InputCollector) {
 
@@ -186,6 +190,9 @@ export class ClientGame<Game extends GameEngine>  {
 
       if (isFirstTimeSeeingEntity(stateMessage.entityId)) {
         const entity = this.entityFactory.fromStateMessage(stateMessage.entityId, stateMessage.state);
+        if (entity.id !== stateMessage.entityId) {
+          throw Error(`Entity created by entity factory has an incorrect id: ${entity.id} != ${stateMessage.entityId}`);
+        }
         this.engine.addObject(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
 
@@ -195,20 +202,28 @@ export class ClientGame<Game extends GameEngine>  {
       }
 
       if (this.playerEntityIds.includes(stateMessage.entityId)) {
+        const entity = this.engine.getEntityById(stateMessage.entityId);
+
+        if (entity == null) throw Error('Unknown entity was not created.');
+
+        entity.state = stateMessage.state; // Received authoritative position for our entity.
+
         // Perform server reconciliation. When the client receives an update about its entities
         // from the server, apply them, and then reapply all local pending inputs (have timestamps
         // later than the timestamp sent by the server).
-        const inputsNotProcessedByServer = this.pendingInputs.filter((input: InputMessage) => {
+        this.pendingInputs = this.pendingInputs.filter((input: InputMessage) => {
           return input.inputSequenceNumber > stateMessage.lastProcessedInputSequenceNumber;
         });
 
-        inputsNotProcessedByServer.forEach((inputMessage: InputMessage) => {
+        this.pendingInputs.forEach((inputMessage: InputMessage) => {
           const entity = this.engine.getEntityById(inputMessage.entityId);
-          if (entity == null) { throw Error("Did not find entity corresponding to a pending input."); }
+          if (entity == null) { throw Error('Did not find entity corresponding to a pending input.'); }
 
           entity.state = entity.calcNextStateFromInput(entity.state, inputMessage.input);
         });
       } else {
+        // Received the state of an entity that does not belong to this client.
+
         const timestamp = new Date().getTime();
         const stateBuffer = this.entityStateBuffers.get(stateMessage.entityId);
         if (stateBuffer == null) { throw Error(`Did not find state buffer for entity with id ${stateMessage.entityId}.`) }
@@ -222,7 +237,7 @@ export class ClientGame<Game extends GameEngine>  {
    * sends them to the server, and applies them locally.
    */
   private processInputs(): void {
-    const now = +new Date();
+    const now = new Date().getTime();
     const inputs = this.inputCollector.getInputs();
 
     inputs.forEach(input => {
@@ -239,21 +254,25 @@ export class ClientGame<Game extends GameEngine>  {
 
       if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
 
-      playerEntity.calcNextStateFromInput(playerEntity.state, input.input); // Client-side prediction.
+      playerEntity.state = playerEntity.calcNextStateFromInput(playerEntity.state, input.input); // Client-side prediction.
 
       this.pendingInputs.push(inputMessage); // Save for later reconciliation.
     });
 
-
-    this.inputSequenceNumber = this.inputSequenceNumber + 1;
+    if (inputs.length > 0) {
+      this.inputSequenceNumber = this.inputSequenceNumber + 1;
+    }
   }
 
   private interpolateEntities(): void {
-    const now = +new Date();
+    const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
     this.engine.getEntities().forEach((entity: GameEntity<any, any>) => {
-      if (this.playerEntityIds.includes(entity.id)) { return; }
+      if (this.playerEntityIds.includes(entity.id)) { 
+        // No point in interpolating an entity that belongs to this client.
+        return; 
+      }
 
       // Find the two authoritative positions surrounding the timestamp.
       const buffer = this.entityStateBuffers.get(entity.id);
@@ -327,12 +346,22 @@ export abstract class ServerGame<Game extends GameEngine> {
     }
   }
 
-  public startServer(hz: number) {
-    this.updateRateHz = hz;
+  public startServer(serverUpdateRate: number, gameUpdateRate: number) {
+    this.updateRateHz = serverUpdateRate;
 
     clearInterval(this.updateInterval);
 
+    this.game.start(gameUpdateRate);
     this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
+  }
+
+  public getLastProcessedInputForClient(clientId: string) {
+    const client = this.clients.get(clientId);
+    if (client != null) {
+      return client.lastProcessedInput;
+    } else {
+      throw Error(`Did not find client with an ID of ${clientId}`);
+    }
   }
 
   protected abstract handleClientConnection(newClientId: string): void;

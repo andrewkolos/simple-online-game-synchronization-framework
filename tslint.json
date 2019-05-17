@@ -21,6 +21,11 @@
     "typedef": false,
     "no-any": false,
     "no-unbound-method": true,
-    "no-null-keyword": false
+    "no-null-keyword": false,
+    "variable-name": [
+      true,
+      "allow-leading-underscore"
+    ],
+    "curly": false,
   }
 }
