@@ -12,6 +12,7 @@ export interface StateMessage {
   entityId: string;
   state: any;
   lastProcessedInputSequenceNumber: number;
+  entityBelongsToRecipientClient?: boolean;
 }
 
 /**

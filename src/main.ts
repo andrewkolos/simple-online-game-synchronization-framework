@@ -188,6 +188,10 @@ export class ClientGame<Game extends GameEngine>  {
         const entity = this.entityFactory.fromStateMessage(stateMessage.entityId, stateMessage.state);
         this.engine.addObject(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
+
+        if (stateMessage.entityBelongsToRecipientClient) {
+          this.playerEntityIds.push(stateMessage.entityId);
+        }
       }
 
       if (this.playerEntityIds.includes(stateMessage.entityId)) {
@@ -264,7 +268,7 @@ export class ClientGame<Game extends GameEngine>  {
       // the current timestamp falls in-between.
       if (buffer.length >= 2 && buffer[0].timestamp <= renderTimestamp && renderTimestamp <= buffer[1].timestamp) {
         const timeRatio = (renderTimestamp - buffer[0].timestamp) / (buffer[1].timestamp - buffer[0].timestamp);
-        entity.state = entity.interpolate(buffer[0], buffer[1], timeRatio);
+        entity.state = entity.interpolate(buffer[0].state, buffer[1].state, timeRatio);
       }
     });
   }
@@ -279,14 +283,14 @@ export abstract class ServerGame<Game extends GameEngine> {
 
   public updateRateHz: number;
 
-  public game: Game;
+  private game: Game;
 
-  private clients: ClientInfo[];
+  private clients: Map<string, ClientInfo>;
 
   private updateInterval: NodeJS.Timeout;
 
   constructor(game: Game) {
-    this.clients = [];
+    this.clients = new Map();
     this.game = game;
     this.updateRateHz = 10;
   }
@@ -297,18 +301,30 @@ export abstract class ServerGame<Game extends GameEngine> {
     // Initialize the state of the entity (e.g. spawn).
     // Add to the server representation of the game, this.game.
 
-    const newClientId = `${this.clients.length}`;
+    const newClientId = `${this.clients.size}`;
     const client: ClientInfo = {
       clientId: newClientId,
       connection,
-      lastProcessedInput: 0
+      lastProcessedInput: 0,
+      ownedEntityIds: []
     };
 
-    this.handlePlayerConnection(newClientId);
+    this.clients.set(newClientId, client);
 
-    this.clients.push(client);
+    this.handleClientConnection(newClientId);
 
     return newClientId;
+  }
+
+  public addPlayerEntity(entity: GameEntity<any, any>, playerClientId: string) {
+    this.game.addObject(entity);
+    const client = this.clients.get(playerClientId);
+    
+    if (client != null) {
+      client.ownedEntityIds.push(entity.id);
+    } else {
+      throw Error(`Unknown client ${playerClientId} when adding new player entity.`);
+    }
   }
 
   public startServer(hz: number) {
@@ -319,7 +335,7 @@ export abstract class ServerGame<Game extends GameEngine> {
     this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
   }
 
-  protected abstract handlePlayerConnection(newClientId: string): void;
+  protected abstract handleClientConnection(newClientId: string): void;
 
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
 
@@ -335,7 +351,7 @@ export abstract class ServerGame<Game extends GameEngine> {
    */
   private processInputs() {
     const getClientWithReadyInput = (): ClientInfo | undefined => {
-      for (const client of this.clients) {
+      for (const client of this.clients.values()) {
         if (client.connection.hasNext()) {
           return client;
         }
@@ -366,12 +382,15 @@ export abstract class ServerGame<Game extends GameEngine> {
   private sendWorldState() {
     const stateMessages = this.getStatesToBroadcastToClients();
 
-    for (const client of this.clients) {
+    for (const client of this.clients.values()) {
       for (const stateMessage of stateMessages) {
+        const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
+
         client.connection.send({
           entityId: stateMessage.entityId,
           state: stateMessage.state,
-          lastProcessedInputSequenceNumber: client.lastProcessedInput
+          lastProcessedInputSequenceNumber: client.lastProcessedInput,
+          entityBelongsToRecipientClient: entityBelongsToClient
         });
       }
     }
@@ -382,4 +401,5 @@ export interface ClientInfo {
   clientId: string;
   connection: ClientConnection;
   lastProcessedInput: number;
+  ownedEntityIds: string[];
 }

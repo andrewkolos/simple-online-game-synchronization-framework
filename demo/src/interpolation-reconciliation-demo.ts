@@ -1,6 +1,6 @@
 // tslint:disable
 
-import { GameEngine, GameEntity, InputCollector, InputForEntity, ServerGame, EntityFactory, ClientGame } from '../../src/main';
+import { GameEngine, GameEntity, InputCollector, InputForEntity, ServerGame, EntityFactory, ClientGame, EntityStateBroadcastMessage } from '../../src/main';
 import { InMemoryClientServerNetwork } from '../../src/network';
 
 interface MoveInput extends InputForEntity {
@@ -144,17 +144,17 @@ export class DemoServer extends ServerGame<DemoGameEngine> {
 
   private players: DemoPlayer[] = [];
 
-  protected handlePlayerConnection(clientId: string): void {
+  protected handleClientConnection(clientId: string): void {
     const newPlayer = new DemoPlayer(clientId, { position: 0 });
     this.players.push(newPlayer);
-    this.game.addObject(newPlayer);
+    this.addPlayerEntity(newPlayer, clientId);
 
     this.startServer(90);
   }
 
   // Message should be a mapped thingy with all available state types.
   // tslint:disable-next-line:no-any
-  protected getStatesToBroadcastToClients(): { entityId: string; state: any }[] {
+  protected getStatesToBroadcastToClients(): EntityStateBroadcastMessage[] {
     const messages = [];
 
     for (const p of this.players) {
