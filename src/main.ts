@@ -316,10 +316,6 @@ export abstract class ServerGame<Game extends GameEngine> {
 
   public connect(connection: ClientConnection): string {
 
-    // Create some sort of entity for the client to control.
-    // Initialize the state of the entity (e.g. spawn).
-    // Add to the server representation of the game, this.game.
-
     const newClientId = `${this.clients.size}`;
     const client: ClientInfo = {
       clientId: newClientId,
@@ -364,6 +360,11 @@ export abstract class ServerGame<Game extends GameEngine> {
     }
   }
 
+  /**
+   * Called when a new client connects to the server. Can be used, for example,
+   * to create a player entity for the new client and add it to the game.
+   * @param newClientId The id assigned to the new client.
+   */
   protected abstract handleClientConnection(newClientId: string): void;
 
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
@@ -372,7 +373,7 @@ export abstract class ServerGame<Game extends GameEngine> {
     this.processInputs();
     this.sendWorldState();
 
-    // Fire update event, can be used for rendering/logging and such.
+    // TODO: Fire update event, can be used for rendering/logging and such.
   }
 
   /**
@@ -392,7 +393,7 @@ export abstract class ServerGame<Game extends GameEngine> {
     // tslint:disable-next-line:no-constant-condition
     while (true) {
       const client = getClientWithReadyInput();
-      if (client == undefined) {
+      if (client == null) {
         break;
       }
 
@@ -401,7 +402,7 @@ export abstract class ServerGame<Game extends GameEngine> {
 
       if (entity != undefined && entity.validateInput(entity.state, input.input)) {
 
-        entity.calcNextStateFromInput(entity.state, input.input);
+        entity.state = entity.calcNextStateFromInput(entity.state, input.input);
 
         client.lastProcessedInput = input.inputSequenceNumber;
       }

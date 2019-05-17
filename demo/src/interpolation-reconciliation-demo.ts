@@ -111,7 +111,6 @@ export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
         nextPosition = currentPosition;
     }
 
-    console.log(`attempting to move from ${currentPosition} to ${nextPosition}`);
     return {
       position: nextPosition
     };
@@ -194,7 +193,7 @@ const network = new InMemoryClientServerNetwork();
 
 const clientConnection = network.getClientConnection();
 const client1Id = server.connect(clientConnection);
-//const client2Id = server.connect(clientConnection);
+const client2Id = server.connect(clientConnection);
 
 const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) => {
 
@@ -209,24 +208,28 @@ const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLe
 }
 
 const client1Game = new DemoGameEngine();
-//const client2Game = new DemoGameEngine();
+const client2Game = new DemoGameEngine();
 const client1 = createClient(client1Game, client1Id, 65, 68);
-//const client2 = createClient(client2Game, client2Id, 37, 39);
+const client2 = createClient(client2Game, client2Id, 37, 39);
 
 client1.startGame(clientUpdateRate);
-//client2.startGame(clientUpdateRate);
+client2.startGame(clientUpdateRate);
 
 const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
 const client1Canvas = document.getElementById('player1_canvas') as HTMLCanvasElement;
-//const client2Canvas = document.getElementById('player2_canvas') as HTMLCanvasElement;
+const client2Canvas = document.getElementById('player2_canvas') as HTMLCanvasElement;
 
 const serverStatus = document.getElementById('server_status') as HTMLDivElement;
 const client1Status = document.getElementById('player1_status') as HTMLDivElement;
+const client2Status = document.getElementById('player2_status') as HTMLDivElement;
 
 serverGame.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(serverCanvas, serverGame.getEntities());
   const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
-  serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}`;
+  const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
+
+  serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
+    `Player 2: #${lastProcessedInputForClient2}`;
 });
 
 client1Game.eventEmitter.on('postStep', () => {
@@ -234,9 +237,10 @@ client1Game.eventEmitter.on('postStep', () => {
   client1Status.innerText = `Non-acknowledged inputs: ${client1.numberOfPendingInputs}`;
 });
 
-// client2Game.eventEmitter.on('postStep', () => {
-//   renderWorldOntoCanvas(client2Canvas, client2Game.getEntities());
-// });
+client2Game.eventEmitter.on('postStep', () => {
+  renderWorldOntoCanvas(client2Canvas, client2Game.getEntities());
+  client2Status.innerText = `Non-acknowledged inputs: ${client2.numberOfPendingInputs}`;
+});
 
 const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<any, any>[]) => {
   
