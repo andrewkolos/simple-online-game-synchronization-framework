@@ -1,7 +1,10 @@
 // tslint:disable
 
-import { GameEngine, GameEntity, InputCollector, InputForEntity, ServerGame, EntityFactory, ClientGame, EntityStateBroadcastMessage } from '../../src/main';
-import { InMemoryClientServerNetwork } from '../../src/network';
+import { InputForEntity, InputCollector, EntityFactory, GameClient } from '../../src/game-client';
+import { GameEntity } from '../../src/game-entity';
+import { GameEngine } from '../../src/game-engine';
+import { GameServer, EntityStateBroadcastMessage } from '../../src/game-server';
+import { InMemoryClientServerNetwork } from "../../src/networking/in-memory-client-server-network";
 
 interface MoveInput extends InputForEntity {
   inputType: DemoInputType.Move,
@@ -125,22 +128,15 @@ export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
 
 export class DemoGameEngine extends GameEngine {
 
-  private tickCounter: number = 0;
-
   protected step(): void {
 
-    this.tickCounter += 1;
-
-    if (this.tickCounter % 120 === 0) {
-      // tslint:disable-next-line:no-console
-      //console.log('tick', this.tickCounter);
-    }
+    // No game logic.
 
     return;
   }
 }
 
-export class DemoServer extends ServerGame<DemoGameEngine> {
+export class DemoServer extends GameServer<DemoGameEngine> {
 
   private players: DemoPlayer[] = [];
 
@@ -200,7 +196,7 @@ const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLe
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client = new ClientGame(gameEngine, serverConnection,
+  const client = new GameClient(gameEngine, serverConnection,
     entityFactory, serverGameUpdateRate, InputCollector);
 
   return client;
