@@ -79,6 +79,8 @@ export abstract class GameServer<Game extends GameEngine> {
 
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
 
+  protected abstract validateInput(entity: GameEntity<any, any>, input: any): boolean;
+
   private update() {
     this.processInputs();
     this.sendWorldState();
@@ -115,7 +117,7 @@ export abstract class GameServer<Game extends GameEngine> {
         continue;
       }
 
-      if (entity != undefined && entity.validateInput(entity.state, input.input)) {
+      if (entity != undefined && this.validateInput(entity, input.input)) {
 
         entity.state = entity.calcNextStateFromInput(entity.state, input.input);
 

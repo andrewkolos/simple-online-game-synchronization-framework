@@ -1,6 +1,6 @@
 // tslint:disable
 
-import { InputForEntity, InputCollector, EntityFactory, GameClient } from '../../src/game-client';
+import { InputForEntity, InputCollectionStrategy, EntityFactory, GameClient } from '../../src/game-client';
 import { GameEntity } from '../../src/game-entity';
 import { GameEngine } from '../../src/game-engine';
 import { GameServer, EntityStateBroadcastMessage } from '../../src/game-server';
@@ -10,6 +10,7 @@ interface MoveInput extends InputForEntity {
   inputType: DemoInputType.Move,
   input: {
     direction: MoveInputDirection;
+    pressTime: number;
   }
 }
 
@@ -24,7 +25,7 @@ export const enum MoveInputDirection {
 
 type DemoInput = MoveInput; // Union with new Input types added in the future.
 
-class KeyboardDemoInputCollector implements InputCollector {
+class KeyboardDemoInputCollector implements InputCollectionStrategy {
 
   private playerEntityId: string;
 
@@ -54,7 +55,7 @@ class KeyboardDemoInputCollector implements InputCollector {
     });
   }
 
-  public getInputs(): DemoInput[] {
+  public getInputs(dt: number): DemoInput[] {
 
     const xor = (x: boolean, y: boolean) => (x && !y) || (!x && y);
 
@@ -68,7 +69,8 @@ class KeyboardDemoInputCollector implements InputCollector {
         inputType: DemoInputType.Move,
         entityId: this.playerEntityId,
         input: {
-          direction
+          direction,
+          pressTime: dt
         }
       }
 
@@ -84,7 +86,8 @@ interface DemoPlayerState {
 }
 
 interface DemoPlayerInput {
-  direction?: MoveInputDirection;
+  direction: MoveInputDirection;
+  pressTime: number;
 }
 
 export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
@@ -93,22 +96,18 @@ export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
     super(id, initialState);
   }
 
-  public validateInput(_currentState: DemoPlayerState, _input: DemoPlayerInput): boolean {
-    // No vulnerabilities here, since any input is valid.
-    return true;
-  }
-
   public calcNextStateFromInput(currentState: DemoPlayerState, input: DemoPlayerInput): DemoPlayerState {
 
     const currentPosition = currentState.position;
+
     let nextPosition;
     
     switch (input.direction) {
       case MoveInputDirection.Forward:
-        nextPosition = currentPosition + 1;
+        nextPosition = currentPosition + (input.pressTime * .2);
         break;
       case MoveInputDirection.Backward:
-        nextPosition = currentPosition - 1;
+        nextPosition = currentPosition - (input.pressTime * .2);
         break;
       default:
         nextPosition = currentPosition;
@@ -136,14 +135,29 @@ export class DemoGameEngine extends GameEngine {
   }
 }
 
+interface PlayerMovementInfo {
+  entityId: string;
+  lastInputTimestamp: number,
+  pressTimeDuringLastInput: number,
+  totalPressTimeInLast10Ms: number;
+}
+
 export class DemoServer extends GameServer<DemoGameEngine> {
 
   private players: DemoPlayer[] = [];
+  private playerMovementInfos: PlayerMovementInfo[] = [];
 
   protected handleClientConnection(clientId: string): void {
     const newPlayer = new DemoPlayer(clientId, { position: 0 });
     this.players.push(newPlayer);
     this.addPlayerEntity(newPlayer, clientId);
+
+    this.playerMovementInfos.push({
+      entityId: newPlayer.id,
+      lastInputTimestamp: new Date().getTime(),
+      pressTimeDuringLastInput: 0,
+      totalPressTimeInLast10Ms: 0
+    });
   }
 
   // Message should be a mapped thingy with all available state types.
@@ -160,6 +174,22 @@ export class DemoServer extends GameServer<DemoGameEngine> {
 
     return messages;
   }
+
+  protected validateInput(entity: GameEntity<any, any>, input: any) {
+
+    if (entity instanceof GameEntity && (input as DemoPlayerInput).direction != null) {
+      const demoPlayerInput = input as DemoPlayerInput;
+
+      const player = this.playerMovementInfos.find((info: PlayerMovementInfo) => {
+        return info.entityId === entity.id;
+      })
+      if (player != null && demoPlayerInput.pressTime != null) {
+        return player.lastInputTimestamp + demoPlayerInput.pressTime <= new Date().getTime();
+      }
+    }
+
+    return false;
+  }
 }
 
 export class DemoEntityFactory implements EntityFactory {
@@ -175,7 +205,6 @@ export class DemoEntityFactory implements EntityFactory {
   }
 
 }
-
 
 const serverGameUpdateRate = 120;
 const serverSyncUpdateRate = 120;

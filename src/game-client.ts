@@ -18,12 +18,13 @@ export interface InputForEntity {
 /**
  * Collects inputs for a game step.
  */
-export interface InputCollector {
+export interface InputCollectionStrategy {
   /**
    * @returns A collection of inputs paired with the entities they are meant
    * to be applied against.
+   * @param dt The amount of time that has elapsed since input was last collected.
    */
-  getInputs(): InputForEntity[];
+  getInputs(dt: number): InputForEntity[];
 }
 
 /**
@@ -40,13 +41,16 @@ export class GameClient<Game extends GameEngine>  {
   private entityFactory: EntityFactory;
   private serverUpdateRateInHz: number;
   /** Collects user inputs. */
-  private inputCollector: InputCollector;
+  private inputCollectionStrategy: InputCollectionStrategy;
 
   private inputSequenceNumber = 0;
   /**
    * Inputs with sequence numbers later than that of the last server message received.
    */
   private pendingInputs: InputMessage[] = [];
+
+  private lastInputCollectionTimestamp: number | undefined;
+
   private playerEntityIds: EntityId[] = [];
 
   private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
@@ -56,13 +60,13 @@ export class GameClient<Game extends GameEngine>  {
   }
 
   constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory,
-    serverUpdateRateInHz: number, inputCollector: InputCollector) {
+    serverUpdateRateInHz: number, inputCollector: InputCollectionStrategy) {
 
     this.engine = engine;
     this.server = server;
     this.entityFactory = entityFactory;
     this.serverUpdateRateInHz = serverUpdateRateInHz;
-    this.inputCollector = inputCollector;
+    this.inputCollectionStrategy = inputCollector;
 
     engine.eventEmitter.on('preStep', () => {
       this.update();
@@ -156,8 +160,22 @@ export class GameClient<Game extends GameEngine>  {
    * sends them to the server, and applies them locally.
    */
   private processInputs(): void {
+
     const now = new Date().getTime();
-    const inputs = this.inputCollector.getInputs();
+
+    const getInputs = (): InputForEntity[] => {
+      
+      const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
+        ? this.lastInputCollectionTimestamp : now;
+
+      const timeSinceLastInputCollection = now - lastInputCollectionTime;
+
+      this.lastInputCollectionTimestamp = now;
+
+      return this.inputCollectionStrategy.getInputs(timeSinceLastInputCollection);
+    }
+
+    const inputs = getInputs();
 
     inputs.forEach(input => {
       const inputMessage = {
