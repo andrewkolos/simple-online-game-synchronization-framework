@@ -178,6 +178,7 @@ export class GameClient<Game extends GameEngine>  {
     const inputs = getInputs();
 
     inputs.forEach(input => {
+
       const inputMessage = {
         entityId: input.entityId,
         timestamp: now,

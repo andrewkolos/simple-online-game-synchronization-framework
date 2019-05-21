@@ -1,12 +1,22 @@
 import { InputMessage, StateMessage, ServerConnection, ClientConnection } from './connection';
+import { TypedEventEmitter } from '../event-emitter';
+
+interface InMemoryClientServerNetworkEvents {
+  stateMessageSent: (message: StateMessage) => void;
+  inputMessageSent: (message: InputMessage) => void;
+}
 
 export class InMemoryClientServerNetwork {
-  private inputMessageQueues: InputMessage[][] = [];
-  private stateMessageQueues: StateMessage[][] = [];
+  public inputMessageQueues: InputMessage[][] = [];
+  public stateMessageQueues: StateMessage[][] = [];
 
   private inputMessageReadyTimes: Map<InputMessage, number> = new Map();
   private stateMessageSendTimes: Map<StateMessage, number> = new Map();
   private stateMessageReferenceCounts: Map<StateMessage, number> = new Map();
+
+  private eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents>();
+
+  public on = this.eventEmitter.on.bind(this.eventEmitter);
 
   /**
    * Get a connection to the server.
@@ -20,12 +30,12 @@ export class InMemoryClientServerNetwork {
     return {
       send: (message: InputMessage) => {
         const inputMessageQueue = this.inputMessageQueues[clientIndex];
-        if (this.stateMessageQueues == null) {
+        if (inputMessageQueue == null) {
           throw Error('Cannot send input to server before the client connection has been created.');
         }
         inputMessageQueue.push(message);
-        if (this.inputMessageReadyTimes.get(message)) throw Error('bad');
         this.inputMessageReadyTimes.set(message, new Date().getTime() + lagMs);
+        this.eventEmitter.emit('inputMessageSent', message);
       },
       receive: function() {
         if (!this.hasNext()) throw Error('No message ready.');
@@ -35,23 +45,29 @@ export class InMemoryClientServerNetwork {
         return message;
       },
       hasNext: () => {
-        return (stateMessageQueue.length > 0 &&
-          this.stateMessageSendTimes.get(stateMessageQueue[0])!.valueOf() <= new Date().getTime() + lagMs);
+        if (stateMessageQueue.length < 1) return false;
+        const nextMessage = stateMessageQueue[0];
+        const nextMessageSentAt = this.stateMessageSendTimes.get(nextMessage)!.valueOf();
+        
+        return nextMessageSentAt + lagMs<= new Date().getTime();
       }
     };
   }
+
+  /**
+   * Get a connection to a client.
+   */
   public getNewClientConnection(): ClientConnection {
     this.inputMessageQueues.push([]);
-    const imQueue = this.inputMessageQueues[this.inputMessageQueues.length - 1];
+    const clientIndex = this.inputMessageQueues.length - 1;
+    const imQueue = this.inputMessageQueues[clientIndex];
     return {
       send: (message: StateMessage) => {
-        for (const mq of this.stateMessageQueues) {
-          mq.push(message);
-        }
-        if (this.stateMessageSendTimes.get(message)) throw Error('badd');
+        this.stateMessageQueues[clientIndex].push(message);
+
         this.stateMessageSendTimes.set(message, new Date().getTime());
-        if (this.stateMessageReferenceCounts.get(message)) throw Error('badd');
-        this.stateMessageReferenceCounts.set(message, this.stateMessageQueues.length);
+        increment(this.stateMessageReferenceCounts, message);
+        this.eventEmitter.emit('stateMessageSent', message);
       },
       receive: function() {
         if (!this.hasNext()) throw Error('No input message is ready.');
@@ -77,4 +93,13 @@ function decrementOrRemove<K>(map: Map<K, number>, key: K): void {
   }
   
   map.set(key, value - 1);
+}
+
+function increment<K>(map: Map<K, number>, key: K): void {
+  const value = map.get(key);
+  if (value == undefined) {
+    map.set(key, 1);
+  } else {
+    map.set(key, value + 1);
+  }
 }

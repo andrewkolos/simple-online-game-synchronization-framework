@@ -57,7 +57,10 @@ export abstract class GameServer<Game extends GameEngine> {
     clearInterval(this.updateInterval);
 
     this.game.start(gameUpdateRate);
-    this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
+
+    if (serverUpdateRate > 0) {
+      this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
+    }
   }
 
   public getLastProcessedInputForClient(clientId: string) {
@@ -128,8 +131,9 @@ export abstract class GameServer<Game extends GameEngine> {
 
   private sendWorldState() {
     const stateMessages = this.getStatesToBroadcastToClients();
+    const clients = Array.from(this.clients.values());
 
-    for (const client of this.clients.values()) {
+    for (const client of clients) {
       for (const stateMessage of stateMessages) {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 

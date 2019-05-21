@@ -207,26 +207,27 @@ export class DemoEntityFactory implements EntityFactory {
 }
 
 const serverGameUpdateRate = 120;
-const serverSyncUpdateRate = 120;
+const serverSyncUpdateRate = 30;
 const clientUpdateRate = 120;
 
 const serverGame = new DemoGameEngine();
 
 const server = new DemoServer(serverGame);
-server.startServer(serverGameUpdateRate, serverSyncUpdateRate);
+server.startServer(serverSyncUpdateRate, serverGameUpdateRate);
 const network = new InMemoryClientServerNetwork();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());
 
-const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) => {
+const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, 
+  moveLeftKeycode: number, moveRightKeyCode: number) => {
 
-  const serverConnection = network.getNewServerConnection(5000);
+  const serverConnection = network.getNewServerConnection(100);
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
   const client = new GameClient(gameEngine, serverConnection,
-    entityFactory, serverGameUpdateRate, InputCollector);
+    entityFactory, serverSyncUpdateRate, InputCollector);
 
   return client;
 }
@@ -254,16 +255,19 @@ serverGame.eventEmitter.on('postStep', () => {
 
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
     ` Player 2: #${lastProcessedInputForClient2}`;
+  writePositions(serverGame.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
 });
 
 client1Game.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(client1Canvas, client1Game.getEntities());
   client1Status.innerText = `Non-acknowledged inputs: ${client1.numberOfPendingInputs}`;
+  writePositions(client1Game.getEntities(), document.getElementById('player1_positions') as HTMLDivElement);
 });
 
 client2Game.eventEmitter.on('postStep', () => {
   renderWorldOntoCanvas(client2Canvas, client2Game.getEntities());
   client2Status.innerText = `Non-acknowledged inputs: ${client2.numberOfPendingInputs}`;
+  writePositions(client2Game.getEntities(), document.getElementById('player2_positions') as HTMLDivElement);
 });
 
 const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<any, any>[]) => {
@@ -294,3 +298,35 @@ const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<a
     ctx.stroke();
   });
 }
+
+const writePositions = (entities: GameEntity<any, any>[], el: HTMLElement) => {
+  const message = entities.map(entity => {
+    if (!(entity instanceof DemoPlayer)) return;
+
+    return `${entity.id}: ${entity.state.position.toFixed(3)}`;
+  }).join(' ');
+
+  el.innerText = message;
+}
+
+const handleMessageSent = () => {
+  const misc = document.getElementById('misc') as HTMLDivElement;
+  
+  let message = 'Input Message Queues <br />';
+
+  message += network.inputMessageQueues.map(value => {
+    return value.length;
+  }).join('<br />');
+
+  message += '<br />State Message Queues <br />';
+
+  message += network.stateMessageQueues.map(value => {
+    return value.length;
+  }).join('<br />');
+
+  misc.innerHTML = message;
+}
+
+network.on('stateMessageSent', handleMessageSent);
+network.on('stateMessageSent', handleMessageSent);
+
