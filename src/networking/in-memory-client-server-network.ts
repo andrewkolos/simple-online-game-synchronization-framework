@@ -7,8 +7,8 @@ interface InMemoryClientServerNetworkEvents {
 }
 
 export class InMemoryClientServerNetwork {
-  public inputMessageQueues: InputMessage[][] = [];
-  public stateMessageQueues: StateMessage[][] = [];
+  private inputMessageQueues: InputMessage[][] = [];
+  private stateMessageQueues: StateMessage[][] = [];
 
   private inputMessageReadyTimes: Map<InputMessage, number> = new Map();
   private stateMessageSendTimes: Map<StateMessage, number> = new Map();
@@ -80,6 +80,14 @@ export class InMemoryClientServerNetwork {
           this.inputMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
       }
     };
+  }
+
+  public getInputMessageQueueLengths(): number[] {
+    return this.inputMessageQueues.map(q => q.length);
+  }
+
+  public getStateMessageQueueLengths(): number[] {
+    return this.stateMessageQueues.map(q => q.length);
   }
 }
 

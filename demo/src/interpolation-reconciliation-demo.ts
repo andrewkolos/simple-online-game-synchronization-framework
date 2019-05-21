@@ -314,15 +314,11 @@ const handleMessageSent = () => {
   
   let message = 'Input Message Queues <br />';
 
-  message += network.inputMessageQueues.map(value => {
-    return value.length;
-  }).join('<br />');
+  message += network.getInputMessageQueueLengths().join('<br />');
 
   message += '<br />State Message Queues <br />';
 
-  message += network.stateMessageQueues.map(value => {
-    return value.length;
-  }).join('<br />');
+  message += network.getStateMessageQueueLengths().join('<br />');
 
   misc.innerHTML = message;
 }
