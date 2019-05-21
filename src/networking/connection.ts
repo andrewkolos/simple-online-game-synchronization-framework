@@ -24,8 +24,6 @@ export interface Connection<SendType,ReceiveType> {
   receive(): ReceiveType;
 
   hasNext(): boolean;
-
-  peek(position: number): ReceiveType | undefined;
 }
 
 export interface ServerConnection extends Connection<InputMessage, StateMessage> {}
