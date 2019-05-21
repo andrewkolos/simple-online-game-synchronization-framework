@@ -221,7 +221,7 @@ const client2Id = server.connect(network.getNewClientConnection());
 
 const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) => {
 
-  const serverConnection = network.getNewServerConnection();
+  const serverConnection = network.getNewServerConnection(5000);
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 

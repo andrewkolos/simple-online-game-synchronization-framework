@@ -4,84 +4,66 @@ export class InMemoryClientServerNetwork {
   private inputMessageQueues: InputMessage[][] = [];
   private stateMessageQueues: StateMessage[][] = [];
 
-  private messageReadyTimes: Map<InputMessage | StateMessage, number> = new Map();
+  private inputMessageReadyTimes: Map<InputMessage, number> = new Map();
+  private stateMessageSendTimes: Map<StateMessage, number> = new Map();
   private stateMessageReferenceCounts: Map<StateMessage, number> = new Map();
 
   /**
    * Get a connection to the server.
    */
   public getNewServerConnection(lagMs: number): ServerConnection {
+    const that = this;
     this.stateMessageQueues.push([]);
     const clientIndex = this.stateMessageQueues.length - 1;
+    const stateMessageQueue = this.stateMessageQueues[clientIndex];
+
     return {
       send: (message: InputMessage) => {
-        if (this.inputMessageQueues[clientIndex] == null) {
+        const inputMessageQueue = this.inputMessageQueues[clientIndex];
+        if (this.stateMessageQueues == null) {
           throw Error('Cannot send input to server before the client connection has been created.');
         }
-        this.inputMessageQueues[clientIndex].push(message);
-        this.messageReadyTimes.set(message, new Date().getTime() + lagMs);
+        inputMessageQueue.push(message);
+        if (this.inputMessageReadyTimes.get(message)) throw Error('bad');
+        this.inputMessageReadyTimes.set(message, new Date().getTime() + lagMs);
       },
-      receive: () => {
-        const message = this.getFirstMessageThatIsReady(this.stateMessageQueues[clientIndex], lagMs);
-        decrementOrRemove(this.stateMessageReferenceCounts, message);
+      receive: function() {
+        if (!this.hasNext()) throw Error('No message ready.');
+        const message = stateMessageQueue[0];
+        stateMessageQueue.splice(0, 1);
+        decrementOrRemove(that.stateMessageReferenceCounts, message);
         return message;
       },
       hasNext: () => {
-        return this.hasMessageThatIsReady(this.stateMessageQueues[clientIndex], lagMs);
+        return (stateMessageQueue.length > 0 &&
+          this.stateMessageSendTimes.get(stateMessageQueue[0])!.valueOf() <= new Date().getTime() + lagMs);
       }
     };
   }
-  public getNewClientConnection(lagMs: number): ClientConnection {
+  public getNewClientConnection(): ClientConnection {
     this.inputMessageQueues.push([]);
-    const imQueueIndex = this.inputMessageQueues.length - 1;
+    const imQueue = this.inputMessageQueues[this.inputMessageQueues.length - 1];
     return {
       send: (message: StateMessage) => {
         for (const mq of this.stateMessageQueues) {
           mq.push(message);
         }
-        this.messageReadyTimes.set(message, new Date().getTime() + lagMs);
+        if (this.stateMessageSendTimes.get(message)) throw Error('badd');
+        this.stateMessageSendTimes.set(message, new Date().getTime());
+        if (this.stateMessageReferenceCounts.get(message)) throw Error('badd');
         this.stateMessageReferenceCounts.set(message, this.stateMessageQueues.length);
       },
-      receive: () => {
-        const message = this.getFirstMessageThatIsReady(this.inputMessageQueues[imQueueIndex], lagMs);
-        this.messageReadyTimes.delete(message);
+      receive: function() {
+        if (!this.hasNext()) throw Error('No input message is ready.');
+        const message = imQueue[0];
+        imQueue.splice(0,1);
         return message;
       },
       hasNext: () => {
-        return this.hasMessageThatIsReady(this.inputMessageQueues[imQueueIndex], lagMs);
+        return (imQueue.length > 0 &&
+          this.inputMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
       }
     };
-  }
-
-  private getFirstMessageThatIsReady<T extends InputMessage | StateMessage>(queue: T[], lagMs: number) {
-    const readyMessageIndex = this.getIndexOfFirstMessageThatIsReady(queue, lagMs);
-    if (readyMessageIndex != -1) {
-      throw Error('Tried to receive a message when none are ready.');
-    }
-    const message = queue[readyMessageIndex];
-    queue.splice(readyMessageIndex, 1);
-    return message;
-  }
-
-  private getIndexOfFirstMessageThatIsReady<T extends InputMessage | StateMessage>(queue: T[], lagMs: number) {
-    const now = new Date().getTime();
-    const readyMessageIndex = queue.findIndex(message => {
-      const readyTime = this.messageReadyTimes.get(message);
-      if (readyTime == null) {
-        throw Error('Found a message without a ready time.');
-      } else {
-        if (readyTime >= now + lagMs) {
-          return true;
-        }
-      }
-      return false;
-    });
-
-    return readyMessageIndex;
-  }
-
-  private hasMessageThatIsReady<T extends InputMessage | StateMessage>(queue: T[], lagMs: number) {
-    return this.getIndexOfFirstMessageThatIsReady(queue, lagMs) != -1;
   }
 }
 
