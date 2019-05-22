@@ -1,24 +1,47 @@
+export type TickHandler = (tickNumber: number) => void;
+
+/**
+ * A simple timer utility.
+ */
 export class Timer {
 
-  private time: number = 0;
+  /**
+   * How long the timer has been running.
+   */
+  private tickCount: number = 0;
 
   private updateIntervalId?: NodeJS.Timer;
   private tickHandler: TickHandler;
 
+  /**
+   * Creates an instance of timer.
+   * @param tickHandler The function that will be called every ti
+   */
   constructor(tickHandler: TickHandler) {
     this.tickHandler = tickHandler;
   }
 
-  public start(updateRateHz: number) {
+  /**
+   * Starts the timer.
+   * @param tickRateHz How often the timer should tick. 
+   */
+  public start(tickRateHz: number) {
     this.stop();
     this.updateIntervalId = setInterval(() => this.tick(),
-      1000 / updateRateHz)
+      1000 / tickRateHz)
   }
 
+  /**
+   * Determines whether the timer is running.
+   * @returns true if running.
+   */
   public isRunning(): boolean {
     return this.updateIntervalId != undefined;
   }
 
+  /**
+   * Stops timer.
+   */
   public stop() {
     if (this.updateIntervalId != undefined) {
       clearInterval(this.updateIntervalId);
@@ -27,8 +50,7 @@ export class Timer {
   }
 
   private tick() {
-    this.tickHandler(this.time);
+    this.tickCount += 1;
+    this.tickHandler(this.tickCount);
   }
 }
-
-export type TickHandler = (tickNumber: number) => void;

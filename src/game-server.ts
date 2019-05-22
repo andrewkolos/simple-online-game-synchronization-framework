@@ -41,7 +41,7 @@ export abstract class GameServer<Game extends GameEngine> {
   }
 
   public addPlayerEntity(entity: GameEntity<any, any>, playerClientId: string) {
-    this.game.addObject(entity);
+    this.game.addEntity(entity);
     const client = this.clients.get(playerClientId);
 
     if (client != null) {

@@ -293,7 +293,7 @@ function createClient(gameEngine: DemoGameEngine, playerEntityId: string,
 
 const serverGameUpdateRate = 120;
 const serverSyncUpdateRate = 30;
-const clientUpdateRate = 120;
+const clientUpdateRate = 240;
 
 const serverGame = new DemoGameEngine();
 const client1Game = new DemoGameEngine();
@@ -308,7 +308,6 @@ const client2Id = server.connect(network.getNewClientConnection());
 
 const client1 = createClient(client1Game, client1Id, 65, 68);
 const client2 = createClient(client2Game, client2Id, 37, 39);
-
 
 serverGame.eventEmitter.on('postStep', () => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;

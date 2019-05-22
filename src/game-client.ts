@@ -42,23 +42,46 @@ export class GameClient<Game extends GameEngine>  {
   private serverUpdateRateInHz: number;
   /** Collects user inputs. */
   private inputCollectionStrategy: InputCollectionStrategy;
-
-  private inputSequenceNumber = 0;
+  /**
+   * The number assigned to the next set of inputs that will be sent out by this
+   * game client. Used for server reconciliation.
+   */
+  private currentInputSequenceNumber = 0;
   /**
    * Inputs with sequence numbers later than that of the last server message received.
+   * These inputs will be reapplied when the client receives a new authoritative state
+   * sent by the server.
    */
   private pendingInputs: InputMessage[] = [];
 
   private lastInputCollectionTimestamp: number | undefined;
 
+  /**
+   * IDs of entities that are meant to be controlled by this client's player.
+   */
   private playerEntityIds: EntityId[] = [];
 
   private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
+  /**
+   * Gets the number of inputs that this client has yet to receive an acknowledgement
+   * for from the server.
+   */
   public get numberOfPendingInputs() {
     return this.pendingInputs.length;
   }
 
+  /**
+   * Creates an instance of game client.
+   * @param engine The game this client is running.
+   * @param server A connection to the game server.
+   * @param entityFactory A strategy to create local representations of
+   *   new entities sent by the server.
+   * @param serverUpdateRateInHz How often the server will be sending out
+   *  the world state.
+   * @param inputCollector Used to obtain inputs from the user that can be applied
+   *  to entities in the game.
+   */
   constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory,
     serverUpdateRateInHz: number, inputCollector: InputCollectionStrategy) {
 
@@ -73,23 +96,34 @@ export class GameClient<Game extends GameEngine>  {
     });
   }
 
+  /**
+   * Starts the game contained in this client.
+   * @param updateRateHz How often the game should update its world state.
+   */
   public startGame(updateRateHz: number) {
     this.engine.start(updateRateHz);
   }
 
+  /**
+   * Stops/pauses the game contained in this client.
+   */
   public stopGame() {
     this.engine.stop();
   }
 
+  /**
+   * Determines whether has received communication from the game server.
+   * @returns true if connected.
+   */
   public isConnected(): boolean {
     return this.playerEntityIds.length > 0;
   }
 
-  public hasControllableEntities(): boolean {
-    return this.playerEntityIds.length > 0;
-  }
-
-  public update() {
+  /**
+   * Updates the state of the game, based on the game itself, messages regarding
+   * the state of the world sent by the server, and inputs from the user.
+   */
+  private update() {
     this.processServerMessages();
 
     if (!this.isConnected()) { return; }
@@ -116,7 +150,7 @@ export class GameClient<Game extends GameEngine>  {
         if (entity.id !== stateMessage.entityId) {
           throw Error(`Entity created by entity factory has an incorrect id: ${entity.id} != ${stateMessage.entityId}`);
         }
-        this.engine.addObject(entity);
+        this.engine.addEntity(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
 
         if (stateMessage.entityBelongsToRecipientClient) {
@@ -182,7 +216,7 @@ export class GameClient<Game extends GameEngine>  {
       const inputMessage = {
         entityId: input.entityId,
         timestamp: now,
-        inputSequenceNumber: this.inputSequenceNumber,
+        inputSequenceNumber: this.currentInputSequenceNumber,
         input: input.input
       };
 
@@ -198,10 +232,13 @@ export class GameClient<Game extends GameEngine>  {
     });
 
     if (inputs.length > 0) {
-      this.inputSequenceNumber = this.inputSequenceNumber + 1;
+      this.currentInputSequenceNumber = this.currentInputSequenceNumber + 1;
     }
   }
 
+  /**
+   * Smooths out the state of entities controlled by other players.
+   */
   private interpolateEntities(): void {
     const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
@@ -224,6 +261,7 @@ export class GameClient<Game extends GameEngine>  {
       // Get the "average" (whatever the entity's interpolation scheme decides) of the two states in which
       // the current timestamp falls in-between.
       if (buffer.length >= 2 && buffer[0].timestamp <= renderTimestamp && renderTimestamp <= buffer[1].timestamp) {
+        
         const timeRatio = (renderTimestamp - buffer[0].timestamp) / (buffer[1].timestamp - buffer[0].timestamp);
         entity.state = entity.interpolate(buffer[0].state, buffer[1].state, timeRatio);
       }

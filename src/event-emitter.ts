@@ -4,6 +4,10 @@ type Arguments<T> = [T] extends [(...args: infer U) => any]
   ? U
   : [T] extends [void] ? [] : [T];
 
+/**
+ * Resembles the NodeJS EventEmitter class. This custom event emitter
+ * features specifying types for event names and their callbacks.
+ */
 export class TypedEventEmitter<Events> {
   private handlers: Array<any> = [];
 
@@ -39,7 +43,7 @@ export class TypedEventEmitter<Events> {
     this.dispatchEvent(type, ...args);
   }
 
-  public clear<E extends keyof Events>(type: E, fn: Events[E]) {
+  public clear() {
     this.clearEventListeners();
   }
 }
