@@ -92,6 +92,8 @@ interface DemoPlayerInput {
 
 export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
 
+  private static MOVE_SPEED = 0.2;
+
   constructor(id: string, initialState: DemoPlayerState) {
     super(id, initialState);
   }
@@ -104,10 +106,10 @@ export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
     
     switch (input.direction) {
       case MoveInputDirection.Forward:
-        nextPosition = currentPosition + (input.pressTime * .2);
+        nextPosition = currentPosition + (input.pressTime * DemoPlayer.MOVE_SPEED);
         break;
       case MoveInputDirection.Backward:
-        nextPosition = currentPosition - (input.pressTime * .2);
+        nextPosition = currentPosition - (input.pressTime * DemoPlayer.MOVE_SPEED);
         break;
       default:
         nextPosition = currentPosition;
@@ -206,71 +208,22 @@ export class DemoEntityFactory implements EntityFactory {
 
 }
 
-const serverGameUpdateRate = 120;
-const serverSyncUpdateRate = 30;
-const clientUpdateRate = 120;
+// Helper code for running the demo.
 
-const serverGame = new DemoGameEngine();
+function displayGame<Engine extends GameEngine>(client: GameClient<Engine>, game: Engine, displayElement: HTMLElement) {
+  const entities = game.getEntities();
+  const displayElementId = displayElement.id;
 
-const server = new DemoServer(serverGame);
-server.startServer(serverSyncUpdateRate, serverGameUpdateRate);
-const network = new InMemoryClientServerNetwork();
+  const canvasElement = document.getElementById(`${displayElementId}_canvas`) as HTMLCanvasElement;
+  const positionsElement = document.getElementById(`${displayElementId}_positions`) as HTMLElement;
+  const lastAckElement = document.getElementById(`${displayElementId}_status`) as HTMLElement;
 
-const client1Id = server.connect(network.getNewClientConnection());
-const client2Id = server.connect(network.getNewClientConnection());
-
-const createClient = (gameEngine: DemoGameEngine, playerEntityId: string, 
-  moveLeftKeycode: number, moveRightKeyCode: number) => {
-
-  const serverConnection = network.getNewServerConnection(100);
-  const entityFactory = new DemoEntityFactory();
-  const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
-
-  const client = new GameClient(gameEngine, serverConnection,
-    entityFactory, serverSyncUpdateRate, InputCollector);
-
-  return client;
+  renderWorldOntoCanvas(canvasElement, entities);
+  writePositions(entities, positionsElement);
+  lastAckElement.innerText = `Non-acknowledged inputs: ${client.numberOfPendingInputs}`; 
 }
 
-const client1Game = new DemoGameEngine();
-const client2Game = new DemoGameEngine();
-const client1 = createClient(client1Game, client1Id, 65, 68);
-const client2 = createClient(client2Game, client2Id, 37, 39);
-
-client1.startGame(clientUpdateRate);
-client2.startGame(clientUpdateRate);
-
-const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
-const client1Canvas = document.getElementById('player1_canvas') as HTMLCanvasElement;
-const client2Canvas = document.getElementById('player2_canvas') as HTMLCanvasElement;
-
-const serverStatus = document.getElementById('server_status') as HTMLDivElement;
-const client1Status = document.getElementById('player1_status') as HTMLDivElement;
-const client2Status = document.getElementById('player2_status') as HTMLDivElement;
-
-serverGame.eventEmitter.on('postStep', () => {
-  renderWorldOntoCanvas(serverCanvas, serverGame.getEntities());
-  const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
-  const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
-
-  serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
-    ` Player 2: #${lastProcessedInputForClient2}`;
-  writePositions(serverGame.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
-});
-
-client1Game.eventEmitter.on('postStep', () => {
-  renderWorldOntoCanvas(client1Canvas, client1Game.getEntities());
-  client1Status.innerText = `Non-acknowledged inputs: ${client1.numberOfPendingInputs}`;
-  writePositions(client1Game.getEntities(), document.getElementById('player1_positions') as HTMLDivElement);
-});
-
-client2Game.eventEmitter.on('postStep', () => {
-  renderWorldOntoCanvas(client2Canvas, client2Game.getEntities());
-  client2Status.innerText = `Non-acknowledged inputs: ${client2.numberOfPendingInputs}`;
-  writePositions(client2Game.getEntities(), document.getElementById('player2_positions') as HTMLDivElement);
-});
-
-const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<any, any>[]) => {
+function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: GameEntity<any, any>[]) {
   
   canvas.width = canvas.width; // Clears the canvas.
 
@@ -299,7 +252,7 @@ const renderWorldOntoCanvas = (canvas: HTMLCanvasElement, entities: GameEntity<a
   });
 }
 
-const writePositions = (entities: GameEntity<any, any>[], el: HTMLElement) => {
+function writePositions(entities: GameEntity<any, any>[], el: HTMLElement) {
   const message = entities.map(entity => {
     if (!(entity instanceof DemoPlayer)) return;
 
@@ -309,7 +262,7 @@ const writePositions = (entities: GameEntity<any, any>[], el: HTMLElement) => {
   el.innerText = message;
 }
 
-const handleMessageSent = () => {
+function handleMessageSent() {
   const misc = document.getElementById('misc') as HTMLDivElement;
   
   let message = 'Input Message Queues <br />';
@@ -323,6 +276,64 @@ const handleMessageSent = () => {
   misc.innerHTML = message;
 }
 
+function createClient(gameEngine: DemoGameEngine, playerEntityId: string,
+  moveLeftKeycode: number, moveRightKeyCode: number) {
+
+  const serverConnection = network.getNewServerConnection(100);
+  const entityFactory = new DemoEntityFactory();
+  const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
+
+  const client = new GameClient(gameEngine, serverConnection,
+    entityFactory, serverSyncUpdateRate, InputCollector);
+
+  return client;
+}
+
+// Start up clients, server, connect them, and start them.
+
+const serverGameUpdateRate = 120;
+const serverSyncUpdateRate = 30;
+const clientUpdateRate = 120;
+
+const serverGame = new DemoGameEngine();
+const client1Game = new DemoGameEngine();
+const client2Game = new DemoGameEngine();
+
+const server = new DemoServer(serverGame);
+const network = new InMemoryClientServerNetwork();
+
+const client1Id = server.connect(network.getNewClientConnection());
+const client2Id = server.connect(network.getNewClientConnection());
+
+
+const client1 = createClient(client1Game, client1Id, 65, 68);
+const client2 = createClient(client2Game, client2Id, 37, 39);
+
+
+serverGame.eventEmitter.on('postStep', () => {
+  const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
+  renderWorldOntoCanvas(serverCanvas, serverGame.getEntities());
+
+  const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
+  const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
+
+  const serverStatus = document.getElementById('server_status') as HTMLDivElement;
+  serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
+    ` Player 2: #${lastProcessedInputForClient2}`;
+  writePositions(serverGame.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
+});
+
+client1Game.eventEmitter.on('postStep', () => {
+  displayGame(client1, client1Game, document.getElementById('client1') as HTMLElement);
+});
+
+client2Game.eventEmitter.on('postStep', () => {
+  displayGame(client2, client2Game, document.getElementById('client2') as HTMLElement);
+});
+
 network.on('stateMessageSent', handleMessageSent);
 network.on('stateMessageSent', handleMessageSent);
 
+server.startServer(serverSyncUpdateRate, serverGameUpdateRate);
+client1.startGame(clientUpdateRate);
+client2.startGame(clientUpdateRate);
