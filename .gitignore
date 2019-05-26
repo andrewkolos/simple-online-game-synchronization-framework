@@ -22,3 +22,9 @@ build/
 .DS_Store
 
 demo/build*
+
+build/**
+
+dist/**
+
+**/.rpt2_cache/**

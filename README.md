@@ -1,3 +1,3 @@
-# TypeScript Game Client and Server
+# TypeScript Game Client and Server Synchronization Server
 
-credit to Jakub Synowiec for boilerplate: https://github.com/jsynowiec/node-typescript-boilerplate
+This project is still under development.

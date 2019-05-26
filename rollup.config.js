@@ -1,18 +1,23 @@
 import typescript from 'rollup-plugin-typescript';
-import resolve from 'rollup-plugin-node-resolve';
+
+import pkg from './package.json';
 
 export default {
-  input: 'demo/src/interpolation-reconciliation-demo.ts',
-  output: {
-    name: 'bundle',
-    file: 'demo/build.js',
-    format: 'iife',
-    sourcemap: true
-  },
+  input: 'src/index.ts',
+  output: [
+    {
+      file: pkg.main,
+      format: 'cjs',
+    },
+    {
+      file: pkg.module,
+      format: 'es'
+    }
+  ],
   plugins: [
     typescript({
-      sourceMap: true
+      sourceMap: true,
+      declaration: true,
     }),
-    resolve()
   ]
 }

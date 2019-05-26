@@ -2,13 +2,13 @@
   "compilerOptions": {
     "target": "es2016",
     "moduleResolution": "node",
-    "module": "ES2015",
+    "module": "es2015",
     "allowSyntheticDefaultImports": true,
+    "allowJs": true,
     "importHelpers": true,
     "jsx": "react",
-    "declaration": true,
     "alwaysStrict": true,
-    "sourceMap": false,
+    "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -17,9 +17,7 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    "rootDir": "./src"
+    "outDir": "build"
   },
-  "exclude": [
-    "./demo/**"
-  ]
+  
 }
