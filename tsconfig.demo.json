@@ -17,6 +17,9 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    "outDir": "build"
-  }
+    "declaration": false
+  },
+  "include": [
+    "demo/src/interpolation-reconciliation-demo.ts"
+  ]
 }

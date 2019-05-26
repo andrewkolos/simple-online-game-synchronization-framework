@@ -10,7 +10,7 @@
     "node": ">= 8.9.0"
   },
   "scripts": {
-    "demo": "cd demo && rollup -c rollup.config.js && http-server",
+    "demo": "rollup -c rollup.config.demo.js && cd demo && http-server",
     "build": "rollup -c rollup.config.js"
   },
   "author": "Andrew Kolos",
@@ -25,19 +25,22 @@
     "rollup": "^1.11.3",
     "rollup-plugin-commonjs": "^9.3.4",
     "rollup-plugin-node-resolve": "^4.2.4",
+    "rollup-plugin-typescript2": "^0.21.1",
     "ts-jest": "^23.10.5",
+    "ts-loader": "^6.0.1",
     "tslib": "^1.9.3",
     "tslint": "~5.12.0",
     "tslint-config-prettier": "1.17.0",
     "tslint-microsoft-contrib": "^6.0.0",
     "tsutils": "~3.7.0",
-    "typescript": "^3.4.5"
+    "typescript": "^3.4.5",
+    "webpack": "^4.32.2",
+    "webpack-cli": "^3.3.2"
   },
   "dependencies": {
     "eventemitter3": "^3.1.2",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
-    "rollup-plugin-typescript": "^1.0.1",
     "strict-event-emitter-types": "^2.0.0"
   }
 }
