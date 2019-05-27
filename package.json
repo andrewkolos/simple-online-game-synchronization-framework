@@ -1,6 +1,6 @@
 {
-  "name": "@akolos/ts-game-client-server",
-  "version": "0.0.0",
+  "name": "@akolos/ts-client-server-game-synchronization",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,8 @@
   },
   "scripts": {
     "demo": "rollup -c rollup.config.demo.js && cd demo && http-server",
-    "build": "rollup -c rollup.config.js"
+    "build": "rollup -c rollup.config.js",
+    "publish": "npm publish --access=public"
   },
   "author": "Andrew Kolos",
   "license": "APLv2",
