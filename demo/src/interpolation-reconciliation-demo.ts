@@ -2,9 +2,9 @@
 
 import { InputForEntity, InputCollectionStrategy, EntityFactory, GameClient } from '../../src/game-client';
 import { GameEntity } from '../../src/game-entity';
-import { GameEngine } from '../../src/game-engine';
 import { GameServer, EntityStateBroadcastMessage } from '../../src/game-server';
 import { InMemoryClientServerNetwork } from "../../src/networking/in-memory-client-server-network";
+import { GameLoop } from '../../src/game-loop';
 
 interface MoveInput extends InputForEntity {
   inputType: DemoInputType.Move,
@@ -127,7 +127,7 @@ export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
   }
 }
 
-export class DemoGameEngine extends GameEngine {
+export class DemoGameLoop extends GameLoop {
 
   protected step(): void {
 
@@ -144,7 +144,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends GameServer<DemoGameEngine> {
+export class DemoServer extends GameServer {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -210,8 +210,8 @@ export class DemoEntityFactory implements EntityFactory {
 
 // Helper code for running the demo.
 
-function displayGame<Engine extends GameEngine>(client: GameClient<Engine>, game: Engine, displayElement: HTMLElement) {
-  const entities = game.getEntities();
+function displayGame(client: GameClient, displayElement: HTMLElement) {
+  const entities = client.entities.getEntities();
   const displayElementId = displayElement.id;
 
   const canvasElement = document.getElementById(`${displayElementId}_canvas`) as HTMLCanvasElement;
@@ -276,15 +276,13 @@ function handleMessageSent() {
   misc.innerHTML = message;
 }
 
-function createClient(gameEngine: DemoGameEngine, playerEntityId: string,
-  moveLeftKeycode: number, moveRightKeyCode: number) {
+function createClient(playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) {
 
   const serverConnection = network.getNewServerConnection(100);
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client = new GameClient(gameEngine, serverConnection,
-    entityFactory, serverSyncUpdateRate, InputCollector);
+  const client = new GameClient(serverConnection, entityFactory, serverSyncUpdateRate, InputCollector);
 
   return client;
 }
@@ -295,23 +293,23 @@ const serverGameUpdateRate = 120;
 const serverSyncUpdateRate = 30;
 const clientUpdateRate = 240;
 
-const serverGame = new DemoGameEngine();
-const client1Game = new DemoGameEngine();
-const client2Game = new DemoGameEngine();
+const serverGame = new DemoGameLoop();
+const client1Game = new DemoGameLoop();
+const client2Game = new DemoGameLoop();
 
-const server = new DemoServer(serverGame);
+const server = new DemoServer();
 const network = new InMemoryClientServerNetwork();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());
 
 
-const client1 = createClient(client1Game, client1Id, 65, 68);
-const client2 = createClient(client2Game, client2Id, 37, 39);
+const client1 = createClient(client1Id, 65, 68);
+const client2 = createClient(client2Id, 37, 39);
 
 serverGame.eventEmitter.on('postStep', () => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
-  renderWorldOntoCanvas(serverCanvas, serverGame.getEntities());
+  renderWorldOntoCanvas(serverCanvas, server.entities.getEntities());
 
   const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
   const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
@@ -319,20 +317,29 @@ serverGame.eventEmitter.on('postStep', () => {
   const serverStatus = document.getElementById('server_status') as HTMLDivElement;
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
     ` Player 2: #${lastProcessedInputForClient2}`;
-  writePositions(serverGame.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
+  writePositions(server.entities.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
 });
 
 client1Game.eventEmitter.on('postStep', () => {
-  displayGame(client1, client1Game, document.getElementById('client1') as HTMLElement);
+  displayGame(client1, document.getElementById('client1') as HTMLElement);
 });
 
 client2Game.eventEmitter.on('postStep', () => {
-  displayGame(client2, client2Game, document.getElementById('client2') as HTMLElement);
+  displayGame(client2, document.getElementById('client2') as HTMLElement);
 });
 
 network.on('stateMessageSent', handleMessageSent);
 network.on('stateMessageSent', handleMessageSent);
 
-server.startServer(serverSyncUpdateRate, serverGameUpdateRate);
-client1.startGame(clientUpdateRate);
-client2.startGame(clientUpdateRate);
+server.startServer(serverSyncUpdateRate);
+client1Game.eventEmitter.on('postStep', () => {
+  client1.update();
+})
+
+client2Game.eventEmitter.on('postStep', () => {
+  client2.update();
+})
+
+client1Game.start(clientUpdateRate);
+client2Game.start(clientUpdateRate);
+serverGame.start(serverGameUpdateRate);

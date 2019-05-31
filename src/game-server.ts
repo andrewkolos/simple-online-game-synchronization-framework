@@ -1,25 +1,25 @@
 import { ClientConnection } from './networking/connection';
-import { GameEngine } from './game-engine';
 import { GameEntity } from './game-entity';
+import { EntityCollection } from './entity-collection';
 
 export interface EntityStateBroadcastMessage {
   entityId: string,
   state: any;
 }
 
-export abstract class GameServer<Game extends GameEngine> {
+export abstract class GameServer {
 
   public updateRateHz: number;
 
-  private game: Game;
+  public entities: EntityCollection;
 
   private clients: Map<string, ClientInfo>;
 
   private updateInterval: NodeJS.Timeout;
 
-  constructor(game: Game) {
+  constructor() {
     this.clients = new Map();
-    this.game = game;
+    this.entities = new EntityCollection();
     this.updateRateHz = 10;
   }
 
@@ -41,7 +41,7 @@ export abstract class GameServer<Game extends GameEngine> {
   }
 
   public addPlayerEntity(entity: GameEntity<any, any>, playerClientId: string) {
-    this.game.addEntity(entity);
+    this.entities.addEntity(entity);
     const client = this.clients.get(playerClientId);
 
     if (client != null) {
@@ -51,12 +51,10 @@ export abstract class GameServer<Game extends GameEngine> {
     }
   }
 
-  public startServer(serverUpdateRate: number, gameUpdateRate: number) {
+  public startServer(serverUpdateRate: number) {
     this.updateRateHz = serverUpdateRate;
 
     clearInterval(this.updateInterval);
-
-    this.game.start(gameUpdateRate);
 
     if (serverUpdateRate > 0) {
       this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
@@ -113,7 +111,7 @@ export abstract class GameServer<Game extends GameEngine> {
       }
 
       const input = client.connection.receive();
-      const entity = this.game.getEntityById(input.entityId);
+      const entity = this.entities.getEntityById(input.entityId);
 
       // Client sent an input for an entity it does not own.
       if (!client.ownedEntityIds.includes(input.entityId)) {

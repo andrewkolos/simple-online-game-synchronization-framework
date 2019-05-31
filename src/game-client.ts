@@ -1,6 +1,6 @@
 import { GameEntity } from './game-entity';
-import { GameEngine } from './game-engine';
 import { InputMessage, ServerConnection, Timestamp } from './networking/connection';
+import { EntityCollection } from './entity-collection';
 
 type EntityId = string;
 
@@ -32,9 +32,9 @@ export interface InputCollectionStrategy {
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class GameClient<Game extends GameEngine>  {
+export class GameClient  {
   /** Contains game state and can accept inputs. */
-  private engine: Game;
+  public entities: EntityCollection;
   /** Provides state messages. */
   private server: ServerConnection;
   /** Constructs representations of new entities given a state object. */
@@ -73,7 +73,6 @@ export class GameClient<Game extends GameEngine>  {
 
   /**
    * Creates an instance of game client.
-   * @param engine The game this client is running.
    * @param server A connection to the game server.
    * @param entityFactory A strategy to create local representations of
    *   new entities sent by the server.
@@ -82,33 +81,14 @@ export class GameClient<Game extends GameEngine>  {
    * @param inputCollector Used to obtain inputs from the user that can be applied
    *  to entities in the game.
    */
-  constructor(engine: Game, server: ServerConnection, entityFactory: EntityFactory,
+  constructor(server: ServerConnection, entityFactory: EntityFactory,
     serverUpdateRateInHz: number, inputCollector: InputCollectionStrategy) {
 
-    this.engine = engine;
+    this.entities = new EntityCollection();
     this.server = server;
     this.entityFactory = entityFactory;
     this.serverUpdateRateInHz = serverUpdateRateInHz;
     this.inputCollectionStrategy = inputCollector;
-
-    engine.eventEmitter.on('preStep', () => {
-      this.update();
-    });
-  }
-
-  /**
-   * Starts the game contained in this client.
-   * @param updateRateHz How often the game should update its world state.
-   */
-  public startGame(updateRateHz: number) {
-    this.engine.start(updateRateHz);
-  }
-
-  /**
-   * Stops/pauses the game contained in this client.
-   */
-  public stopGame() {
-    this.engine.stop();
   }
 
   /**
@@ -123,7 +103,7 @@ export class GameClient<Game extends GameEngine>  {
    * Updates the state of the game, based on the game itself, messages regarding
    * the state of the world sent by the server, and inputs from the user.
    */
-  private update() {
+  public update() {
     this.processServerMessages();
 
     if (!this.isConnected()) { return; }
@@ -140,7 +120,7 @@ export class GameClient<Game extends GameEngine>  {
    * 
    */
   private processServerMessages() {
-    const isFirstTimeSeeingEntity = (entityId: string) => !this.engine.getEntities().some((ge) => ge.id === entityId);
+    const isFirstTimeSeeingEntity = (entityId: string) => !this.entities.getEntities().some((ge) => ge.id === entityId);
 
     while (this.server.hasNext()) {
       const stateMessage = this.server.receive();
@@ -150,7 +130,7 @@ export class GameClient<Game extends GameEngine>  {
         if (entity.id !== stateMessage.entityId) {
           throw Error(`Entity created by entity factory has an incorrect id: ${entity.id} != ${stateMessage.entityId}`);
         }
-        this.engine.addEntity(entity);
+        this.entities.addEntity(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
 
         if (stateMessage.entityBelongsToRecipientClient) {
@@ -159,7 +139,7 @@ export class GameClient<Game extends GameEngine>  {
       }
 
       if (this.playerEntityIds.includes(stateMessage.entityId)) {
-        const entity = this.engine.getEntityById(stateMessage.entityId);
+        const entity = this.entities.getEntityById(stateMessage.entityId);
 
         if (entity == null) throw Error('Unknown entity was not created.');
 
@@ -173,7 +153,7 @@ export class GameClient<Game extends GameEngine>  {
         });
 
         this.pendingInputs.forEach((inputMessage: InputMessage) => {
-          const entity = this.engine.getEntityById(inputMessage.entityId);
+          const entity = this.entities.getEntityById(inputMessage.entityId);
           if (entity == null) { throw Error('Did not find entity corresponding to a pending input.'); }
 
           entity.state = entity.calcNextStateFromInput(entity.state, inputMessage.input);
@@ -222,7 +202,7 @@ export class GameClient<Game extends GameEngine>  {
 
       this.server.send(inputMessage);
 
-      const playerEntity = this.engine.getEntityById(input.entityId);
+      const playerEntity = this.entities.getEntityById(input.entityId);
 
       if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
 
@@ -243,7 +223,7 @@ export class GameClient<Game extends GameEngine>  {
     const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
-    this.engine.getEntities().forEach((entity: GameEntity<any, any>) => {
+    this.entities.getEntities().forEach((entity: GameEntity<any, any>) => {
       if (this.playerEntityIds.includes(entity.id)) {
         // No point in interpolating an entity that belongs to this client.
         return;

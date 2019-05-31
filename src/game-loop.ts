@@ -1,8 +1,6 @@
 import { Timer } from './timer';
 import { TypedEventEmitter } from './event-emitter';
-import { GameEntity } from './game-entity';
 
-type EntityId = string;
 
 export interface GameEngineEvents {
   preStep(): void
@@ -12,11 +10,10 @@ export interface GameEngineEvents {
 /**
  * Contains all state and game logic for a game.
  */
-export abstract class GameEngine {
+export abstract class GameLoop {
 
   public readonly eventEmitter = new TypedEventEmitter<GameEngineEvents>();
-  /** These compose the state of the game. */
-  private entities: Map<EntityId, GameEntity<any, any>> = new Map();
+
   private stepTimer: Timer = new Timer(this._step.bind(this));
   private stepRateHz: number;
 
@@ -42,31 +39,6 @@ export abstract class GameEngine {
    */
   public isRunning() {
     return this.stepTimer.isRunning();
-  }
-
-  /**
-   * Adds an entity to the game world.
-   * @param entity The entity to add the the world.
-   */
-  public addEntity(entity: GameEntity<any, any>) {
-    this.entities.set(entity.id, entity);
-  }
-
-  /**
-   * Searches for an entity by ID.
-   * @param id The ID of the entity to search for.
-   * @returns The entity with the matching ID, if it exists.
-   */
-  public getEntityById(id: EntityId): GameEntity<any, any> | undefined {
-    return this.entities.get(id);
-  }
-
-  /**
-   * Gets all entities in the game.
-   * @returns The entities in the game world.
-   */
-  public getEntities(): GameEntity<any, any>[] {
-    return Array.from(this.entities.values());
   }
 
   /**
