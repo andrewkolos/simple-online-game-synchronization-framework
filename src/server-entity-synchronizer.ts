@@ -1,5 +1,5 @@
 import { ClientConnection } from './networking/connection';
-import { GameEntity } from './game-entity';
+import { SyncableEntity } from './syncable-entity';
 import { EntityCollection } from './entity-collection';
 
 export interface EntityStateBroadcastMessage {
@@ -7,7 +7,7 @@ export interface EntityStateBroadcastMessage {
   state: any;
 }
 
-export abstract class GameServer {
+export abstract class ServerEntitySynchronizer {
 
   public updateRateHz: number;
 
@@ -40,7 +40,7 @@ export abstract class GameServer {
     return newClientId;
   }
 
-  public addPlayerEntity(entity: GameEntity<any, any>, playerClientId: string) {
+  public addPlayerEntity(entity: SyncableEntity<any, any>, playerClientId: string) {
     this.entities.addEntity(entity);
     const client = this.clients.get(playerClientId);
 
@@ -80,7 +80,7 @@ export abstract class GameServer {
 
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
 
-  protected abstract validateInput(entity: GameEntity<any, any>, input: any): boolean;
+  protected abstract validateInput(entity: SyncableEntity<any, any>, input: any): boolean;
 
   private update() {
     this.processInputs();

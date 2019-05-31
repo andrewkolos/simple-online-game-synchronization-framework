@@ -1,8 +1,8 @@
 // tslint:disable
 
-import { InputForEntity, InputCollectionStrategy, EntityFactory, GameClient } from '../../src/game-client';
-import { GameEntity } from '../../src/game-entity';
-import { GameServer, EntityStateBroadcastMessage } from '../../src/game-server';
+import { InputForEntity, InputCollectionStrategy, EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
+import { SyncableEntity } from '../../src/syncable-entity';
+import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
 import { InMemoryClientServerNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
 
@@ -90,7 +90,7 @@ interface DemoPlayerInput {
   pressTime: number;
 }
 
-export class DemoPlayer extends GameEntity<DemoPlayerInput, DemoPlayerState> {
+export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState> {
 
   private static MOVE_SPEED = 0.2;
 
@@ -144,7 +144,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends GameServer {
+export class DemoServer extends ServerEntitySynchronizer {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -177,9 +177,9 @@ export class DemoServer extends GameServer {
     return messages;
   }
 
-  protected validateInput(entity: GameEntity<any, any>, input: any) {
+  protected validateInput(entity: SyncableEntity<any, any>, input: any) {
 
-    if (entity instanceof GameEntity && (input as DemoPlayerInput).direction != null) {
+    if (entity instanceof SyncableEntity && (input as DemoPlayerInput).direction != null) {
       const demoPlayerInput = input as DemoPlayerInput;
 
       const player = this.playerMovementInfos.find((info: PlayerMovementInfo) => {
@@ -210,7 +210,7 @@ export class DemoEntityFactory implements EntityFactory {
 
 // Helper code for running the demo.
 
-function displayGame(client: GameClient, displayElement: HTMLElement) {
+function displayGame(client: ClientEntitySynchronizer, displayElement: HTMLElement) {
   const entities = client.entities.getEntities();
   const displayElementId = displayElement.id;
 
@@ -223,7 +223,7 @@ function displayGame(client: GameClient, displayElement: HTMLElement) {
   lastAckElement.innerText = `Non-acknowledged inputs: ${client.numberOfPendingInputs}`; 
 }
 
-function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: GameEntity<any, any>[]) {
+function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: SyncableEntity<any, any>[]) {
   
   canvas.width = canvas.width; // Clears the canvas.
 
@@ -232,7 +232,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: GameEntity<a
     c1: 'red'
   };
 
-  entities.forEach((entity: GameEntity<any,any>) => {
+  entities.forEach((entity: SyncableEntity<any,any>) => {
     if (!(entity instanceof DemoPlayer)) return;
 
     const entityRadius = canvas.height*0.9/2;
@@ -252,7 +252,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: GameEntity<a
   });
 }
 
-function writePositions(entities: GameEntity<any, any>[], el: HTMLElement) {
+function writePositions(entities: SyncableEntity<any, any>[], el: HTMLElement) {
   const message = entities.map(entity => {
     if (!(entity instanceof DemoPlayer)) return;
 
@@ -282,7 +282,7 @@ function createClient(playerEntityId: string, moveLeftKeycode: number, moveRight
   const entityFactory = new DemoEntityFactory();
   const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client = new GameClient(serverConnection, entityFactory, serverSyncUpdateRate, InputCollector);
+  const client = new ClientEntitySynchronizer(serverConnection, entityFactory, serverSyncUpdateRate, InputCollector);
 
   return client;
 }

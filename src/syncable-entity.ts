@@ -4,7 +4,7 @@ type EntityId = string;
  * Represents any object in the game, physical or abstract. All objects together
  * encode the game state.
  */
-export abstract class GameEntity<Input, State> {
+export abstract class SyncableEntity<Input, State> {
 
   /**
    * State of the game entity.

@@ -8,7 +8,8 @@ export interface GameEngineEvents {
 }
 
 /**
- * Contains all state and game logic for a game.
+ * Executes (game) logic at a constant rate using safe fixed time steps across
+ * any hardware.
  */
 export abstract class GameLoop {
 

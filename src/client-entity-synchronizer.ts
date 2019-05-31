@@ -1,11 +1,11 @@
-import { GameEntity } from './game-entity';
+import { SyncableEntity } from './syncable-entity';
 import { InputMessage, ServerConnection, Timestamp } from './networking/connection';
 import { EntityCollection } from './entity-collection';
 
 type EntityId = string;
 
 export interface EntityFactory {
-  fromStateMessage(entityId: string, state: any): GameEntity<any, any>;
+  fromStateMessage(entityId: string, state: any): SyncableEntity<any, any>;
 }
 
 export interface InputForEntity {
@@ -32,7 +32,7 @@ export interface InputCollectionStrategy {
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class GameClient  {
+export class ClientEntitySynchronizer  {
   /** Contains game state and can accept inputs. */
   public entities: EntityCollection;
   /** Provides state messages. */
@@ -223,7 +223,7 @@ export class GameClient  {
     const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
-    this.entities.getEntities().forEach((entity: GameEntity<any, any>) => {
+    this.entities.getEntities().forEach((entity: SyncableEntity<any, any>) => {
       if (this.playerEntityIds.includes(entity.id)) {
         // No point in interpolating an entity that belongs to this client.
         return;
