@@ -1,5 +1,6 @@
-import { Timer } from './timer';
 import { TypedEventEmitter } from './event-emitter';
+
+export type TickHandler = (tickNumber: number) => void;
 
 
 export interface GameEngineEvents {
@@ -11,27 +12,39 @@ export interface GameEngineEvents {
  * Executes (game) logic at a constant rate using safe fixed time steps across
  * any hardware.
  */
-export abstract class GameLoop {
+export class GameLoop {
 
   public readonly eventEmitter = new TypedEventEmitter<GameEngineEvents>();
 
-  private stepTimer: Timer = new Timer(this._step.bind(this));
-  private stepRateHz: number;
+  public tickRateHz: number;
+  
+  /** How many ticks the timer has counted. */
+  private tickCount: number = 0;
+  private tickIntervalId?: NodeJS.Timer;
+  private tickHandler: TickHandler  
+
+  public constructor(tickHandler: TickHandler) {
+    this.tickHandler = tickHandler;
+  }
 
   /**
    * Starts the game.
    * @param stepRateHz How often the game should advance its state.
    */
   public start(stepRateHz: number) {
-    this.stepRateHz = stepRateHz;
-    this.stepTimer.start(stepRateHz);
+    this.stop();
+    this.tickIntervalId = setInterval(() => this.tick()) as any;
+    this.tickRateHz = stepRateHz;
   }
 
   /**
    * Game state stops advancing. State is unaffected.
    */
   public stop(): void {
-    this.stepTimer.stop();
+    if (this.tickIntervalId != null) {
+      clearInterval(this.tickIntervalId);
+      this.tickIntervalId = undefined;
+    }
   }
 
   /**
@@ -39,23 +52,13 @@ export abstract class GameLoop {
    * @returns true if the game is running.
    */
   public isRunning() {
-    return this.stepTimer.isRunning();
+    return this.tickIntervalId != undefined;
   }
 
-  /**
-   * Updates the state of the game.
-   * @param stepRateHz How often a step occurs, in hz. Use this to determine
-   * how far the state should advance every step.
-   */
-  protected abstract step(stepRateHz: number): void;
-
-  /**
-   * Advances game state.
-   */
-  // tslint:disable-next-line:function-name
-  private _step(): void {
+  private tick() {
     this.eventEmitter.emit('preStep');
-    this.step(this.stepRateHz);
+    this.tickCount += 1;
+    this.tickHandler(this.tickCount);
     this.eventEmitter.emit('postStep');
   }
 }
