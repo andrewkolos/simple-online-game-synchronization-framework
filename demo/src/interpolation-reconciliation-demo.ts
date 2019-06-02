@@ -127,16 +127,6 @@ export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState>
   }
 }
 
-export class DemoGameLoop extends GameLoop {
-
-  protected step(): void {
-
-    // No game logic.
-
-    return;
-  }
-}
-
 interface PlayerMovementInfo {
   entityId: string;
   lastInputTimestamp: number,
@@ -293,9 +283,11 @@ const serverGameUpdateRate = 120;
 const serverSyncUpdateRate = 30;
 const clientUpdateRate = 240;
 
-const serverGame = new DemoGameLoop();
-const client1Game = new DemoGameLoop();
-const client2Game = new DemoGameLoop();
+const noop = () => {};
+
+const serverGame = new GameLoop(noop);
+const client1Game = new GameLoop(noop);
+const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
 const network = new InMemoryClientServerNetwork();
