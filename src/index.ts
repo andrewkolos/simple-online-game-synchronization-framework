@@ -4,3 +4,4 @@ export * from './game-loop';
 export * from './syncable-entity';
 export * from './server-entity-synchronizer';
 export * from './entity-collection';
+export * from './event-emitter';
