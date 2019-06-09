@@ -2,8 +2,7 @@ import { TypedEventEmitter } from './event-emitter';
 
 export type TickHandler = (tickNumber: number) => void;
 
-
-export interface GameEngineEvents {
+export interface GameLoopEvents {
   preStep(): void
   postStep(): void
 }
@@ -14,7 +13,7 @@ export interface GameEngineEvents {
  */
 export class GameLoop {
 
-  public readonly eventEmitter = new TypedEventEmitter<GameEngineEvents>();
+  public readonly eventEmitter = new TypedEventEmitter<GameLoopEvents>();
 
   public tickRateHz: number;
   
