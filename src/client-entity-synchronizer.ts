@@ -1,6 +1,8 @@
 import { SyncableEntity } from './syncable-entity';
 import { InputMessage, ServerConnection, Timestamp } from './networking/connection';
 import { EntityCollection } from './entity-collection';
+import { TypedEventEmitter } from './event-emitter';
+import { DeepReadonly } from './util';
 
 type EntityId = string;
 
@@ -27,12 +29,23 @@ export interface InputCollectionStrategy {
   getInputs(dt: number): InputForEntity[];
 }
 
+export interface ClientEntitySynchronizerEvents {
+  synchronized(): void;
+}
+
+export interface ClientEntitySynchronizerContext {
+  serverConnection: ServerConnection; 
+  serverUpdateRateInHz: number;
+  entityFactory: EntityFactory;
+  inputCollector: InputCollectionStrategy;
+}
+
 /**
  * Collects user inputs.
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class ClientEntitySynchronizer  {
+export class ClientEntitySynchronizer {
   /** Contains game state and can accept inputs. */
   public entities: EntityCollection;
   /** Provides state messages. */
@@ -63,6 +76,8 @@ export class ClientEntitySynchronizer  {
 
   private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
+  public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
+
   /**
    * Gets the number of inputs that this client has yet to receive an acknowledgement
    * for from the server.
@@ -81,14 +96,13 @@ export class ClientEntitySynchronizer  {
    * @param inputCollector Used to obtain inputs from the user that can be applied
    *  to entities in the game.
    */
-  constructor(server: ServerConnection, entityFactory: EntityFactory,
-    serverUpdateRateInHz: number, inputCollector: InputCollectionStrategy) {
+  constructor(context: ClientEntitySynchronizerContext) {
 
     this.entities = new EntityCollection();
-    this.server = server;
-    this.entityFactory = entityFactory;
-    this.serverUpdateRateInHz = serverUpdateRateInHz;
-    this.inputCollectionStrategy = inputCollector;
+    this.server = context.serverConnection;
+    this.entityFactory = context.entityFactory;
+    this.serverUpdateRateInHz = context.serverUpdateRateInHz;
+    this.inputCollectionStrategy = context.inputCollector;
   }
 
   /**
@@ -111,6 +125,8 @@ export class ClientEntitySynchronizer  {
     this.processInputs();
 
     this.interpolateEntities();
+
+    this.eventEmitter.emit('synchronized');
   }
 
   /**
@@ -178,7 +194,7 @@ export class ClientEntitySynchronizer  {
     const now = new Date().getTime();
 
     const getInputs = (): InputForEntity[] => {
-      
+
       const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
         ? this.lastInputCollectionTimestamp : now;
 
@@ -241,7 +257,7 @@ export class ClientEntitySynchronizer  {
       // Get the "average" (whatever the entity's interpolation scheme decides) of the two states in which
       // the current timestamp falls in-between.
       if (buffer.length >= 2 && buffer[0].timestamp <= renderTimestamp && renderTimestamp <= buffer[1].timestamp) {
-        
+
         const timeRatio = (renderTimestamp - buffer[0].timestamp) / (buffer[1].timestamp - buffer[0].timestamp);
         entity.state = entity.interpolate(buffer[0].state, buffer[1].state, timeRatio);
       }
