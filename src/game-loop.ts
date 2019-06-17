@@ -32,7 +32,7 @@ export class GameLoop {
    */
   public start(stepRateHz: number) {
     this.stop();
-    this.tickIntervalId = setInterval(() => this.tick()) as any;
+    this.tickIntervalId = setInterval(() => this.tick(), 1 / stepRateHz * 1000) as any;
     this.tickRateHz = stepRateHz;
   }
 
