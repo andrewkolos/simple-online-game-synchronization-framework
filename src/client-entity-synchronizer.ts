@@ -3,30 +3,13 @@ import { InputMessage, ServerConnection, Timestamp } from './networking/connecti
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { DeepReadonly } from './util';
+import { InputCollectionStrategy } from './input-collection-strategy';
+import { InputForEntity } from './input-for-entity';
 
-type EntityId = string;
+export type EntityId = string;
 
 export interface EntityFactory {
   fromStateMessage(entityId: string, state: any): SyncableEntity<any, any>;
-}
-
-export interface InputForEntity {
-  /**
-   * The entity should react to the input.
-   */
-  entityId: EntityId;
-  input: Object;
-}
-/**
- * Collects inputs for a game step.
- */
-export interface InputCollectionStrategy {
-  /**
-   * @returns A collection of inputs paired with the entities they are meant
-   * to be applied against.
-   * @param dt The amount of time that has elapsed since input was last collected.
-   */
-  getInputs(dt: number): InputForEntity[];
 }
 
 export interface ClientEntitySynchronizerEvents {

@@ -6,3 +6,5 @@ export * from './syncable-entity';
 export * from './server-entity-synchronizer';
 export * from './entity-collection';
 export * from './event-emitter';
+export * from './input-collection-strategy';
+export * from './input-for-entity';

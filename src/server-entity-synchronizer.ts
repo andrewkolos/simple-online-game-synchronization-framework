@@ -1,6 +1,11 @@
 import { ClientConnection } from './networking/connection';
 import { SyncableEntity } from './syncable-entity';
 import { EntityCollection } from './entity-collection';
+import { TypedEventEmitter } from './event-emitter';
+
+export interface ServerEntitySynchronizerEvents {
+  synchronized(): void;
+}
 
 export interface EntityStateBroadcastMessage {
   entityId: string,
@@ -17,6 +22,8 @@ export abstract class ServerEntitySynchronizer {
 
   private updateInterval: NodeJS.Timeout;
 
+  public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
+
   constructor() {
     this.clients = new Map();
     this.entities = new EntityCollection();
@@ -25,7 +32,10 @@ export abstract class ServerEntitySynchronizer {
 
   public connect(connection: ClientConnection): string {
 
-    const newClientId = `c${this.clients.size}`;
+    const newClientId = this.getIdForNewClient();
+
+    this.handleClientConnection(newClientId);
+
     const client: ClientInfo = {
       clientId: newClientId,
       connection,
@@ -34,8 +44,6 @@ export abstract class ServerEntitySynchronizer {
     };
 
     this.clients.set(newClientId, client);
-
-    this.handleClientConnection(newClientId);
 
     return newClientId;
   }
@@ -78,6 +86,8 @@ export abstract class ServerEntitySynchronizer {
    */
   protected abstract handleClientConnection(newClientId: string): void;
 
+  protected abstract getIdForNewClient(): string;
+
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
 
   protected abstract validateInput(entity: SyncableEntity<any, any>, input: any): boolean;
@@ -86,7 +96,7 @@ export abstract class ServerEntitySynchronizer {
     this.processInputs();
     this.sendWorldState();
 
-    // TODO: Fire update event, can be used for rendering/logging and such.
+    this.eventEmitter.emit("synchronized");
   }
 
   /**

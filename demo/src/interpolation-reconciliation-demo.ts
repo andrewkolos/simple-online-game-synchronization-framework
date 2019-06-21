@@ -1,10 +1,12 @@
 // tslint:disable
 
-import { InputForEntity, InputCollectionStrategy, EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
+import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
 import { SyncableEntity } from '../../src/syncable-entity';
 import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
 import { InMemoryClientServerNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
+import { InputForEntity } from '../../src/input-for-entity';
+import { InputCollectionStrategy } from '../../src/input-collection-strategy';
 
 interface MoveInput extends InputForEntity {
   inputType: DemoInputType.Move,
@@ -270,9 +272,9 @@ function createClient(playerEntityId: string, moveLeftKeycode: number, moveRight
 
   const serverConnection = network.getNewServerConnection(100);
   const entityFactory = new DemoEntityFactory();
-  const InputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
+  const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client = new ClientEntitySynchronizer(serverConnection, entityFactory, serverSyncUpdateRate, InputCollector);
+  const client = new ClientEntitySynchronizer({serverConnection, entityFactory, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
 
   return client;
 }
