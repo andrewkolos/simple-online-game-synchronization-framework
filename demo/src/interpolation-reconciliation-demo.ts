@@ -154,6 +154,10 @@ export class DemoServer extends ServerEntitySynchronizer {
     });
   }
 
+  protected getIdForNewClient(): string {
+    return `c${this.players.length}`;
+  }
+
   // Message should be a mapped thingy with all available state types.
   // tslint:disable-next-line:no-any
   protected getStatesToBroadcastToClients(): EntityStateBroadcastMessage[] {

@@ -34,8 +34,6 @@ export abstract class ServerEntitySynchronizer {
 
     const newClientId = this.getIdForNewClient();
 
-    this.handleClientConnection(newClientId);
-
     const client: ClientInfo = {
       clientId: newClientId,
       connection,
@@ -44,6 +42,8 @@ export abstract class ServerEntitySynchronizer {
     };
 
     this.clients.set(newClientId, client);
+
+    this.handleClientConnection(newClientId);
 
     return newClientId;
   }

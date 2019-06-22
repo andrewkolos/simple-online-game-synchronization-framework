@@ -4,5 +4,5 @@ export interface InputForEntity {
    * The entity should react to the input.
    */
   entityId: EntityId;
-  input: Object;
+  input: unknown;
 }
