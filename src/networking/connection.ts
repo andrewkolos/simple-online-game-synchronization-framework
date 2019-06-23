@@ -18,7 +18,7 @@ export interface StateMessage {
 /**
  * A network that can be used by a client to communicate to a server or vis-a-versa.
  */
-export interface Connection<SendType,ReceiveType> {
+export interface Connection<ReceiveType, SendType> {
   send(message: SendType): void;
   
   receive(): ReceiveType;
@@ -26,6 +26,6 @@ export interface Connection<SendType,ReceiveType> {
   hasNext(): boolean;
 }
 
-export interface ServerConnection extends Connection<InputMessage, StateMessage> {}
-export interface ClientConnection extends Connection<StateMessage, InputMessage> {}
+export interface ServerConnection extends Connection<StateMessage, InputMessage> {}
+export interface ClientConnection extends Connection<InputMessage, StateMessage> {}
 
