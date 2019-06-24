@@ -26,6 +26,6 @@ export interface Connection<ReceiveType, SendType> {
   hasNext(): boolean;
 }
 
-export interface ServerConnection extends Connection<StateMessage, InputMessage> {}
-export interface ClientConnection extends Connection<InputMessage, StateMessage> {}
+export interface ConnectionToEntityServer extends Connection<StateMessage, InputMessage> {}
+export interface ConnectionToEntityClient extends Connection<InputMessage, StateMessage> {}
 

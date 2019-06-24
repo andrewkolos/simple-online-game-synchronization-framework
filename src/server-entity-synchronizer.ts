@@ -1,4 +1,4 @@
-import { ClientConnection } from './networking/connection';
+import { ConnectionToEntityClient } from './networking/connection';
 import { SyncableEntity } from './syncable-entity';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
@@ -30,7 +30,7 @@ export abstract class ServerEntitySynchronizer {
     this.updateRateHz = 10;
   }
 
-  public connect(connection: ClientConnection): string {
+  public connect(connection: ConnectionToEntityClient): string {
 
     const newClientId = this.getIdForNewClient();
 
@@ -160,7 +160,7 @@ export abstract class ServerEntitySynchronizer {
 
 export interface ClientInfo {
   clientId: string;
-  connection: ClientConnection;
+  connection: ConnectionToEntityClient;
   lastProcessedInput: number;
   ownedEntityIds: string[];
 }

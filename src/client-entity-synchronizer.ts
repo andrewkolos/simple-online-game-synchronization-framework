@@ -1,5 +1,5 @@
 import { SyncableEntity } from './syncable-entity';
-import { InputMessage, ServerConnection, Timestamp } from './networking/connection';
+import { InputMessage, ConnectionToEntityServer, Timestamp } from './networking/connection';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { DeepReadonly } from './util';
@@ -17,7 +17,7 @@ export interface ClientEntitySynchronizerEvents {
 }
 
 export interface ClientEntitySynchronizerContext {
-  serverConnection: ServerConnection; 
+  serverConnection: ConnectionToEntityServer; 
   serverUpdateRateInHz: number;
   entityFactory: EntityFactory;
   inputCollector: InputCollectionStrategy;
@@ -32,7 +32,7 @@ export class ClientEntitySynchronizer {
   /** Contains game state and can accept inputs. */
   public entities: EntityCollection;
   /** Provides state messages. */
-  private server: ServerConnection;
+  private server: ConnectionToEntityServer;
   /** Constructs representations of new entities given a state object. */
   private entityFactory: EntityFactory;
   private serverUpdateRateInHz: number;
