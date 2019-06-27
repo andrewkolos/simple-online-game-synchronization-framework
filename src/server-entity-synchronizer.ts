@@ -2,6 +2,7 @@ import { ClientConnection } from './networking/connection';
 import { SyncableEntity } from './syncable-entity';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
+import { IntervalRunner } from "./interval-runner";
 
 export interface ServerEntitySynchronizerEvents {
   synchronized(): void;
@@ -20,7 +21,7 @@ export abstract class ServerEntitySynchronizer {
 
   private clients: Map<string, ClientInfo>;
 
-  private updateInterval: NodeJS.Timeout;
+  private updateInterval?: IntervalRunner;
 
   public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
 
@@ -59,13 +60,20 @@ export abstract class ServerEntitySynchronizer {
     }
   }
 
-  public startServer(serverUpdateRate: number) {
+  public start(serverUpdateRate: number) {
     this.updateRateHz = serverUpdateRate;
 
-    clearInterval(this.updateInterval);
+    this.stop();
 
     if (serverUpdateRate > 0) {
-      this.updateInterval = setInterval(() => this.update(), 1000 / this.updateRateHz);
+      this.updateInterval = new IntervalRunner(() => this.update(), 1000 / this.updateRateHz);
+      this.updateInterval.start();
+    }
+  }
+
+  public stop() {
+    if (this.updateInterval != null && this.updateInterval.running) {
+      this.updateInterval.stop();
     }
   }
 

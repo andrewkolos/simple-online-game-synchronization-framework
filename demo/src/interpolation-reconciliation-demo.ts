@@ -301,7 +301,6 @@ const network = new InMemoryClientServerNetwork();
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());
 
-
 const client1 = createClient(client1Id, 65, 68);
 const client2 = createClient(client2Id, 37, 39);
 
@@ -329,14 +328,9 @@ client2Game.eventEmitter.on('postStep', () => {
 network.on('stateMessageSent', handleMessageSent);
 network.on('stateMessageSent', handleMessageSent);
 
-server.startServer(serverSyncUpdateRate);
-client1Game.eventEmitter.on('postStep', () => {
-  client1.update();
-})
-
-client2Game.eventEmitter.on('postStep', () => {
-  client2.update();
-})
+server.start(serverSyncUpdateRate);
+client1.start(clientUpdateRate);
+client2.start(clientUpdateRate);
 
 client1Game.start(clientUpdateRate);
 client2Game.start(clientUpdateRate);
