@@ -5,6 +5,7 @@ import { TypedEventEmitter } from './event-emitter';
 import { DeepReadonly } from './util';
 import { InputCollectionStrategy } from './input-collection-strategy';
 import { InputForEntity } from './input-for-entity';
+import { IntervalRunner } from "./interval-runner";
 
 export type EntityId = string;
 
@@ -31,6 +32,9 @@ export interface ClientEntitySynchronizerContext {
 export class ClientEntitySynchronizer {
   /** Contains game state and can accept inputs. */
   public entities: EntityCollection;
+
+  public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
+
   /** Provides state messages. */
   private server: ConnectionToEntityServer;
   /** Constructs representations of new entities given a state object. */
@@ -50,6 +54,7 @@ export class ClientEntitySynchronizer {
    */
   private pendingInputs: InputMessage[] = [];
 
+  /** The time of the most recent input collection. */
   private lastInputCollectionTimestamp: number | undefined;
 
   /**
@@ -59,7 +64,7 @@ export class ClientEntitySynchronizer {
 
   private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
-  public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
+  private updateInterval?: IntervalRunner;
 
   /**
    * Gets the number of inputs that this client has yet to receive an acknowledgement
@@ -96,11 +101,23 @@ export class ClientEntitySynchronizer {
     return this.playerEntityIds.length > 0;
   }
 
+  public start(updateRateHz: number) {
+    this.stop();
+    this.updateInterval = new IntervalRunner(() => this.update(), 1000 / updateRateHz);
+    this.updateInterval.start();
+  }
+
+  public stop() {
+    if (this.updateInterval != null && this.updateInterval.running) {
+      this.updateInterval.stop();
+    }
+  }
+
   /**
    * Updates the state of the game, based on the game itself, messages regarding
    * the state of the world sent by the server, and inputs from the user.
    */
-  public update() {
+  private update() {
     this.processServerMessages();
 
     if (!this.isConnected()) { return; }
