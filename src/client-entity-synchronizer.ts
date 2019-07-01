@@ -36,12 +36,12 @@ export class ClientEntitySynchronizer {
   public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
 
   /** Provides state messages. */
-  private server: ConnectionToEntityServer;
+  private readonly server: ConnectionToEntityServer;
   /** Constructs representations of new entities given a state object. */
-  private entityFactory: EntityFactory;
-  private serverUpdateRateInHz: number;
+  private readonly entityFactory: EntityFactory;
+  private readonly serverUpdateRateInHz: number;
   /** Collects user inputs. */
-  private inputCollectionStrategy: InputCollectionStrategy;
+  private readonly inputCollectionStrategy: InputCollectionStrategy;
   /**
    * The number assigned to the next set of inputs that will be sent out by this
    * game client. Used for server reconciliation.
@@ -108,7 +108,7 @@ export class ClientEntitySynchronizer {
   }
 
   public stop() {
-    if (this.updateInterval != null && this.updateInterval.running) {
+    if (this.updateInterval != null && this.updateInterval.isRunning()) {
       this.updateInterval.stop();
     }
   }

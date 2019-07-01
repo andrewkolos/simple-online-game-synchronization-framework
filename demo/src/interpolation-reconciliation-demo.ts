@@ -3,7 +3,7 @@
 import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
 import { SyncableEntity } from '../../src/syncable-entity';
 import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
-import { InMemoryClientServerNetwork } from "../../src/networking/in-memory-client-server-network";
+import { InMemoryClientServerEntityNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
 import { InputForEntity } from '../../src/input-for-entity';
 import { InputCollectionStrategy } from '../../src/input-collection-strategy';
@@ -296,7 +296,7 @@ const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
-const network = new InMemoryClientServerNetwork();
+const network = new InMemoryClientServerEntityNetwork();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());

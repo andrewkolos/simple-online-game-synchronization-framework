@@ -7,7 +7,7 @@ type EntityId = string;
  */
 export class EntityCollection {
   /** These compose the state of the game. */
-  private entities: Map<EntityId, SyncableEntity<unknown, unknown>> = new Map();
+  private readonly entities: Map<EntityId, SyncableEntity<unknown, unknown>> = new Map();
 
   /**
    * Adds an entity to the game world.

@@ -1,21 +1,26 @@
-import { InputMessage, StateMessage, ConnectionToEntityServer, ConnectionToEntityClient } from './connection';
 import { TypedEventEmitter } from '../event-emitter';
+import { ConnectionToEntityClient, ConnectionToEntityServer, InputMessage, StateMessage } from './connection';
 
 interface InMemoryClientServerNetworkEvents {
-  stateMessageSent: (message: StateMessage) => void;
-  inputMessageSent: (message: InputMessage) => void;
+  stateMessageSent(message: StateMessage): void;
+  inputMessageSent(message: InputMessage): void;
 }
 
-export class InMemoryClientServerNetwork {
-  private inputMessageQueues: InputMessage[][] = [];
-  private stateMessageQueues: StateMessage[][] = [];
+/**
+ * An in-memory network that can be used to connect client and server entity synchronizers.
+ */
+export class InMemoryClientServerEntityNetwork {
 
-  private inputMessageReadyTimes: Map<InputMessage, number> = new Map();
-  private stateMessageSendTimes: Map<StateMessage, number> = new Map();
-  private stateMessageReferenceCounts: Map<StateMessage, number> = new Map();
+  private readonly inputMessageQueues: InputMessage[][] = [];
+  private readonly stateMessageQueues: StateMessage[][] = [];
 
-  private eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents>();
+  private readonly inputMessageReadyTimes: Map<InputMessage, number> = new Map();
+  private readonly stateMessageSendTimes: Map<StateMessage, number> = new Map();
+  private readonly stateMessageReferenceCounts: Map<StateMessage, number> = new Map();
 
+  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents>();
+
+  // tslint:disable-next-line: member-ordering
   public on = this.eventEmitter.on.bind(this.eventEmitter);
 
   /**
@@ -42,6 +47,7 @@ export class InMemoryClientServerNetwork {
         const message = stateMessageQueue[0];
         stateMessageQueue.splice(0, 1);
         decrementOrRemove(that.stateMessageReferenceCounts, message);
+
         return message;
       },
       hasNext: () => {
@@ -61,6 +67,7 @@ export class InMemoryClientServerNetwork {
     this.inputMessageQueues.push([]);
     const clientIndex = this.inputMessageQueues.length - 1;
     const imQueue = this.inputMessageQueues[clientIndex];
+
     return {
       send: (message: StateMessage) => {
         this.stateMessageQueues[clientIndex].push(message);

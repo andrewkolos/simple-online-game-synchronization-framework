@@ -1,8 +1,8 @@
-import { ConnectionToEntityClient } from './networking/connection';
-import { SyncableEntity } from './syncable-entity';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { IntervalRunner } from "./interval-runner";
+import { ConnectionToEntityClient } from './networking/connection';
+import { SyncableEntity } from './syncable-entity';
 
 export interface ServerEntitySynchronizerEvents {
   synchronized(): void;
@@ -13,17 +13,20 @@ export interface EntityStateBroadcastMessage {
   state: any;
 }
 
+/**
+ * Creates and synchronizes game entities for clients.
+ */
 export abstract class ServerEntitySynchronizer {
 
   public updateRateHz: number;
 
   public entities: EntityCollection;
 
-  private clients: Map<string, ClientInfo>;
+  public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
+
+  private readonly clients: Map<string, ClientInfo>;
 
   private updateInterval?: IntervalRunner;
-
-  public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
 
   constructor() {
     this.clients = new Map();
@@ -72,7 +75,7 @@ export abstract class ServerEntitySynchronizer {
   }
 
   public stop() {
-    if (this.updateInterval != null && this.updateInterval.running) {
+    if (this.updateInterval != null && this.updateInterval.isRunning()) {
       this.updateInterval.stop();
     }
   }

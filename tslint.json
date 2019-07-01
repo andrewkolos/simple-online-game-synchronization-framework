@@ -26,6 +26,6 @@
       true,
       "allow-leading-underscore"
     ],
-    "curly": false,
+    "curly": false
   }
 }
