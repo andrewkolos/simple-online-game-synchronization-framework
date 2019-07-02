@@ -1,7 +1,8 @@
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { IntervalRunner } from "./interval-runner";
-import { ConnectionToEntityClient } from './networking/connection';
+import { StateMessage } from './networking';
+import { ServerEntityMessageBuffer } from './networking/message-buffer';
 import { SyncableEntity } from './syncable-entity';
 
 export interface ServerEntitySynchronizerEvents {
@@ -34,7 +35,7 @@ export abstract class ServerEntitySynchronizer {
     this.updateRateHz = 10;
   }
 
-  public connect(connection: ConnectionToEntityClient): string {
+  public connect(connection: ServerEntityMessageBuffer): string {
 
     const newClientId = this.getIdForNewClient();
 
@@ -156,7 +157,8 @@ export abstract class ServerEntitySynchronizer {
       for (const stateMessage of stateMessages) {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
-        const networkedStateMessage = {
+        const networkedStateMessage: StateMessage = {
+          messageKind: "entityState",
           entityId: stateMessage.entityId,
           state: stateMessage.state,
           lastProcessedInputSequenceNumber: client.lastProcessedInput,
@@ -171,7 +173,7 @@ export abstract class ServerEntitySynchronizer {
 
 export interface ClientInfo {
   clientId: string;
-  connection: ConnectionToEntityClient;
+  connection: ServerEntityMessageBuffer;
   lastProcessedInput: number;
   ownedEntityIds: string[];
 }

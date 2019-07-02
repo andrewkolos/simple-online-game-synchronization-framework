@@ -1,5 +1,6 @@
 import { TypedEventEmitter } from '../event-emitter';
-import { ConnectionToEntityClient, ConnectionToEntityServer, InputMessage, StateMessage } from './connection';
+import { ClientEntityMessageBuffer, ServerEntityMessageBuffer } from './message-buffer';
+import { InputMessage, StateMessage } from './messages';
 
 interface InMemoryClientServerNetworkEvents {
   stateMessageSent(message: StateMessage): void;
@@ -26,7 +27,7 @@ export class InMemoryClientServerEntityNetwork {
   /**
    * Get a connection to the server.
    */
-  public getNewServerConnection(lagMs: number): ConnectionToEntityServer {
+  public getNewServerConnection(lagMs: number): ClientEntityMessageBuffer {
     const that = this;
     this.stateMessageQueues.push([]);
     const clientIndex = this.stateMessageQueues.length - 1;
@@ -63,7 +64,7 @@ export class InMemoryClientServerEntityNetwork {
   /**
    * Get a connection to a client.
    */
-  public getNewClientConnection(): ConnectionToEntityClient {
+  public getNewClientConnection(): ServerEntityMessageBuffer {
     this.inputMessageQueues.push([]);
     const clientIndex = this.inputMessageQueues.length - 1;
     const imQueue = this.inputMessageQueues[clientIndex];

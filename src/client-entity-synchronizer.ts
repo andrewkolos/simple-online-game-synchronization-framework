@@ -1,11 +1,12 @@
-import { SyncableEntity } from './syncable-entity';
-import { InputMessage, ConnectionToEntityServer, Timestamp } from './networking/connection';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
-import { DeepReadonly } from './util';
 import { InputCollectionStrategy } from './input-collection-strategy';
 import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
+import { InputMessage } from './networking';
+import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
+import { SyncableEntity } from './syncable-entity';
+import { DeepReadonly } from './util';
 
 export type EntityId = string;
 
@@ -18,7 +19,7 @@ export interface ClientEntitySynchronizerEvents {
 }
 
 export interface ClientEntitySynchronizerContext {
-  serverConnection: ConnectionToEntityServer; 
+  serverConnection: ClientEntityMessageBuffer; 
   serverUpdateRateInHz: number;
   entityFactory: EntityFactory;
   inputCollector: InputCollectionStrategy;
@@ -36,7 +37,7 @@ export class ClientEntitySynchronizer {
   public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
 
   /** Provides state messages. */
-  private readonly server: ConnectionToEntityServer;
+  private readonly server: ClientEntityMessageBuffer;
   /** Constructs representations of new entities given a state object. */
   private readonly entityFactory: EntityFactory;
   private readonly serverUpdateRateInHz: number;
@@ -60,9 +61,9 @@ export class ClientEntitySynchronizer {
   /**
    * IDs of entities that are meant to be controlled by this client's player.
    */
-  private playerEntityIds: EntityId[] = [];
+  private readonly playerEntityIds: EntityId[] = [];
 
-  private entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
+  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
 
   private updateInterval?: IntervalRunner;
 
@@ -149,7 +150,7 @@ export class ClientEntitySynchronizer {
         this.entities.addEntity(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
 
-        if (stateMessage.entityBelongsToRecipientClient) {
+        if (stateMessage.entityBelongsToRecipientClient != null) {
           this.playerEntityIds.push(stateMessage.entityId);
         }
       }
@@ -209,9 +210,9 @@ export class ClientEntitySynchronizer {
 
     inputs.forEach(input => {
 
-      const inputMessage = {
+      const inputMessage: InputMessage = {
+        messageKind: "entityInput",
         entityId: input.entityId,
-        timestamp: now,
         inputSequenceNumber: this.currentInputSequenceNumber,
         input: input.input
       };
