@@ -1,7 +1,7 @@
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { IntervalRunner } from "./interval-runner";
-import { StateMessage } from './networking';
+import { StateMessage, EntityMessageKind } from './networking';
 import { ServerEntityMessageBuffer } from './networking/message-buffer';
 import { SyncableEntity } from './syncable-entity';
 
@@ -158,7 +158,7 @@ export abstract class ServerEntitySynchronizer {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
         const networkedStateMessage: StateMessage = {
-          messageKind: "entityState",
+          kind: EntityMessageKind.State,
           entityId: stateMessage.entityId,
           state: stateMessage.state,
           lastProcessedInputSequenceNumber: client.lastProcessedInput,

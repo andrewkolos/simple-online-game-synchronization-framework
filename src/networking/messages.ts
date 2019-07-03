@@ -1,16 +1,21 @@
+export const enum EntityMessageKind {
+  Input = "entityInput",
+  State = "entityState",
+}
+
 export interface BufferMessage {
-  messageKind: string;
+  kind: string;
 }
 
 export interface InputMessage extends BufferMessage {
-  messageKind: "entityInput";
+  kind: EntityMessageKind.Input;
   entityId: string;
   input: any;
   inputSequenceNumber: number;
 }
 
 export interface StateMessage extends BufferMessage {
-  messageKind: "entityState";
+  kind: EntityMessageKind.State;
   entityId: string;
   state: any;
   lastProcessedInputSequenceNumber: number;
@@ -20,11 +25,11 @@ export interface StateMessage extends BufferMessage {
 export function isEntityInputMessage(message: any): message is InputMessage {
   const asInputMessage = message as Partial<InputMessage>;
 
-  return asInputMessage.messageKind != null && asInputMessage.messageKind === "entityInput";
+  return asInputMessage.kind != null && asInputMessage.kind === EntityMessageKind.Input;
 }
 
 export function isEntityStateMessage(message: any): message is StateMessage {
   const asInputMessage = message as Partial<StateMessage>;
 
-  return asInputMessage.messageKind != null && asInputMessage.messageKind === "entityState";
+  return asInputMessage.kind != null && asInputMessage.kind === EntityMessageKind.State;
 }

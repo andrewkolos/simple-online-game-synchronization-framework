@@ -3,7 +3,7 @@ import { TypedEventEmitter } from './event-emitter';
 import { InputCollectionStrategy } from './input-collection-strategy';
 import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
-import { InputMessage } from './networking';
+import { InputMessage, EntityMessageKind } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
 import { SyncableEntity } from './syncable-entity';
 import { DeepReadonly } from './util';
@@ -211,7 +211,7 @@ export class ClientEntitySynchronizer {
     inputs.forEach(input => {
 
       const inputMessage: InputMessage = {
-        messageKind: "entityInput",
+        kind: EntityMessageKind.Input,
         entityId: input.entityId,
         inputSequenceNumber: this.currentInputSequenceNumber,
         input: input.input
