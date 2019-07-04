@@ -1,7 +1,7 @@
 // tslint:disable
 
 import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
-import { SyncableEntity } from '../../src/syncable-entity';
+import { SyncableEntity, PickInputType, PickStateType } from '../../src/syncable-entity';
 import { ServerEntitySynchronizer } from '../../src/server-entity-synchronizer';
 import { InMemoryClientServerEntityNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
@@ -305,7 +305,7 @@ const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
-const network = new InMemoryClientServerEntityNetwork();
+const network = new InMemoryClientServerEntityNetwork<PickInputType<DemoEntityTypeMap>, PickStateType<DemoEntityTypeMap>>();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());

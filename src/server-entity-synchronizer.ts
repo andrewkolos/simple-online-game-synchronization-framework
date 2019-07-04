@@ -1,7 +1,7 @@
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { IntervalRunner } from "./interval-runner";
-import { EntityMessageKind, InputMessageFromEntityMap, StateMessageFromEntityMap } from './networking';
+import { EntityMessageKind, StateMessageFromEntityMap } from './networking';
 import { ServerEntityMessageBuffer } from './networking/message-buffer';
 import { EntityTypeMap, PickInputType, PickStateType, SyncableEntity, SyncableEntityFromMap } from './syncable-entity';
 
@@ -173,7 +173,7 @@ export abstract class ServerEntitySynchronizer<M extends EntityTypeMap> {
 
 export interface ClientInfo<M extends EntityTypeMap> {
   clientId: string;
-  connection: ServerEntityMessageBuffer<InputMessageFromEntityMap<M>, StateMessageFromEntityMap<M>>;
+  connection: ServerEntityMessageBuffer<PickInputType<M>, PickStateType<M>>;
   lastProcessedInput: number;
   ownedEntityIds: string[];
 }

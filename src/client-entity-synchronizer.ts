@@ -3,9 +3,9 @@ import { TypedEventEmitter } from './event-emitter';
 import { InputCollectionStrategy } from './input-collection-strategy';
 import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
-import { InputMessage, EntityMessageKind, InputMessageFromEntityMap, StateMessageFromEntityMap } from './networking';
+import { EntityMessageKind, InputMessage, InputMessageFromEntityMap } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
-import { SyncableEntity, EntityTypeMap, PickInputType, PickStateType } from './syncable-entity';
+import { EntityTypeMap, PickInputType, PickStateType, SyncableEntity } from './syncable-entity';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
@@ -19,7 +19,7 @@ export interface ClientEntitySynchronizerEvents {
 }
 
 export interface ClientEntitySynchronizerContext<M extends EntityTypeMap> {
-  serverConnection: ClientEntityMessageBuffer<InputMessageFromEntityMap<M>, StateMessageFromEntityMap<M>>; 
+  serverConnection: ClientEntityMessageBuffer<PickInputType<M>, PickStateType<M>>; 
   serverUpdateRateInHz: number;
   entityFactory: EntityFactory;
   inputCollector: InputCollectionStrategy<PickInputType<M>>;
@@ -37,7 +37,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
   public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
 
   /** Provides state messages. */
-  private readonly server: ClientEntityMessageBuffer<InputMessageFromEntityMap<M>, StateMessageFromEntityMap<M>>;
+  private readonly server: ClientEntityMessageBuffer<PickInputType<M>, PickStateType<M>>;
   /** Constructs representations of new entities given a state object. */
   private readonly entityFactory: EntityFactory;
   private readonly serverUpdateRateInHz: number;

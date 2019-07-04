@@ -7,7 +7,10 @@ import { BufferMessage } from './messages';
  * meant to be received by a router, and one to a type to be sent by the router.
  */
 export type RouterTypeMap = {
-  [key: string]: { receiveType: BufferMessage; sendType: BufferMessage }
+  [key: string]: { 
+    receiveType: BufferMessage;
+    sendType: BufferMessage;
+  };
 };
 
 /**
@@ -18,14 +21,16 @@ export type InvertRouterTypeMap<T extends RouterTypeMap> = {
   [key in keyof T]: { receiveType: T[key]["sendType"]; sendType: T[key]["receiveType"] };
 };
 
-export type PickTypeFromMap<T extends {[key: string]: any}, K extends string> = ValueOf<T>[K];
+type TypeMap = { [key: string]: any };
+
+export type PickTypeFromMap<T extends TypeMap, K extends string> = ValueOf<T>[K];
+type PickTypeGivenKey<M extends TypeMap, K extends keyof M, T extends keyof M[K]> = M[K][T];
 
 export type PickSendType<T extends RouterTypeMap> = PickTypeFromMap<T, "sendType">;
-
 export type PickReceiveType<T extends RouterTypeMap> = PickTypeFromMap<T, "receiveType">;
 
-export type PickSendTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = T[K]["sendType"];
-export type PickReceiveTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = T[K]["receiveType"];
+export type PickSendTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, "sendType">;
+export type PickReceiveTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, "receiveType">;
 
 /**
  * Given a message buffer, a `MessageRouter` can generate filtered message buffers that are
