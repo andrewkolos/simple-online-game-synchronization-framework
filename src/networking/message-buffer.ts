@@ -1,4 +1,3 @@
-import { InputMessage, StateMessage } from './messages';
 
 /*tslint:disable */
 
@@ -16,6 +15,6 @@ export interface MessageBuffer<ReceiveType, SendType> {
   hasNext(): boolean;
 }
 
-export interface ClientEntityMessageBuffer extends MessageBuffer<StateMessage, InputMessage> {}
-export interface ServerEntityMessageBuffer extends MessageBuffer<InputMessage, StateMessage> {}
+export interface ClientEntityMessageBuffer<InputMessage, StateMessage> extends MessageBuffer<StateMessage, InputMessage> {}
+export interface ServerEntityMessageBuffer<InputMessage, StateMessage> extends MessageBuffer<InputMessage, StateMessage> {}
 

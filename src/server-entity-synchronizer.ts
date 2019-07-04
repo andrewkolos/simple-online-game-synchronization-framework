@@ -1,31 +1,31 @@
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { IntervalRunner } from "./interval-runner";
-import { StateMessage, EntityMessageKind } from './networking';
+import { EntityMessageKind, InputMessageFromEntityMap, StateMessageFromEntityMap } from './networking';
 import { ServerEntityMessageBuffer } from './networking/message-buffer';
-import { SyncableEntity } from './syncable-entity';
+import { EntityTypeMap, PickInputType, PickStateType, SyncableEntity, SyncableEntityFromMap } from './syncable-entity';
 
 export interface ServerEntitySynchronizerEvents {
   synchronized(): void;
 }
 
-export interface EntityStateBroadcastMessage {
+export interface EntityStateBroadcastMessage<S> {
   entityId: string,
-  state: any;
+  state: S;
 }
 
 /**
  * Creates and synchronizes game entities for clients.
  */
-export abstract class ServerEntitySynchronizer {
+export abstract class ServerEntitySynchronizer<M extends EntityTypeMap> {
 
   public updateRateHz: number;
 
-  public entities: EntityCollection;
+  public entities: EntityCollection<M>;
 
   public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
 
-  private readonly clients: Map<string, ClientInfo>;
+  private readonly clients: Map<string, ClientInfo<M>>;
 
   private updateInterval?: IntervalRunner;
 
@@ -35,11 +35,11 @@ export abstract class ServerEntitySynchronizer {
     this.updateRateHz = 10;
   }
 
-  public connect(connection: ServerEntityMessageBuffer): string {
+  public connect(connection: ServerEntityMessageBuffer<PickInputType<M>, PickStateType<M>>): string {
 
     const newClientId = this.getIdForNewClient();
 
-    const client: ClientInfo = {
+    const client: ClientInfo<M> = {
       clientId: newClientId,
       connection,
       lastProcessedInput: 0,
@@ -53,7 +53,7 @@ export abstract class ServerEntitySynchronizer {
     return newClientId;
   }
 
-  public addPlayerEntity(entity: SyncableEntity<any, any>, playerClientId: string) {
+  public addPlayerEntity(entity: SyncableEntityFromMap<M>, playerClientId: string) {
     this.entities.addEntity(entity);
     const client = this.clients.get(playerClientId);
 
@@ -100,7 +100,7 @@ export abstract class ServerEntitySynchronizer {
 
   protected abstract getIdForNewClient(): string;
 
-  protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage[];
+  protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage<PickStateType<M>>[];
 
   protected abstract validateInput(entity: SyncableEntity<any, any>, input: any): boolean;
 
@@ -115,7 +115,7 @@ export abstract class ServerEntitySynchronizer {
    * Processes all available inputs.
    */
   private processInputs() {
-    const getClientWithReadyInput = (): ClientInfo | undefined => {
+    const getClientWithReadyInput = (): ClientInfo<M> | undefined => {
       for (const client of this.clients.values()) {
         if (client.connection.hasNext()) {
           return client;
@@ -157,7 +157,7 @@ export abstract class ServerEntitySynchronizer {
       for (const stateMessage of stateMessages) {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
-        const networkedStateMessage: StateMessage = {
+        const networkedStateMessage: StateMessageFromEntityMap<M> = {
           kind: EntityMessageKind.State,
           entityId: stateMessage.entityId,
           state: stateMessage.state,
@@ -171,9 +171,9 @@ export abstract class ServerEntitySynchronizer {
   }
 }
 
-export interface ClientInfo {
+export interface ClientInfo<M extends EntityTypeMap> {
   clientId: string;
-  connection: ServerEntityMessageBuffer;
+  connection: ServerEntityMessageBuffer<InputMessageFromEntityMap<M>, StateMessageFromEntityMap<M>>;
   lastProcessedInput: number;
   ownedEntityIds: string[];
 }

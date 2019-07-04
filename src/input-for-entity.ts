@@ -1,8 +1,8 @@
 import { EntityId } from './client-entity-synchronizer';
-export interface InputForEntity {
+export interface InputForEntity<T> {
   /**
-   * The entity should react to the input.
+   * The entity that is to react to the input.
    */
   entityId: EntityId;
-  input: unknown;
+  input: T;
 }

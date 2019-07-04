@@ -2,13 +2,13 @@
 
 import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
 import { SyncableEntity } from '../../src/syncable-entity';
-import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
+import { ServerEntitySynchronizer } from '../../src/server-entity-synchronizer';
 import { InMemoryClientServerEntityNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
 import { InputForEntity } from '../../src/input-for-entity';
 import { InputCollectionStrategy } from '../../src/input-collection-strategy';
 
-interface MoveInput extends InputForEntity {
+interface MoveInput extends InputForEntity<{direction: MoveInputDirection, pressTime: number}> {
   inputType: DemoInputType.Move,
   input: {
     direction: MoveInputDirection;
@@ -25,9 +25,18 @@ export const enum MoveInputDirection {
   Backward = 'left'
 }
 
+type DemoEntityTypeMap = {
+  "entity": {
+    inputType: DemoPlayerInput;
+    stateType: DemoPlayerState
+  }
+}
+
+type DemoClientEntitySynchronizer = ClientEntitySynchronizer<DemoEntityTypeMap>;
+
 type DemoInput = MoveInput; // Union with new Input types added in the future.
 
-class KeyboardDemoInputCollector implements InputCollectionStrategy {
+class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayerInput> {
 
   private playerEntityId: string;
 
@@ -57,7 +66,7 @@ class KeyboardDemoInputCollector implements InputCollectionStrategy {
     });
   }
 
-  public getInputs(dt: number): DemoInput[] {
+  public getInputs(dt: number) {
 
     const xor = (x: boolean, y: boolean) => (x && !y) || (!x && y);
 
@@ -136,7 +145,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends ServerEntitySynchronizer {
+export class DemoServer extends ServerEntitySynchronizer<DemoEntityTypeMap> {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -160,7 +169,7 @@ export class DemoServer extends ServerEntitySynchronizer {
 
   // Message should be a mapped thingy with all available state types.
   // tslint:disable-next-line:no-any
-  protected getStatesToBroadcastToClients(): EntityStateBroadcastMessage[] {
+  protected getStatesToBroadcastToClients() {
     const messages = [];
 
     for (const p of this.players) {
@@ -206,7 +215,7 @@ export class DemoEntityFactory implements EntityFactory {
 
 // Helper code for running the demo.
 
-function displayGame(client: ClientEntitySynchronizer, displayElement: HTMLElement) {
+function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLElement) {
   const entities = client.entities.getEntities();
   const displayElementId = displayElement.id;
 
@@ -278,7 +287,7 @@ function createClient(playerEntityId: string, moveLeftKeycode: number, moveRight
   const entityFactory = new DemoEntityFactory();
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client = new ClientEntitySynchronizer({serverConnection, entityFactory, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
+  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({serverConnection, entityFactory, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
 
   return client;
 }

@@ -1,19 +1,20 @@
-import { SyncableEntity } from './syncable-entity';
+import { EntityTypeMap, SyncableEntityFromMap } from './syncable-entity';
 
 type EntityId = string;
+
 
 /**
  * Contains entities, allowing retrieval by entity ID.
  */
-export class EntityCollection {
+export class EntityCollection<M extends EntityTypeMap> {
   /** These compose the state of the game. */
-  private readonly entities: Map<EntityId, SyncableEntity<unknown, unknown>> = new Map();
+  private readonly entities: Map<EntityId, SyncableEntityFromMap<M>> = new Map();
 
   /**
    * Adds an entity to the game world.
    * @param entity The entity to add the the world.
    */
-  public addEntity(entity: SyncableEntity<unknown, unknown>) {
+  public addEntity(entity: SyncableEntityFromMap<M>) {
     this.entities.set(entity.id, entity);
   }
 
@@ -22,7 +23,7 @@ export class EntityCollection {
    * @param id The ID of the entity to search for.
    * @returns The entity with the matching ID, if it exists.
    */
-  public getEntityById(id: EntityId): SyncableEntity<unknown, unknown> | undefined {
+  public getEntityById(id: EntityId): SyncableEntityFromMap<M> | undefined {
     return this.entities.get(id);
   }
 
@@ -30,7 +31,7 @@ export class EntityCollection {
    * Gets all entities in the game.
    * @returns The entities in the game world.
    */
-  public getEntities(): SyncableEntity<unknown, unknown>[] {
+  public getEntities(): SyncableEntityFromMap<M>[] {
     return Array.from(this.entities.values());
   }
 }
