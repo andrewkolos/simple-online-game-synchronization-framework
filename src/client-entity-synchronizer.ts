@@ -5,7 +5,7 @@ import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
 import { InputMessage, EntityMessageKind, InputMessageFromEntityMap, StateMessageFromEntityMap } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
-import { SyncableEntity, EntityTypeMap, PickInputType } from './syncable-entity';
+import { SyncableEntity, EntityTypeMap, PickInputType, PickStateType } from './syncable-entity';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
@@ -63,7 +63,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
    */
   private readonly playerEntityIds: EntityId[] = [];
 
-  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: Object }[]>();
+  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: PickStateType<M> }[]>();
 
   private updateInterval?: IntervalRunner;
 
@@ -87,7 +87,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
    */
   constructor(context: ClientEntitySynchronizerContext<M>) {
 
-    this.entities = new EntityCollection();
+    this.entities = new EntityCollection<M>();
     this.server = context.serverConnection;
     this.entityFactory = context.entityFactory;
     this.serverUpdateRateInHz = context.serverUpdateRateInHz;
@@ -150,7 +150,8 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
         this.entities.addEntity(entity);
         this.entityStateBuffers.set(stateMessage.entityId, []);
 
-        if (stateMessage.entityBelongsToRecipientClient != null) {
+        const entityBelongsToThisClient = stateMessage.entityBelongsToRecipientClient;
+        if (entityBelongsToThisClient != null && entityBelongsToThisClient) {
           this.playerEntityIds.push(stateMessage.entityId);
         }
       }
