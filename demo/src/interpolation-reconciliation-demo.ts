@@ -56,7 +56,7 @@ export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState>
 
 type DemoEntity = DemoPlayer; // Union future entities here.
 
-interface MoveInput extends InputForEntity<{direction: MoveInputDirection, pressTime: number}> {
+interface MoveInput extends InputForEntity<DemoEntity> {
   inputType: DemoInputType.Move,
   input: {
     direction: MoveInputDirection;

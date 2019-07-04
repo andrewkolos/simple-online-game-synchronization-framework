@@ -1,5 +1,5 @@
 import { InputForEntity } from "./input-for-entity";
-import { AnySyncableEntity, PickInput } from './syncable-entity';
+import { AnySyncableEntity } from './syncable-entity';
 
 /**
  * Collects inputs for a game step.
@@ -10,5 +10,5 @@ export interface InputCollectionStrategy<Entity extends AnySyncableEntity> {
    * to be applied against.
    * @param dt The amount of time that has elapsed since input was last collected.
    */
-  getInputs(dt: number): InputForEntity<PickInput<Entity>>[];
+  getInputs(dt: number): InputForEntity<Entity>[];
 }

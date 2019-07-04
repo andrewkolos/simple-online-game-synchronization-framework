@@ -5,7 +5,7 @@ import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
 import { EntityMessageKind, InputMessage } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
-import { AnySyncableEntity, PickState, PickInput } from './syncable-entity';
+import { AnySyncableEntity, PickState } from './syncable-entity';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
@@ -195,7 +195,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
 
     const now = new Date().getTime();
 
-    const getInputs = (): InputForEntity<PickInput<E>>[] => {
+    const getInputs = (): InputForEntity<E>[] => {
 
       const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
         ? this.lastInputCollectionTimestamp : now;
