@@ -1,6 +1,6 @@
 {
   "name": "@akolos/ts-client-server-game-synchronization",
-  "version": "0.1.35",
+  "version": "0.1.42",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",

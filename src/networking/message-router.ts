@@ -4,9 +4,9 @@ import { BufferMessage } from './messages';
 /**
  * Maps string keys to types implementing the `BufferMessage` interface.
  */
-export interface RouterTypeMap {
-  [key: string]: BufferMessage;
-}
+export type RouterTypeMap<T extends string> = {
+  [key in T]: BufferMessage;
+};
 
 /**
  * Given a message buffer (where received and sent messages can be of several types), the message router can generate
@@ -15,7 +15,10 @@ export interface RouterTypeMap {
  * @template ReceiveTypeMap Describes what type of `BufferMessage` is received by a `MessageBuffer` filtered by a given string key.
  * @template SendTypeMap Describes what type of `BufferMessage` is sent by a `MessageBuffer` filtered by a given string key.
  */
-export interface MessageRouter<ReceiveTypeMap extends RouterTypeMap, SendTypeMap extends RouterTypeMap> {
-  getFilteredMessageBuffer<R extends keyof ReceiveTypeMap, S extends keyof SendTypeMap>(bufferType: R & S)
-    : MessageBuffer<ReceiveTypeMap[R], SendTypeMap[S]>;
+export interface MessageRouter<MessageTypeKey extends string,
+                               ReceiveTypeMap extends RouterTypeMap<MessageTypeKey>, 
+                               SendTypeMap extends RouterTypeMap<MessageTypeKey>> {
+
+  getFilteredMessageBuffer<K extends MessageTypeKey & keyof ReceiveTypeMap & keyof SendTypeMap>(bufferType: K)
+    : MessageBuffer<ReceiveTypeMap[K], SendTypeMap[K]>;
 }

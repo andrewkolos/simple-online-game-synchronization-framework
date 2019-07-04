@@ -9,14 +9,14 @@ import { MessageRouter, RouterTypeMap } from './message-router';
  * @template ReceiveTypeMap @inheritdoc
  * @template SendTypeMap @inheritdoc
  */
-export abstract class SimpleMessageRouter<ReceiveTypeMap extends RouterTypeMap, SendTypeMap extends RouterTypeMap> 
-                                                         implements MessageRouter<ReceiveTypeMap, SendTypeMap> {
+export class SimpleMessageRouter<MessageTypeKey extends string, ReceiveTypeMap extends RouterTypeMap<MessageTypeKey>, SendTypeMap extends RouterTypeMap<MessageTypeKey>> 
+                                implements MessageRouter<MessageTypeKey, ReceiveTypeMap, SendTypeMap> {
                                                           
   private readonly collections: Record<keyof ReceiveTypeMap, ValueOf<ReceiveTypeMap>[]>;
   
   public constructor(private readonly buffer: MessageBuffer<ValueOf<ReceiveTypeMap>, ValueOf<SendTypeMap>>) {}
   
-  public getFilteredMessageBuffer<R extends keyof ReceiveTypeMap, S extends keyof SendTypeMap>(bufferType: R & S): MessageBuffer<ReceiveTypeMap[R], SendTypeMap[S]> {
+  public getFilteredMessageBuffer<R extends keyof ReceiveTypeMap, S extends keyof SendTypeMap>(bufferType: MessageTypeKey): MessageBuffer<ReceiveTypeMap[R], SendTypeMap[S]> {
     return {
       send: (message: SendTypeMap[S]) => {
         this.buffer.send(message);
