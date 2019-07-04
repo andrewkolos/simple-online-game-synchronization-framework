@@ -1,4 +1,5 @@
 import { StateMessage, InputMessage } from './messages';
+import { AnySyncableEntity } from '../syncable-entity';
 
 /*tslint:disable */
 
@@ -16,6 +17,6 @@ export interface MessageBuffer<ReceiveType, SendType> {
   hasNext(): boolean;
 }
 
-export interface ClientEntityMessageBuffer<I, S> extends MessageBuffer<StateMessage<S>, InputMessage<I>> {}
-export interface ServerEntityMessageBuffer<I, S> extends MessageBuffer<InputMessage<I>, StateMessage<S>> {}
+export interface ClientEntityMessageBuffer<E extends AnySyncableEntity> extends MessageBuffer<StateMessage<E>, InputMessage<E>> {}
+export interface ServerEntityMessageBuffer<E extends AnySyncableEntity> extends MessageBuffer<InputMessage<E>, StateMessage<E>> {}
 

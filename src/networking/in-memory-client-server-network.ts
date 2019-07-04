@@ -1,25 +1,26 @@
 import { TypedEventEmitter } from '../event-emitter';
 import { ClientEntityMessageBuffer, ServerEntityMessageBuffer } from './message-buffer';
 import { InputMessage, StateMessage } from './messages';
+import { AnySyncableEntity, PickInput, PickState } from '../syncable-entity';
 
-interface InMemoryClientServerNetworkEvents<I, S> {
-  stateMessageSent(message: S): void;
-  inputMessageSent(message: I): void;
+interface InMemoryClientServerNetworkEvents<E extends AnySyncableEntity> {
+  stateMessageSent(message: StateMessage<PickState<E>>): void;
+  inputMessageSent(message: InputMessage<PickInput<E>>): void;
 }
 
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
  */
-export class InMemoryClientServerEntityNetwork<I, S> {
+export class InMemoryClientServerEntityNetwork<E extends AnySyncableEntity> {
 
-  private readonly inputMessageQueues: InputMessage<I>[][] = [];
-  private readonly stateMessageQueues: StateMessage<S>[][] = [];
+  private readonly inputMessageQueues: InputMessage<PickInput<E>>[][] = [];
+  private readonly stateMessageQueues: StateMessage<PickState<E>>[][] = [];
 
-  private readonly inputMessageReadyTimes: Map<InputMessage<I>, number> = new Map();
-  private readonly stateMessageSendTimes: Map<StateMessage<S>, number> = new Map();
-  private readonly stateMessageReferenceCounts: Map<StateMessage<S>, number> = new Map();
+  private readonly inputMessageReadyTimes: Map<InputMessage<PickInput<E>>, number> = new Map();
+  private readonly stateMessageSendTimes: Map<StateMessage<PickState<E>>, number> = new Map();
+  private readonly stateMessageReferenceCounts: Map<StateMessage<PickState<E>>, number> = new Map();
 
-  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<InputMessage<I>, StateMessage<S>>>();
+  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<E>>();
 
   // tslint:disable-next-line: member-ordering
   public on = this.eventEmitter.on.bind(this.eventEmitter);
@@ -27,14 +28,14 @@ export class InMemoryClientServerEntityNetwork<I, S> {
   /**
    * Get a connection to the server.
    */
-  public getNewServerConnection(lagMs: number): ClientEntityMessageBuffer<I, S> {
+  public getNewServerConnection(lagMs: number): ClientEntityMessageBuffer<E> {
     const that = this;
     this.stateMessageQueues.push([]);
     const clientIndex = this.stateMessageQueues.length - 1;
     const stateMessageQueue = this.stateMessageQueues[clientIndex];
 
     return {
-      send: (message: InputMessage<I>) => {
+      send: (message: InputMessage<E>) => {
         const inputMessageQueue = this.inputMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
           throw Error('Cannot send input to server before the client connection has been created.');
@@ -64,13 +65,13 @@ export class InMemoryClientServerEntityNetwork<I, S> {
   /**
    * Get a connection to a client.
    */
-  public getNewClientConnection(): ServerEntityMessageBuffer<I, S> {
+  public getNewClientConnection(): ServerEntityMessageBuffer<E> {
     this.inputMessageQueues.push([]);
     const clientIndex = this.inputMessageQueues.length - 1;
     const imQueue = this.inputMessageQueues[clientIndex];
 
     return {
-      send: (message: StateMessage<S>) => {
+      send: (message: StateMessage<E>) => {
         this.stateMessageQueues[clientIndex].push(message);
 
         this.stateMessageSendTimes.set(message, new Date().getTime());

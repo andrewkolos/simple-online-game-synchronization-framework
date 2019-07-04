@@ -1,5 +1,3 @@
-import { PickTypeFromMap } from './networking';
-
 type EntityId = string;
 
 /**
@@ -38,16 +36,7 @@ export abstract class SyncableEntity<Input, State> {
   public abstract interpolate(state1: State, state2: State, timeRatio: number): State;
 }
 
-type entityTypeMap<EntityType extends string> = {
-  [key in EntityType]: {
-    inputType: any;
-    stateType: any;
-  };
-}
+export type AnySyncableEntity = SyncableEntity<any, any>;
 
-export type EntityTypeMap =  entityTypeMap<string>;
-
-export type PickInputType<M extends EntityTypeMap> = PickTypeFromMap<M, "inputType">;
-export type PickStateType<M extends EntityTypeMap> = PickTypeFromMap<M, "stateType">;
-
-export type SyncableEntityFromMap<M extends EntityTypeMap> = SyncableEntity<PickInputType<M>, PickStateType<M>>;
+export type PickInput<E> = E extends SyncableEntity<infer I, any> ? I : never;
+export type PickState<E> = E extends SyncableEntity<any, infer S> ? S : never;

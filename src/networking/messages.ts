@@ -1,4 +1,4 @@
-import { EntityTypeMap, PickInputType, PickStateType } from '../syncable-entity';
+import { AnySyncableEntity, PickState, PickInput } from '../syncable-entity';
 
 export const enum EntityMessageKind {
   Input = "entityInput",
@@ -9,17 +9,17 @@ export interface BufferMessage {
   kind: string;
 }
 
-export interface InputMessage<T> extends BufferMessage {
+export interface InputMessage<Entity extends AnySyncableEntity> extends BufferMessage {
   kind: EntityMessageKind.Input;
   entityId: string;
-  input: T;
+  input: PickInput<Entity>;
   inputSequenceNumber: number;
 }
 
-export interface StateMessage<T> extends BufferMessage {
+export interface StateMessage<Entity extends AnySyncableEntity> extends BufferMessage {
   kind: EntityMessageKind.State;
   entityId: string;
-  state: T;
+  state: PickState<Entity>;
   lastProcessedInputSequenceNumber: number;
   entityBelongsToRecipientClient?: boolean;
 }
@@ -35,6 +35,3 @@ export function isEntityStateMessage(message: any): message is StateMessage<any>
 
   return asInputMessage.kind != null && asInputMessage.kind === EntityMessageKind.State;
 }
-
-export type InputMessageFromEntityMap<M extends EntityTypeMap> = InputMessage<PickInputType<M>>;
-export type StateMessageFromEntityMap<M extends EntityTypeMap> = StateMessage<PickStateType<M>>

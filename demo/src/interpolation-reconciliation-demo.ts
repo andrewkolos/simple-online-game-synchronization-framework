@@ -1,12 +1,60 @@
 // tslint:disable
 
 import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
-import { SyncableEntity, PickInputType, PickStateType } from '../../src/syncable-entity';
-import { ServerEntitySynchronizer } from '../../src/server-entity-synchronizer';
+import { SyncableEntity } from '../../src/syncable-entity';
+import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
 import { InMemoryClientServerEntityNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
 import { InputForEntity } from '../../src/input-for-entity';
 import { InputCollectionStrategy } from '../../src/input-collection-strategy';
+
+interface DemoPlayerState {
+  position: number;
+}
+
+interface DemoPlayerInput {
+  direction: MoveInputDirection;
+  pressTime: number;
+}
+
+export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState> {
+
+  private static MOVE_SPEED = 0.2;
+
+  constructor(id: string, initialState: DemoPlayerState) {
+    super(id, initialState);
+  }
+
+  public calcNextStateFromInput(currentState: DemoPlayerState, input: DemoPlayerInput): DemoPlayerState {
+
+    const currentPosition = currentState.position;
+
+    let nextPosition;
+
+    switch (input.direction) {
+      case MoveInputDirection.Forward:
+        nextPosition = currentPosition + (input.pressTime * DemoPlayer.MOVE_SPEED);
+        break;
+      case MoveInputDirection.Backward:
+        nextPosition = currentPosition - (input.pressTime * DemoPlayer.MOVE_SPEED);
+        break;
+      default:
+        nextPosition = currentPosition;
+    }
+
+    return {
+      position: nextPosition
+    };
+  }
+
+  public interpolate(state1: DemoPlayerState, state2: DemoPlayerState, timeRatio: number): DemoPlayerState {
+    return {
+      position: state1.position + (state1.position - state2.position) * timeRatio
+    };
+  }
+}
+
+type DemoEntity = DemoPlayer; // Union future entities here.
 
 interface MoveInput extends InputForEntity<{direction: MoveInputDirection, pressTime: number}> {
   inputType: DemoInputType.Move,
@@ -25,18 +73,11 @@ export const enum MoveInputDirection {
   Backward = 'left'
 }
 
-type DemoEntityTypeMap = {
-  "entity": {
-    inputType: DemoPlayerInput;
-    stateType: DemoPlayerState
-  }
-}
-
-type DemoClientEntitySynchronizer = ClientEntitySynchronizer<DemoEntityTypeMap>;
+type DemoClientEntitySynchronizer = ClientEntitySynchronizer<DemoEntity>;
 
 type DemoInput = MoveInput; // Union with new Input types added in the future.
 
-class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayerInput> {
+class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoEntity> {
 
   private playerEntityId: string;
 
@@ -92,52 +133,6 @@ class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayerIn
   }
 }
 
-interface DemoPlayerState {
-  position: number;
-}
-
-interface DemoPlayerInput {
-  direction: MoveInputDirection;
-  pressTime: number;
-}
-
-export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState> {
-
-  private static MOVE_SPEED = 0.2;
-
-  constructor(id: string, initialState: DemoPlayerState) {
-    super(id, initialState);
-  }
-
-  public calcNextStateFromInput(currentState: DemoPlayerState, input: DemoPlayerInput): DemoPlayerState {
-
-    const currentPosition = currentState.position;
-
-    let nextPosition;
-    
-    switch (input.direction) {
-      case MoveInputDirection.Forward:
-        nextPosition = currentPosition + (input.pressTime * DemoPlayer.MOVE_SPEED);
-        break;
-      case MoveInputDirection.Backward:
-        nextPosition = currentPosition - (input.pressTime * DemoPlayer.MOVE_SPEED);
-        break;
-      default:
-        nextPosition = currentPosition;
-    }
-
-    return {
-      position: nextPosition
-    };
-  }
-
-  public interpolate(state1: DemoPlayerState, state2: DemoPlayerState, timeRatio: number): DemoPlayerState {
-    return {
-      position: state1.position + (state1.position - state2.position) * timeRatio
-    };
-  }
-}
-
 interface PlayerMovementInfo {
   entityId: string;
   lastInputTimestamp: number,
@@ -145,7 +140,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends ServerEntitySynchronizer<DemoEntityTypeMap> {
+export class DemoServer extends ServerEntitySynchronizer<DemoEntity> {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -167,9 +162,7 @@ export class DemoServer extends ServerEntitySynchronizer<DemoEntityTypeMap> {
     return `c${this.players.length}`;
   }
 
-  // Message should be a mapped thingy with all available state types.
-  // tslint:disable-next-line:no-any
-  protected getStatesToBroadcastToClients() {
+  protected getStatesToBroadcastToClients(): EntityStateBroadcastMessage<DemoEntity>[] {
     const messages = [];
 
     for (const p of this.players) {
@@ -199,7 +192,7 @@ export class DemoServer extends ServerEntitySynchronizer<DemoEntityTypeMap> {
   }
 }
 
-export class DemoEntityFactory implements EntityFactory {
+export class DemoEntityFactory implements EntityFactory<DemoEntity> {
 
   public fromStateMessage(entityId: string, state: any): DemoPlayer {
     if (state != null && state.position != null) {
@@ -228,7 +221,7 @@ function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLE
   lastAckElement.innerText = `Non-acknowledged inputs: ${client.numberOfPendingInputs}`; 
 }
 
-function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: SyncableEntity<any, any>[]) {
+function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[]) {
   
   canvas.width = canvas.width; // Clears the canvas.
 
@@ -305,7 +298,7 @@ const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
-const network = new InMemoryClientServerEntityNetwork<PickInputType<DemoEntityTypeMap>, PickStateType<DemoEntityTypeMap>>();
+const network = new InMemoryClientServerEntityNetwork<DemoPlayer>();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());

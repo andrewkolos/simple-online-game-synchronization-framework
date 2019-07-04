@@ -20,7 +20,7 @@ export class GameLoop {
   /** How many ticks the timer has counted. */
   private tickCount: number = 0;
   private tickIntervalId?: NodeJS.Timer;
-  private tickHandler: TickHandler  
+  private readonly tickHandler: TickHandler  
 
   public constructor(tickHandler: TickHandler) {
     this.tickHandler = tickHandler;

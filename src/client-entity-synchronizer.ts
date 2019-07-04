@@ -3,26 +3,26 @@ import { TypedEventEmitter } from './event-emitter';
 import { InputCollectionStrategy } from './input-collection-strategy';
 import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
-import { EntityMessageKind, InputMessage, InputMessageFromEntityMap } from './networking';
+import { EntityMessageKind, InputMessage } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
-import { EntityTypeMap, PickInputType, PickStateType, SyncableEntity } from './syncable-entity';
+import { AnySyncableEntity, PickState, PickInput } from './syncable-entity';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
 
-export interface EntityFactory {
-  fromStateMessage(entityId: string, state: any): SyncableEntity<any, any>;
+export interface EntityFactory<E extends AnySyncableEntity> {
+  fromStateMessage(entityId: string, state: any): E;
 }
 
 export interface ClientEntitySynchronizerEvents {
   synchronized(): void;
 }
 
-export interface ClientEntitySynchronizerContext<M extends EntityTypeMap> {
-  serverConnection: ClientEntityMessageBuffer<PickInputType<M>, PickStateType<M>>; 
+export interface ClientEntitySynchronizerContext<Entity extends AnySyncableEntity> {
+  serverConnection: ClientEntityMessageBuffer<Entity>; 
   serverUpdateRateInHz: number;
-  entityFactory: EntityFactory;
-  inputCollector: InputCollectionStrategy<PickInputType<M>>;
+  entityFactory: EntityFactory<Entity>;
+  inputCollector: InputCollectionStrategy<Entity>;
 }
 
 /**
@@ -30,19 +30,19 @@ export interface ClientEntitySynchronizerContext<M extends EntityTypeMap> {
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class ClientEntitySynchronizer<M extends EntityTypeMap> {
+export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
   /** Contains game state and can accept inputs. */
-  public entities: EntityCollection<M>;
+  public entities: EntityCollection<E>;
 
   public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
 
   /** Provides state messages. */
-  private readonly server: ClientEntityMessageBuffer<PickInputType<M>, PickStateType<M>>;
+  private readonly server: ClientEntityMessageBuffer<E>;
   /** Constructs representations of new entities given a state object. */
-  private readonly entityFactory: EntityFactory;
+  private readonly entityFactory: EntityFactory<E>;
   private readonly serverUpdateRateInHz: number;
   /** Collects user inputs. */
-  private readonly inputCollectionStrategy: InputCollectionStrategy<PickInputType<M>>;
+  private readonly inputCollectionStrategy: InputCollectionStrategy<E>;
   /**
    * The number assigned to the next set of inputs that will be sent out by this
    * game client. Used for server reconciliation.
@@ -53,7 +53,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
    * These inputs will be reapplied when the client receives a new authoritative state
    * sent by the server.
    */
-  private pendingInputs: InputMessage<PickInputType<M>>[] = [];
+  private pendingInputs: InputMessage<E>[] = [];
 
   /** The time of the most recent input collection. */
   private lastInputCollectionTimestamp: number | undefined;
@@ -63,7 +63,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
    */
   private readonly playerEntityIds: EntityId[] = [];
 
-  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: PickStateType<M> }[]>();
+  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: PickState<E> }[]>();
 
   private updateInterval?: IntervalRunner;
 
@@ -85,9 +85,9 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
    * @param inputCollector Used to obtain inputs from the user that can be applied
    *  to entities in the game.
    */
-  constructor(context: ClientEntitySynchronizerContext<M>) {
+  constructor(context: ClientEntitySynchronizerContext<E>) {
 
-    this.entities = new EntityCollection<M>();
+    this.entities = new EntityCollection<E>();
     this.server = context.serverConnection;
     this.entityFactory = context.entityFactory;
     this.serverUpdateRateInHz = context.serverUpdateRateInHz;
@@ -166,11 +166,11 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
         // Perform server reconciliation. When the client receives an update about its entities
         // from the server, apply them, and then reapply all local pending inputs (have timestamps
         // later than the timestamp sent by the server).
-        this.pendingInputs = this.pendingInputs.filter((input: InputMessageFromEntityMap<M>) => {
+        this.pendingInputs = this.pendingInputs.filter((input: InputMessage<E>) => {
           return input.inputSequenceNumber > stateMessage.lastProcessedInputSequenceNumber;
         });
 
-        this.pendingInputs.forEach((inputMessage: InputMessageFromEntityMap<M>) => {
+        this.pendingInputs.forEach((inputMessage: InputMessage<E>) => {
           const entity = this.entities.getEntityById(inputMessage.entityId);
           if (entity == null) { throw Error('Did not find entity corresponding to a pending input.'); }
 
@@ -195,7 +195,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
 
     const now = new Date().getTime();
 
-    const getInputs = (): InputForEntity<PickInputType<M>>[] => {
+    const getInputs = (): InputForEntity<PickInput<E>>[] => {
 
       const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
         ? this.lastInputCollectionTimestamp : now;
@@ -211,7 +211,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
 
     inputs.forEach(input => {
 
-      const inputMessage: InputMessageFromEntityMap<M> = {
+      const inputMessage: InputMessage<E> = {
         kind: EntityMessageKind.Input,
         entityId: input.entityId,
         inputSequenceNumber: this.currentInputSequenceNumber,
@@ -241,7 +241,7 @@ export class ClientEntitySynchronizer<M extends EntityTypeMap> {
     const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
-    this.entities.getEntities().forEach((entity: SyncableEntity<any, any>) => {
+    this.entities.getEntities().forEach((entity: E) => {
       if (this.playerEntityIds.includes(entity.id)) {
         // No point in interpolating an entity that belongs to this client.
         return;
