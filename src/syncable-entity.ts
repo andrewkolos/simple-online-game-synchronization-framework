@@ -36,7 +36,7 @@ export abstract class SyncableEntity<Input, State> {
   public abstract interpolate(state1: State, state2: State, timeRatio: number): State;
 }
 
-export type AnySyncableEntity = SyncableEntity<any, any>;
+export type AnySyncableEntity = SyncableEntity<unknown, unknown>;
 
 export type PickInput<E> = E extends SyncableEntity<infer I, any> ? I : never;
 export type PickState<E> = E extends SyncableEntity<any, infer S> ? S : never;

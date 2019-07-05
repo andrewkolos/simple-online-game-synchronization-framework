@@ -1,11 +1,11 @@
 import { TypedEventEmitter } from '../event-emitter';
 import { ClientEntityMessageBuffer, ServerEntityMessageBuffer } from './message-buffer';
 import { InputMessage, StateMessage } from './messages';
-import { AnySyncableEntity, PickInput, PickState } from '../syncable-entity';
+import { AnySyncableEntity } from '../syncable-entity';
 
 interface InMemoryClientServerNetworkEvents<E extends AnySyncableEntity> {
-  stateMessageSent(message: StateMessage<PickState<E>>): void;
-  inputMessageSent(message: InputMessage<PickInput<E>>): void;
+  stateMessageSent(message: StateMessage<E>): void;
+  inputMessageSent(message: InputMessage<E>): void;
 }
 
 /**
@@ -13,12 +13,12 @@ interface InMemoryClientServerNetworkEvents<E extends AnySyncableEntity> {
  */
 export class InMemoryClientServerEntityNetwork<E extends AnySyncableEntity> {
 
-  private readonly inputMessageQueues: InputMessage<PickInput<E>>[][] = [];
-  private readonly stateMessageQueues: StateMessage<PickState<E>>[][] = [];
+  private readonly inputMessageQueues: InputMessage<E>[][] = [];
+  private readonly stateMessageQueues: StateMessage<E>[][] = [];
 
-  private readonly inputMessageReadyTimes: Map<InputMessage<PickInput<E>>, number> = new Map();
-  private readonly stateMessageSendTimes: Map<StateMessage<PickState<E>>, number> = new Map();
-  private readonly stateMessageReferenceCounts: Map<StateMessage<PickState<E>>, number> = new Map();
+  private readonly inputMessageReadyTimes: Map<InputMessage<E>, number> = new Map();
+  private readonly stateMessageSendTimes: Map<StateMessage<E>, number> = new Map();
+  private readonly stateMessageReferenceCounts: Map<StateMessage<E>, number> = new Map();
 
   private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<E>>();
 

@@ -157,7 +157,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity> {
       for (const stateMessage of stateMessages) {
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
-        const networkedStateMessage: StateMessage<PickState<E>> = {
+        const networkedStateMessage: StateMessage<E> = {
           kind: EntityMessageKind.State,
           entityId: stateMessage.entityId,
           state: stateMessage.state,
