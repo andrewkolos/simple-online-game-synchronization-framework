@@ -1,63 +1,61 @@
 import { TypedEventEmitter } from '../event-emitter';
-import { ClientEntityMessageBuffer, ServerEntityMessageBuffer } from './message-buffer';
-import { InputMessage, StateMessage } from './messages';
-import { AnySyncableEntity } from '../syncable-entity';
+import { MessageBuffer } from './message-buffer';
 
-interface InMemoryClientServerNetworkEvents<E extends AnySyncableEntity> {
-  stateMessageSent(message: StateMessage<E>): void;
-  inputMessageSent(message: InputMessage<E>): void;
+interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
+  serverSentMessageSent(message: ServerSendType): void;
+  clientSentMessageSent(message: ClientSendType): void;
 }
 
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
  */
-export class InMemoryClientServerEntityNetwork<E extends AnySyncableEntity> {
+export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
 
-  private readonly inputMessageQueues: InputMessage<E>[][] = [];
-  private readonly stateMessageQueues: StateMessage<E>[][] = [];
+  private readonly clientSentMessageQueues: ClientSendType[][] = [];
+  private readonly serverSentMessageQueues: ServerSendType[][] = [];
 
-  private readonly inputMessageReadyTimes: Map<InputMessage<E>, number> = new Map();
-  private readonly stateMessageSendTimes: Map<StateMessage<E>, number> = new Map();
-  private readonly stateMessageReferenceCounts: Map<StateMessage<E>, number> = new Map();
+  private readonly clientSentMessageReadyTimes: Map<ClientSendType, number> = new Map();
+  private readonly serverSentMessageSendTimes: Map<ServerSendType, number> = new Map();
+  private readonly serverSentMessageReferenceCounts: Map<ServerSendType, number> = new Map();
 
-  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<E>>();
+  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>>();
 
   // tslint:disable-next-line: member-ordering
-  public on = this.eventEmitter.on.bind(this.eventEmitter);
+  public on: (event: keyof InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>, fn: () => void) => void = this.eventEmitter.on.bind(this.eventEmitter);
 
   /**
    * Get a connection to the server.
    */
-  public getNewServerConnection(lagMs: number): ClientEntityMessageBuffer<E> {
+  public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
     const that = this;
-    this.stateMessageQueues.push([]);
-    const clientIndex = this.stateMessageQueues.length - 1;
-    const stateMessageQueue = this.stateMessageQueues[clientIndex];
+    this.serverSentMessageQueues.push([]);
+    const clientIndex = this.serverSentMessageQueues.length - 1;
+    const stateMessageQueue = this.serverSentMessageQueues[clientIndex];
 
     return {
-      send: (message: InputMessage<E>) => {
-        const inputMessageQueue = this.inputMessageQueues[clientIndex];
+      send: (message: ClientSendType) => {
+        const inputMessageQueue = this.clientSentMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
           throw Error('Cannot send input to server before the client connection has been created.');
         }
         inputMessageQueue.push(message);
-        this.inputMessageReadyTimes.set(message, new Date().getTime() + lagMs);
-        this.eventEmitter.emit('inputMessageSent', message);
+        this.clientSentMessageReadyTimes.set(message, new Date().getTime() + lagMs);
+        this.eventEmitter.emit('clientSentMessageSent', message);
       },
-      receive: function() {
+      receive: function () {
         if (!this.hasNext()) throw Error('No message ready.');
         const message = stateMessageQueue[0];
         stateMessageQueue.splice(0, 1);
-        decrementOrRemove(that.stateMessageReferenceCounts, message);
+        decrementOrRemove(that.serverSentMessageReferenceCounts, message);
 
         return message;
       },
       hasNext: () => {
         if (stateMessageQueue.length < 1) return false;
         const nextMessage = stateMessageQueue[0];
-        const nextMessageSentAt = this.stateMessageSendTimes.get(nextMessage)!.valueOf();
-        
-        return nextMessageSentAt + lagMs<= new Date().getTime();
+        const nextMessageSentAt = this.serverSentMessageSendTimes.get(nextMessage)!.valueOf();
+
+        return nextMessageSentAt + lagMs <= new Date().getTime();
       }
     };
   }
@@ -65,38 +63,38 @@ export class InMemoryClientServerEntityNetwork<E extends AnySyncableEntity> {
   /**
    * Get a connection to a client.
    */
-  public getNewClientConnection(): ServerEntityMessageBuffer<E> {
-    this.inputMessageQueues.push([]);
-    const clientIndex = this.inputMessageQueues.length - 1;
-    const imQueue = this.inputMessageQueues[clientIndex];
+  public getNewClientConnection(): MessageBuffer<ClientSendType, ServerSendType> {
+    this.clientSentMessageQueues.push([]);
+    const clientIndex = this.clientSentMessageQueues.length - 1;
+    const imQueue = this.clientSentMessageQueues[clientIndex];
 
     return {
-      send: (message: StateMessage<E>) => {
-        this.stateMessageQueues[clientIndex].push(message);
+      send: (message: ServerSendType) => {
+        this.serverSentMessageQueues[clientIndex].push(message);
 
-        this.stateMessageSendTimes.set(message, new Date().getTime());
-        increment(this.stateMessageReferenceCounts, message);
-        this.eventEmitter.emit('stateMessageSent', message);
+        this.serverSentMessageSendTimes.set(message, new Date().getTime());
+        increment(this.serverSentMessageReferenceCounts, message);
+        this.eventEmitter.emit('serverSentMessageSent', message);
       },
-      receive: function() {
+      receive: function () {
         if (!this.hasNext()) throw Error('No input message is ready.');
         const message = imQueue[0];
-        imQueue.splice(0,1);
+        imQueue.splice(0, 1);
         return message;
       },
       hasNext: () => {
         return (imQueue.length > 0 &&
-          this.inputMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
+          this.clientSentMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
       }
     };
   }
 
   public getInputMessageQueueLengths(): number[] {
-    return this.inputMessageQueues.map(q => q.length);
+    return this.clientSentMessageQueues.map(q => q.length);
   }
 
   public getStateMessageQueueLengths(): number[] {
-    return this.stateMessageQueues.map(q => q.length);
+    return this.serverSentMessageQueues.map(q => q.length);
   }
 }
 
@@ -108,7 +106,7 @@ function decrementOrRemove<K>(map: Map<K, number>, key: K): void {
   if (value === 1) {
     map.delete(key);
   }
-  
+
   map.set(key, value - 1);
 }
 

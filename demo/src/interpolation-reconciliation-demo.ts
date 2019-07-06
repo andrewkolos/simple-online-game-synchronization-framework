@@ -3,10 +3,10 @@
 import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
 import { SyncableEntity } from '../../src/syncable-entity';
 import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
-import { InMemoryClientServerEntityNetwork } from "../../src/networking/in-memory-client-server-network";
 import { GameLoop } from '../../src/game-loop';
 import { InputForEntity } from '../../src/input-for-entity';
 import { InputCollectionStrategy } from '../../src/input-collection-strategy';
+import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
 
 interface DemoPlayerState {
   position: number;
@@ -140,7 +140,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends ServerEntitySynchronizer<DemoEntity> {
+export class DemoServer extends ServerEntitySynchronizer<DemoEntity, string> {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -276,7 +276,7 @@ function handleMessageSent() {
 
 function createClient(playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) {
 
-  const serverConnection = network.getNewServerConnection(100);
+  const serverConnection = network.getNewConnectionToServer(100);
   const entityFactory = new DemoEntityFactory();
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
@@ -298,7 +298,7 @@ const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
-const network = new InMemoryClientServerEntityNetwork<DemoPlayer>();
+const network = new InMemoryClientServerNetwork<InputMessage<DemoEntity>, StateMessage<DemoEntity>>();
 
 const client1Id = server.connect(network.getNewClientConnection());
 const client2Id = server.connect(network.getNewClientConnection());
@@ -327,8 +327,8 @@ client2Game.eventEmitter.on('postStep', () => {
   displayGame(client2, document.getElementById('client2') as HTMLElement);
 });
 
-network.on('stateMessageSent', handleMessageSent);
-network.on('stateMessageSent', handleMessageSent);
+network.on('clientSentMessageSent', handleMessageSent);
+network.on('serverSentMessageSent', handleMessageSent);
 
 server.start(serverSyncUpdateRate);
 client1.start(clientUpdateRate);

@@ -6,5 +6,5 @@ export * from './entity-collection';
 export * from './event-emitter';
 export * from './input-collection-strategy';
 export * from './input-for-entity';
-export * from './networking/index';
 export * from './message-buffer-processor';
+export * from './networking/index';

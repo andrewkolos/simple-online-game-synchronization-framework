@@ -17,7 +17,7 @@ export interface EntityStateBroadcastMessage<Entity extends AnySyncableEntity> {
 /**
  * Creates and synchronizes game entities for clients.
  */
-export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity> {
+export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, ClientId extends string> {
 
   public updateRateHz: number;
 
@@ -35,7 +35,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity> {
     this.updateRateHz = 10;
   }
 
-  public connect(connection: ServerEntityMessageBuffer<E>): string {
+  public connect(connection: ServerEntityMessageBuffer<E>): ClientId {
 
     const newClientId = this.getIdForNewClient();
 
@@ -98,7 +98,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity> {
    */
   protected abstract handleClientConnection(newClientId: string): void;
 
-  protected abstract getIdForNewClient(): string;
+  protected abstract getIdForNewClient(): ClientId;
 
   protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage<E>[];
 
