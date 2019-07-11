@@ -209,7 +209,7 @@ export class DemoEntityFactory implements EntityFactory<DemoEntity> {
 // Helper code for running the demo.
 
 function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLElement) {
-  const entities = client.entities.getEntities();
+  const entities = client.entities.asArray();
   const displayElementId = displayElement.id;
 
   const canvasElement = document.getElementById(`${displayElementId}_canvas`) as HTMLCanvasElement;
@@ -221,7 +221,7 @@ function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLE
   lastAckElement.innerText = `Non-acknowledged inputs: ${client.numberOfPendingInputs}`; 
 }
 
-function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[]) {
+function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[] | ReadonlyArray<DemoEntity>) {
   
   canvas.width = canvas.width; // Clears the canvas.
 
@@ -250,7 +250,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[]
   });
 }
 
-function writePositions(entities: SyncableEntity<any, any>[], el: HTMLElement) {
+function writePositions(entities: DemoEntity[] | ReadonlyArray<DemoEntity>, el: HTMLElement) {
   const message = entities.map(entity => {
     if (!(entity instanceof DemoPlayer)) return;
 
@@ -308,7 +308,7 @@ const client2 = createClient(client2Id, 37, 39);
 
 serverGame.eventEmitter.on('postStep', () => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
-  renderWorldOntoCanvas(serverCanvas, server.entities.getEntities());
+  renderWorldOntoCanvas(serverCanvas, server.getEntities());
 
   const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
   const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
@@ -316,7 +316,7 @@ serverGame.eventEmitter.on('postStep', () => {
   const serverStatus = document.getElementById('server_status') as HTMLDivElement;
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
     ` Player 2: #${lastProcessedInputForClient2}`;
-  writePositions(server.entities.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
+  writePositions(server.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
 });
 
 client1Game.eventEmitter.on('postStep', () => {
@@ -327,8 +327,8 @@ client2Game.eventEmitter.on('postStep', () => {
   displayGame(client2, document.getElementById('client2') as HTMLElement);
 });
 
-network.on('clientSentMessageSent', handleMessageSent);
-network.on('serverSentMessageSent', handleMessageSent);
+network.eventEmitter.on('clientSentMessageSent', handleMessageSent);
+network.eventEmitter.on('serverSentMessageSent', handleMessageSent);
 
 server.start(serverSyncUpdateRate);
 client1.start(clientUpdateRate);

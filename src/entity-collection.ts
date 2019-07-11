@@ -31,7 +31,7 @@ export class EntityCollection<E extends AnySyncableEntity> {
    * Gets all entities in the game.
    * @returns The entities in the game world.
    */
-  public getEntities(): E[] {
+  public asArray(): E[] {
     return Array.from(this.entities.values());
   }
 }

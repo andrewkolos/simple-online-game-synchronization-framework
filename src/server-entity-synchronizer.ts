@@ -6,6 +6,7 @@ import { ServerEntityMessageBuffer } from './networking/message-buffer';
 import { AnySyncableEntity, PickState } from './syncable-entity';
 
 export interface ServerEntitySynchronizerEvents {
+  beforeSynchronization(): void;
   synchronized(): void;
 }
 
@@ -21,9 +22,9 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
 
   public updateRateHz: number;
 
-  public entities: EntityCollection<E>;
+  public readonly eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
 
-  public eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
+  public readonly entities: EntityCollection<E>;
 
   private readonly clients: Map<string, ClientInfo<E>>;
 
@@ -51,6 +52,14 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
     this.handleClientConnection(newClientId);
 
     return newClientId;
+  }
+
+  public getEntities(): ReadonlyArray<E> {
+    return this.entities.asArray();
+  }
+
+  public addNonPlayerEntity(entity: E) {
+    this.entities.addEntity(entity);
   }
 
   public addPlayerEntity(entity: E, playerClientId: string) {
@@ -105,6 +114,8 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
   protected abstract validateInput(entity: E, input: any): boolean;
 
   private update() {
+    this.eventEmitter.emit("beforeSynchronization");
+
     this.processInputs();
     this.sendWorldState();
 

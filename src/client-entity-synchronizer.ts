@@ -32,9 +32,9 @@ export interface ClientEntitySynchronizerContext<Entity extends AnySyncableEntit
  */
 export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
   /** Contains game state and can accept inputs. */
-  public entities: EntityCollection<E>;
+  public readonly entities: EntityCollection<E>;
 
-  public eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
+  public readonly eventEmitter: DeepReadonly<TypedEventEmitter<ClientEntitySynchronizerEvents>> = new TypedEventEmitter();
 
   /** Provides state messages. */
   private readonly server: ClientEntityMessageBuffer<E>;
@@ -137,7 +137,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
    * 
    */
   private processServerMessages() {
-    const isFirstTimeSeeingEntity = (entityId: string) => !this.entities.getEntities().some((ge) => ge.id === entityId);
+    const isFirstTimeSeeingEntity = (entityId: string) => !this.entities.asArray().some((ge) => ge.id === entityId);
 
     while (this.server.hasNext()) {
       const stateMessage = this.server.receive();
@@ -241,7 +241,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
     const now = new Date().getTime();
     const renderTimestamp = now - (1000.0 / this.serverUpdateRateInHz);
 
-    this.entities.getEntities().forEach((entity: E) => {
+    this.entities.asArray().forEach((entity: E) => {
       if (this.playerEntityIds.includes(entity.id)) {
         // No point in interpolating an entity that belongs to this client.
         return;

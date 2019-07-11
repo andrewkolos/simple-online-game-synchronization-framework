@@ -23,7 +23,7 @@ export class TypedEventEmitter<Events> {
 
   public dispatchEvent<E extends keyof Events>(type: E, ...args: Arguments<Events[E]>) {
     this.handlers.filter(handler => handler[0] === type).forEach(handler => {
-      handler[1](args);
+      handler[1](...args);
     })
   }
 

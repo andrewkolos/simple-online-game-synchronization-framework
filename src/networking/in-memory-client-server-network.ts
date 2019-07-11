@@ -11,6 +11,8 @@ interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
  */
 export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
 
+  public readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>>();
+
   private readonly clientSentMessageQueues: ClientSendType[][] = [];
   private readonly serverSentMessageQueues: ServerSendType[][] = [];
 
@@ -18,13 +20,9 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
   private readonly serverSentMessageSendTimes: Map<ServerSendType, number> = new Map();
   private readonly serverSentMessageReferenceCounts: Map<ServerSendType, number> = new Map();
 
-  private readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>>();
-
   // tslint:disable-next-line: member-ordering
-  public on: (event: keyof InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>, fn: () => void) => void = this.eventEmitter.on.bind(this.eventEmitter);
-
   /**
-   * Get a connection to the server.
+   * Gives a new connection to the server.
    */
   public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
     const that = this;

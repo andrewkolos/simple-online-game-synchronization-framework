@@ -9,11 +9,14 @@ import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGiv
  */
 export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
                                                           
-  private readonly collections: Record<keyof TypeMap, PickReceiveType<TypeMap>[]>;
+  private readonly collections: Partial<Record<keyof TypeMap, PickReceiveType<TypeMap>[]>>;
   
-  public constructor(private readonly buffer: MessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {}
+  public constructor(private readonly categorizer: MessageCategorizer<TypeMap>, 
+    private readonly buffer: MessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {
+    this.collections = {};
+  }
   
-  public getFilteredMessageBuffer<K extends keyof TypeMap & string>(bufferType: K)
+  public getFilteredMessageBuffer<K extends keyof TypeMap>(bufferType: K)
     : MessageBuffer<PickReceiveTypeGivenKey<TypeMap, K>, PickSendTypeGivenKey<TypeMap, K>> {
 
     return {
@@ -23,7 +26,9 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
       hasNext: () => {
         this.receiveAndOrganizeAllMessages();
 
-        return this.collections[bufferType] != null && this.collections[bufferType].length > 0;
+        const collection = this.collections[bufferType];
+
+        return collection != null && collection.length > 0;
       },
       receive: () => {
         this.receiveAndOrganizeAllMessages();
@@ -43,14 +48,18 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
     while (this.buffer.hasNext()) {
       const message = this.buffer.receive();
 
-      const kind = message.kind as keyof TypeMap;
+      const category = this.categorizer.assignMessageCategory(message);
 
-      if (this.collections[kind] == null) {
-        this.collections[kind] = [];
+      if (this.collections[category] == null) {
+        this.collections[category] = [];
       }
 
-      this.collections[kind].push(message);
+      this.collections[category]!.push(message);
     }
   }
   
+}
+
+export interface MessageCategorizer<TypeMap extends RouterTypeMap> {
+  assignMessageCategory(message: PickReceiveType<TypeMap>): keyof TypeMap;
 }
