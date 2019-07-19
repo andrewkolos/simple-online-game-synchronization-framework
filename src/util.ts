@@ -11,3 +11,8 @@ export type DeepReadonlyObject<T> = {
 };
 
 export type ValueOf<T> = T[keyof T];
+
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+export type JsonObject = { [member: string]: JsonValue };
+export interface JsonArray extends Array<JsonValue> { }
