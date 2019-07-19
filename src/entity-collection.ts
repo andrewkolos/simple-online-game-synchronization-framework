@@ -1,4 +1,4 @@
-import { AnySyncableEntity } from './syncable-entity';
+import { AnyEntity } from './entity/entity';
 
 type EntityId = string;
 
@@ -6,9 +6,22 @@ type EntityId = string;
 /**
  * Contains entities, allowing retrieval by entity ID.
  */
-export class EntityCollection<E extends AnySyncableEntity> {
+export class EntityCollection<E extends AnyEntity> {
+
   /** These compose the state of the game. */
   private readonly entities: Map<EntityId, E> = new Map();
+
+  /**
+   * Creates an instance of an entity collection.
+   * @param entities Entities to add to the entity collection to begin with, if any.
+   */
+  constructor(entities?: E[]) {
+    if (entities != null) {
+      entities.forEach((entity: E) => {
+        this.entities.set(entity.id, entity);
+      });
+    }
+  }
 
   /**
    * Adds an entity to the game world.
