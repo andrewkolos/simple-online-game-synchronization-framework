@@ -1,3 +1,4 @@
+import { AnyEntity, PickState, InterpolableEntity } from './entity';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { InputCollectionStrategy } from './input-collection-strategy';
@@ -5,12 +6,11 @@ import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
 import { EntityMessageKind, InputMessage } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
-import { AnySyncableEntity, PickState } from './syncable-entity';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
 
-export interface EntityFactory<E extends AnySyncableEntity> {
+export interface EntityFactory<E extends AnyEntity> {
   fromStateMessage(entityId: string, state: any): E;
 }
 
@@ -18,7 +18,7 @@ export interface ClientEntitySynchronizerEvents {
   synchronized(): void;
 }
 
-export interface ClientEntitySynchronizerContext<Entity extends AnySyncableEntity> {
+export interface ClientEntitySynchronizerContext<Entity extends AnyEntity> {
   serverConnection: ClientEntityMessageBuffer<Entity>; 
   serverUpdateRateInHz: number;
   entityFactory: EntityFactory<Entity>;
@@ -30,7 +30,7 @@ export interface ClientEntitySynchronizerContext<Entity extends AnySyncableEntit
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
+export class ClientEntitySynchronizer<E extends AnyEntity> {
   /** Contains game state and can accept inputs. */
   public readonly entities: EntityCollection<E>;
 
@@ -174,7 +174,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
           const entity = this.entities.getEntityById(inputMessage.entityId);
           if (entity == null) { throw Error('Did not find entity corresponding to a pending input.'); }
 
-          entity.state = entity.calcNextStateFromInput(entity.state, inputMessage.input);
+          entity.applyInput(inputMessage.input);
         });
       } else {
         // Received the state of an entity that does not belong to this client.
@@ -224,7 +224,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
 
       if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
 
-      playerEntity.state = playerEntity.calcNextStateFromInput(playerEntity.state, input.input); // Client-side prediction.
+      playerEntity.applyInput(input.input); // Client-side prediction.
 
       this.pendingInputs.push(inputMessage); // Save for later reconciliation.
     });
@@ -261,7 +261,7 @@ export class ClientEntitySynchronizer<E extends AnySyncableEntity> {
       if (buffer.length >= 2 && buffer[0].timestamp <= renderTimestamp && renderTimestamp <= buffer[1].timestamp) {
 
         const timeRatio = (renderTimestamp - buffer[0].timestamp) / (buffer[1].timestamp - buffer[0].timestamp);
-        entity.state = entity.interpolate(buffer[0].state, buffer[1].state, timeRatio);
+        (entity as unknown as InterpolableEntity<any, any>).interpolate(buffer[0].state, buffer[1].state, timeRatio); // TODO: fix needing assertion.
       }
     });
   }

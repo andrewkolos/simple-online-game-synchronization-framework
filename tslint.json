@@ -26,6 +26,18 @@
       true,
       "allow-leading-underscore"
     ],
-    "curly": false
+    "curly": false,
+    "function-name": [
+      true,
+      {
+        "function-regex": "[a-z$][\\w\\d]+",
+        "method-regex": "[a-z$][\\w\\d]+",
+        "private-method-regex": "[a-z$][\\w\\d]+",
+        "protected-method-regex": "[a-z$][\\w\\d]+",
+        "static-method-regex": "[a-z$][\\w\\d]+"
+      }
+    ],
+    "no-submodule-imports": false,
+    "no-implicit-dependencies": false
   }
 }

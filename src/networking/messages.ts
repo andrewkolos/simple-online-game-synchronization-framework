@@ -1,4 +1,4 @@
-import { AnySyncableEntity, PickState, PickInput } from '../syncable-entity';
+import { AnyEntity, PickInput, PickState } from 'src/entity';
 
 export const enum EntityMessageKind {
   Input = "entityInput",
@@ -9,14 +9,14 @@ export interface BufferMessage {
   kind: string;
 }
 
-export interface InputMessage<Entity extends AnySyncableEntity> extends BufferMessage {
+export interface InputMessage<Entity extends AnyEntity> extends BufferMessage {
   kind: EntityMessageKind.Input;
   entityId: string;
   input: PickInput<Entity>;
   inputSequenceNumber: number;
 }
 
-export interface StateMessage<Entity extends AnySyncableEntity> extends BufferMessage {
+export interface StateMessage<Entity extends AnyEntity> extends BufferMessage {
   kind: EntityMessageKind.State;
   entityId: string;
   state: PickState<Entity>;

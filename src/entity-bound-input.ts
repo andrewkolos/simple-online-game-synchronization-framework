@@ -1,7 +1,7 @@
 import { EntityId } from './client-entity-synchronizer';
-import { AnySyncableEntity, PickInput } from './syncable-entity';
+import { AnyEntity, PickInput } from './entity';
 
-export interface InputForEntity<E extends AnySyncableEntity> {
+export interface EntityBoundInput<E extends AnyEntity> {
   /**
    * The entity that is to react to the input.
    */
