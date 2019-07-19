@@ -1,5 +1,5 @@
 import { AnyEntity } from './entity';
-import { InputForEntity } from "./input-for-entity";
+import { EntityBoundInput } from "./entity-bound-input";
 
 /**
  * Collects inputs for a game step.
@@ -10,5 +10,5 @@ export interface InputCollectionStrategy<Entity extends AnyEntity> {
    * to be applied against.
    * @param dt The amount of time that has elapsed since input was last collected.
    */
-  getInputs(dt: number): InputForEntity<Entity>[];
+  getInputs(dt: number): EntityBoundInput<Entity>[];
 }

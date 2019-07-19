@@ -1,17 +1,28 @@
-import { AnyEntity, PickState, InterpolableEntity } from './entity';
+import { AnyEntity, InterpolableEntity, PickState } from './entity';
+import { EntityBoundInput } from './entity-bound-input';
 import { EntityCollection } from './entity-collection';
 import { TypedEventEmitter } from './event-emitter';
 import { InputCollectionStrategy } from './input-collection-strategy';
-import { InputForEntity } from './input-for-entity';
 import { IntervalRunner } from "./interval-runner";
-import { EntityMessageKind, InputMessage } from './networking';
+import { EntityMessageKind, InputMessage, StateMessage } from './networking';
 import { ClientEntityMessageBuffer, Timestamp } from './networking/message-buffer';
 import { DeepReadonly } from './util';
 
 export type EntityId = string;
 
-export interface EntityFactory<E extends AnyEntity> {
-  fromStateMessage(entityId: string, state: any): E;
+export const enum SyncStrategyType {
+  Interpolation = "interpolation",
+  DeadReckoning = "reckoning",
+}
+
+export type NonLocalEntityResponse<E extends AnyEntity> = {
+  entity: E,
+  syncStrategy: SyncStrategyType;
+}
+
+export interface NewEntityHandler<E extends AnyEntity> {
+  createLocalEntityFromStateMessage(stateMessage: StateMessage<E>): E;
+  createNonLocalEntityFromStateMessage(stateMessage: StateMessage<E>): NonLocalEntityResponse<E>;
 }
 
 export interface ClientEntitySynchronizerEvents {
@@ -21,7 +32,7 @@ export interface ClientEntitySynchronizerEvents {
 export interface ClientEntitySynchronizerContext<Entity extends AnyEntity> {
   serverConnection: ClientEntityMessageBuffer<Entity>; 
   serverUpdateRateInHz: number;
-  entityFactory: EntityFactory<Entity>;
+  entityFactory: NewEntityHandler<Entity>;
   inputCollector: InputCollectionStrategy<Entity>;
 }
 
@@ -39,7 +50,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> {
   /** Provides state messages. */
   private readonly server: ClientEntityMessageBuffer<E>;
   /** Constructs representations of new entities given a state object. */
-  private readonly entityFactory: EntityFactory<E>;
+  private readonly entityFactory: NewEntityHandler<E>;
   private readonly serverUpdateRateInHz: number;
   /** Collects user inputs. */
   private readonly inputCollectionStrategy: InputCollectionStrategy<E>;
@@ -143,7 +154,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> {
       const stateMessage = this.server.receive();
 
       if (isFirstTimeSeeingEntity(stateMessage.entityId)) {
-        const entity = this.entityFactory.fromStateMessage(stateMessage.entityId, stateMessage.state);
+        const entity = this.entityFactory.createNonLocalEntityFromStateMessage(stateMessage.entityId, stateMessage.state);
         if (entity.id !== stateMessage.entityId) {
           throw Error(`Entity created by entity factory has an incorrect id: ${entity.id} != ${stateMessage.entityId}`);
         }
@@ -195,7 +206,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> {
 
     const now = new Date().getTime();
 
-    const getInputs = (): InputForEntity<E>[] => {
+    const getInputs = (): EntityBoundInput<E>[] => {
 
       const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
         ? this.lastInputCollectionTimestamp : now;
@@ -207,12 +218,12 @@ export class ClientEntitySynchronizer<E extends AnyEntity> {
       return this.inputCollectionStrategy.getInputs(timeSinceLastInputCollection);
     }
 
-    const inputs = getInputs();
+    const entityBoundInputs = getInputs();
 
-    inputs.forEach(input => {
+    entityBoundInputs.forEach(input => {
 
       const inputMessage: InputMessage<E> = {
-        kind: EntityMessageKind.Input,
+        messageKind: EntityMessageKind.Input,
         entityId: input.entityId,
         inputSequenceNumber: this.currentInputSequenceNumber,
         input: input.input
@@ -229,7 +240,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> {
       this.pendingInputs.push(inputMessage); // Save for later reconciliation.
     });
 
-    if (inputs.length > 0) {
+    if (entityBoundInputs.length > 0) {
       this.currentInputSequenceNumber = this.currentInputSequenceNumber + 1;
     }
   }

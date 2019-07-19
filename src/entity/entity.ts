@@ -1,8 +1,3 @@
-export enum SyncStrategyKind {
-  Interpolation = "interpolation",
-  DeadReckoning = "reckoning",
-}
-
 /**
  * Represents any entity in the game, physical. All entities together compose the state of physical entities within a game.
  */

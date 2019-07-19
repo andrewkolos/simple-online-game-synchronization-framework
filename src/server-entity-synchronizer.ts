@@ -169,7 +169,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
         const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
 
         const networkedStateMessage: StateMessage<E> = {
-          kind: EntityMessageKind.State,
+          messageKind: EntityMessageKind.State,
           entityId: stateMessage.entityId,
           state: stateMessage.state,
           lastProcessedInputSequenceNumber: client.lastProcessedInput,
