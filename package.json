@@ -39,6 +39,8 @@
     "webpack-cli": "^3.3.5"
   },
   "dependencies": {
+    "@types/dedent": "^0.7.0",
+    "dedent": "^0.7.0",
     "eventemitter3": "^4.0.0",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
