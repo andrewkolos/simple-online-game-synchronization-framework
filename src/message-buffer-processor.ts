@@ -1,4 +1,4 @@
-import { IntervalRunner } from './interval-runner';
+import { Interval, IntervalRunner } from './interval-runner';
 import { MessageBuffer } from './networking';
 
 /**
@@ -11,7 +11,7 @@ export abstract class MessageBufferProcessor<Message> {
   private readonly intervalRunner: IntervalRunner;
 
   public constructor(private readonly messageBuffer: MessageBuffer<Message, any>, processingRateHz: number) {
-    this.intervalRunner = new IntervalRunner(() => this.processMessages(), processingRateHz);
+    this.intervalRunner = new IntervalRunner(() => this.processMessages(), Interval.fromHz(processingRateHz));
   }
 
   public start() {

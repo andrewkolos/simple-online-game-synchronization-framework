@@ -1,5 +1,5 @@
-import dedent from "dedent";
-import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy, Entity } from '../entity';
+import { singleLineify } from 'src/util';
+import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from '../entity';
 import { EntityBoundInput } from '../entity-bound-input';
 import { EntityCollection } from '../entity-collection';
 import { TypedEventEmitter } from '../event-emitter';
@@ -8,7 +8,6 @@ import { Interval, IntervalRunner } from "../interval-runner";
 import { EntityMessageKind, InputMessage, StateMessage } from '../networking';
 import { ClientEntityMessageBuffer, Timestamp } from '../networking/message-buffer';
 import { CheckedNewEntityHandler, NewEntityHandler, NonLocalEntityResponse } from '../new-entity-handler';
-import { DeepReadonly } from '../util';
 
 export type EntityId = string;
 
@@ -191,7 +190,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
         const entity = this.entities.getEntityById(stateMessageEntityId);
         if (entity == null) {
-          throw Error(dedent`
+          throw Error(singleLineify`
             Received state message with entity ID '${stateMessageEntityId}', but no entity with that ID exists on this client.
           `);
         }

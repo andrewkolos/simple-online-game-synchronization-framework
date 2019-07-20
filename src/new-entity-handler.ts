@@ -1,7 +1,6 @@
-import dedent from "dedent";
 import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from './entity';
 import { StateMessage } from './networking';
-import { compareDumbObjects } from './util';
+import { compareDumbObjects, singleLineify } from './util';
 
 interface InterpolableEntityResponse<E extends AnyEntity> {
   entity: InterpolableEntity<PickInput<E>, PickState<E>>;
@@ -49,13 +48,13 @@ export class CheckedNewEntityHandler<E extends AnyEntity> implements NewEntityHa
 
   private check(createdEntity: E, creatingStateMessage: StateMessage<E>): void | never {
     if (createdEntity.id !== creatingStateMessage.entity.id) {
-      throw Error(dedent`
+      throw Error(singleLineify`
         The ID of the entity created from the state message, '${createdEntity.id}', is not equivalent to the one
         in the state message it was created from, '${creatingStateMessage.entity.id}.
       `);
     }
     if (!compareDumbObjects(createdEntity.state, creatingStateMessage.entity.state)) {
-      throw Error(dedent`
+      throw Error(singleLineify`
         The state of the entity created from the state message is not identical to state perscribed in the state message.
       `);
     }

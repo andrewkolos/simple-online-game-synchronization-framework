@@ -1,6 +1,6 @@
 {
   "name": "@akolos/ts-client-server-game-synchronization",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
@@ -39,8 +39,6 @@
     "webpack-cli": "^3.3.5"
   },
   "dependencies": {
-    "@types/dedent": "^0.7.0",
-    "dedent": "^0.7.0",
     "eventemitter3": "^4.0.0",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
