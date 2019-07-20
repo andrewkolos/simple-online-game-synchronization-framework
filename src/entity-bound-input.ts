@@ -1,5 +1,5 @@
-import { EntityId } from './client-entity-synchronizer';
 import { AnyEntity, PickInput } from './entity';
+import { EntityId } from './synchronizers/client-entity-synchronizer';
 
 export interface EntityBoundInput<E extends AnyEntity> {
   /**

@@ -1,12 +1,10 @@
-import { Entity, SyncStrategyKind } from './entity';
+import { Entity } from './entity';
 
 /**
  * Represents any object in the game, physical or abstract. All objects together
  * encode the game state.
  */
-export abstract class ReckonableEntity<Input extends {}, State extends {}> extends Entity<Input, State> {
-
-  public readonly synchronizationStrategyKind = SyncStrategyKind.DeadReckoning;
+export abstract class ReckonableEntity<Input, State> extends Entity<Input, State> {
 
   public abstract calcReckonedState(previousState: State, timeElapsedSincePreviousStateMs: number): State;
 
@@ -15,4 +13,4 @@ export abstract class ReckonableEntity<Input extends {}, State extends {}> exten
   }
 }
 
-export type AnyReckonableEntity = ReckonableEntity<{}, {}>;
+export type AnyReckonableEntity = ReckonableEntity<unknown, unknown>;

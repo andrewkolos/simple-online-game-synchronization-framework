@@ -1,13 +1,29 @@
 /**
+ * Represents an interval of time, i.e. the amount of time between two events.
+ */
+export class Interval {
+  private constructor(public ms: number) {
+  }
+
+  public static fromMilliseconds(ms: number) {
+    return new Interval(ms);
+  }
+
+  public static fromHz(hz: number) {
+    return new Interval(1000 / hz);
+  }
+}
+
+/**
  * Repeatedly calls a function or executes a code snippet, with a fixed time delay between each call.
  */
 export class IntervalRunner {
 
   private intervalId: NodeJS.Timeout | number;
-  
+
   private running: boolean = false;
 
-  public constructor(private readonly operation: () => void, private readonly intervalTimeMs: number) {}
+  public constructor(private readonly operation: () => void, private readonly interval: Interval) { }
 
   /**
    * Determines if this runner is running.
@@ -21,7 +37,7 @@ export class IntervalRunner {
    * Starts the runner, repeatedly executing its operation using the Node/`Window` `setInterval` API.
    */
   public start() {
-    this.intervalId = setInterval(this.operation, this.intervalTimeMs);
+    this.intervalId = setInterval(this.operation, this.interval.ms);
     this.running = true;
   }
 

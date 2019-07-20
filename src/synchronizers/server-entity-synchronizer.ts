@@ -1,24 +1,24 @@
-import { EntityCollection } from './entity-collection';
-import { TypedEventEmitter } from './event-emitter';
-import { IntervalRunner } from "./interval-runner";
-import { EntityMessageKind, StateMessage } from './networking';
-import { ServerEntityMessageBuffer } from './networking/message-buffer';
-import { AnySyncableEntity, PickState } from './syncable-entity';
+import { AnyEntity, PickState } from 'src/entity';
+import { EntityCollection } from '../entity-collection';
+import { TypedEventEmitter } from '../event-emitter';
+import { Interval, IntervalRunner } from "../interval-runner";
+import { EntityMessageKind, StateMessage } from '../networking';
+import { ServerEntityMessageBuffer } from '../networking/message-buffer';
 
 export interface ServerEntitySynchronizerEvents {
   beforeSynchronization(): void;
   synchronized(): void;
 }
-
-export interface EntityStateBroadcastMessage<Entity extends AnySyncableEntity> {
-  entityId: string,
-  state: PickState<Entity>;
-}
+type ClientId = string;
+// export interface EntityStateBroadcastMessage<Entity extends AnyEntity> {
+//   entityId: string,
+//   state: PickState<Entity>;
+// }
 
 /**
  * Creates and synchronizes game entities for clients.
  */
-export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, ClientId extends string> {
+export abstract class ServerEntitySynchronizer<E extends AnyEntity> {
 
   public updateRateHz: number;
 
@@ -79,7 +79,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
     this.stop();
 
     if (serverUpdateRate > 0) {
-      this.updateInterval = new IntervalRunner(() => this.update(), 1000 / this.updateRateHz);
+      this.updateInterval = new IntervalRunner(() => this.update(), Interval.fromHz(this.updateRateHz));
       this.updateInterval.start();
     }
   }
@@ -108,8 +108,6 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
   protected abstract handleClientConnection(newClientId: string): void;
 
   protected abstract getIdForNewClient(): ClientId;
-
-  protected abstract getStatesToBroadcastToClients(): EntityStateBroadcastMessage<E>[];
 
   protected abstract validateInput(entity: E, input: any): boolean;
 
@@ -153,7 +151,7 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
 
       if (entity != undefined && this.validateInput(entity, input.input)) {
 
-        entity.state = entity.calcNextStateFromInput(entity.state, input.input);
+        entity.applyInput(input.input);
 
         client.lastProcessedInput = input.inputSequenceNumber;
       }
@@ -161,28 +159,33 @@ export abstract class ServerEntitySynchronizer<E extends AnySyncableEntity, Clie
   }
 
   private sendWorldState() {
-    const stateMessages = this.getStatesToBroadcastToClients();
     const clients = Array.from(this.clients.values());
-
+    const entities = this.entities.asArray();
     for (const client of clients) {
-      for (const stateMessage of stateMessages) {
-        const entityBelongsToClient = client.ownedEntityIds.includes(stateMessage.entityId);
+      entities.forEach((entity: E) => {
+        const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
 
         const networkedStateMessage: StateMessage<E> = {
           messageKind: EntityMessageKind.State,
-          entityId: stateMessage.entityId,
-          state: stateMessage.state,
+          entity: {
+            id: entity.id,
+            kind: entity.kind,
+            state: entity.state as PickState<E>,
+            belongsToRecipientClient: entityBelongsToClient,
+          },
           lastProcessedInputSequenceNumber: client.lastProcessedInput,
-          entityBelongsToRecipientClient: entityBelongsToClient
+          timestampMs: new Date().getTime(),
         };
 
         client.connection.send(networkedStateMessage);
-      }
+      });
+        
+      
     }
   }
 }
 
-export interface ClientInfo<E extends AnySyncableEntity> {
+export interface ClientInfo<E extends AnyEntity> {
   clientId: string;
   connection: ServerEntityMessageBuffer<E>;
   lastProcessedInput: number;

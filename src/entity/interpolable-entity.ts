@@ -6,7 +6,7 @@ import { Entity } from './entity';
  * @template Input 
  * @template State 
  */
-export abstract class InterpolableEntity<Input extends {}, State extends {}> extends Entity<Input, State> {
+export abstract class InterpolableEntity<Input, State> extends Entity<Input, State> {
   
   /**
    * Creates a state for the entity by interpolating two other states (essentially creating
@@ -25,5 +25,5 @@ export abstract class InterpolableEntity<Input extends {}, State extends {}> ext
   }
 }
 
-export type AnyInterpolableEntity = InterpolableEntity<{}, {}>;
+export type AnyInterpolableEntity = InterpolableEntity<unknown, unknown>;
 

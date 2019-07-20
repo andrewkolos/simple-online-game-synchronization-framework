@@ -12,7 +12,16 @@ export type DeepReadonlyObject<T> = {
 
 export type ValueOf<T> = T[keyof T];
 
-export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
-export type JsonObject = { [member: string]: JsonValue };
-export interface JsonArray extends Array<JsonValue> { }
+export function compareDumbObjects<T>(o1: T, o2: T) {
+  const isDumbObject = Object.values(o1).every((value: any) => {
+    const t = typeof value;
+    
+    return t !== "object" && t !== "function";
+  });
+
+  if (!isDumbObject) {
+    throw Error("Object cannot contain non-value types.");
+  }
+
+  return JSON.stringify(o1) === JSON.stringify(o2);
+}

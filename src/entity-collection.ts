@@ -1,7 +1,6 @@
 import { AnyEntity } from './entity/entity';
 
-type EntityId = string;
-
+export type EntityId = string;
 
 /**
  * Contains entities, allowing retrieval by entity ID.
@@ -41,10 +40,18 @@ export class EntityCollection<E extends AnyEntity> {
   }
 
   /**
-   * Gets all entities in the game.
-   * @returns The entities in the game world.
+   * Gets all entities in this collection, as an array.
+   * @returns The entities in this collection.
    */
   public asArray(): E[] {
     return Array.from(this.entities.values());
+  }
+
+  /**
+   * Gets all entities in this collection, as a map keyed by an entity ID.
+   * @returns The entities in this collection.
+   */
+  public asIdKeyedMap(): Map<EntityId, E> {
+    return new Map(this.entities);
   }
 }

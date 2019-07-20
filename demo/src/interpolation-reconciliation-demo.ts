@@ -1,12 +1,13 @@
 // tslint:disable
 
-import { EntityFactory, ClientEntitySynchronizer } from '../../src/client-entity-synchronizer';
-import { SyncableEntity } from '../../src/syncable-entity';
-import { ServerEntitySynchronizer, EntityStateBroadcastMessage } from '../../src/server-entity-synchronizer';
 import { GameLoop } from '../../src/game-loop';
-import { InputForEntity } from '../../src/input-for-entity';
 import { InputCollectionStrategy } from '../../src/input-collection-strategy';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
+import { Entity, SyncStrategy, InterpolableEntity } from '../../src/entity';
+import { EntityBoundInput } from '../../src/entity-bound-input';
+import { ClientEntitySynchronizer } from '../../src/synchronizers/client-entity-synchronizer';
+import { ServerEntitySynchronizer } from '../../src/synchronizers/server-entity-synchronizer';
+import { NewEntityHandler, NonLocalEntityResponse } from '../../src/new-entity-handler';
 
 interface DemoPlayerState {
   position: number;
@@ -17,9 +18,11 @@ interface DemoPlayerInput {
   pressTime: number;
 }
 
-export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState> {
+export class DemoPlayer extends InterpolableEntity<DemoPlayerInput, DemoPlayerState> {
 
   private static MOVE_SPEED = 0.2;
+
+  public kind: "demoPlayer";
 
   constructor(id: string, initialState: DemoPlayerState) {
     super(id, initialState);
@@ -47,7 +50,7 @@ export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState>
     };
   }
 
-  public interpolate(state1: DemoPlayerState, state2: DemoPlayerState, timeRatio: number): DemoPlayerState {
+  public calculateInterpolatedState(state1: DemoPlayerState, state2: DemoPlayerState, timeRatio: number): DemoPlayerState {
     return {
       position: state1.position + (state1.position - state2.position) * timeRatio
     };
@@ -55,14 +58,6 @@ export class DemoPlayer extends SyncableEntity<DemoPlayerInput, DemoPlayerState>
 }
 
 type DemoEntity = DemoPlayer; // Union future entities here.
-
-interface MoveInput extends InputForEntity<DemoEntity> {
-  inputType: DemoInputType.Move,
-  input: {
-    direction: MoveInputDirection;
-    pressTime: number;
-  }
-}
 
 export const enum DemoInputType {
   Move = 'move'
@@ -74,8 +69,6 @@ export const enum MoveInputDirection {
 }
 
 type DemoClientEntitySynchronizer = ClientEntitySynchronizer<DemoEntity>;
-
-type DemoInput = MoveInput; // Union with new Input types added in the future.
 
 class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoEntity> {
 
@@ -111,14 +104,13 @@ class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoEntity> 
 
     const xor = (x: boolean, y: boolean) => (x && !y) || (!x && y);
 
-    const inputs: DemoInput[] = [];
+    const inputs: EntityBoundInput<DemoEntity>[] = [];
 
     if (xor(this.leftKeyIsDown, this.rightKeyIsDown)) {
 
       const direction = this.leftKeyIsDown ? MoveInputDirection.Backward : MoveInputDirection.Forward;
 
-      const input: MoveInput = {
-        inputType: DemoInputType.Move,
+      const input: EntityBoundInput<DemoEntity> = {
         entityId: this.playerEntityId,
         input: {
           direction,
@@ -140,7 +132,7 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends ServerEntitySynchronizer<DemoEntity, string> {
+export class DemoServer extends ServerEntitySynchronizer<DemoEntity> {
 
   private players: DemoPlayer[] = [];
   private playerMovementInfos: PlayerMovementInfo[] = [];
@@ -162,22 +154,9 @@ export class DemoServer extends ServerEntitySynchronizer<DemoEntity, string> {
     return `c${this.players.length}`;
   }
 
-  protected getStatesToBroadcastToClients(): EntityStateBroadcastMessage<DemoEntity>[] {
-    const messages = [];
+  protected validateInput(entity: Entity<any, any>, input: any) {
 
-    for (const p of this.players) {
-      messages.push({
-        entityId: p.id,
-        state: p.state
-      })
-    }
-
-    return messages;
-  }
-
-  protected validateInput(entity: SyncableEntity<any, any>, input: any) {
-
-    if (entity instanceof SyncableEntity && (input as DemoPlayerInput).direction != null) {
+    if (entity instanceof Entity && (input as DemoPlayerInput).direction != null) {
       const demoPlayerInput = input as DemoPlayerInput;
 
       const player = this.playerMovementInfos.find((info: PlayerMovementInfo) => {
@@ -192,16 +171,24 @@ export class DemoServer extends ServerEntitySynchronizer<DemoEntity, string> {
   }
 }
 
-export class DemoEntityFactory implements EntityFactory<DemoEntity> {
+export class NewDemoEntityHandler implements NewEntityHandler<DemoEntity> {
 
-  public fromStateMessage(entityId: string, state: any): DemoPlayer {
+  public createLocalEntityFromStateMessage(stateMessage: StateMessage<DemoEntity>): DemoPlayer {
+    const state = stateMessage.entity.state;
     if (state != null && state.position != null) {
-      return new DemoPlayer(entityId, {
+      return new DemoPlayer(stateMessage.entity.id, {
         position: state.position
       });
     }
 
     throw Error('Unable to convert state message into a game entity.');
+  }
+
+  public createNonLocalEntityFromStateMessage(stateMessage: StateMessage<DemoEntity>): NonLocalEntityResponse<DemoEntity> {
+    return  {
+      entity: this.createLocalEntityFromStateMessage(stateMessage),
+      syncStrategy: SyncStrategy.Interpolation,
+    }
   }
 
 }
@@ -230,7 +217,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[]
     c1: 'red'
   };
 
-  entities.forEach((entity: SyncableEntity<any,any>) => {
+  entities.forEach((entity: Entity<any,any>) => {
     if (!(entity instanceof DemoPlayer)) return;
 
     const entityRadius = canvas.height*0.9/2;
@@ -277,10 +264,10 @@ function handleMessageSent() {
 function createClient(playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) {
 
   const serverConnection = network.getNewConnectionToServer(100);
-  const entityFactory = new DemoEntityFactory();
+  const newEntityHandler = new NewDemoEntityHandler();
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({serverConnection, entityFactory, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
+  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({serverConnection, newEntityHandler, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
 
   return client;
 }
