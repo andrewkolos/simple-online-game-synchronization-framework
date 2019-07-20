@@ -56,9 +56,9 @@ export type AnyEntity = Entity<unknown, unknown>;
 /**
  * Picks an `Entity`'s input type.
  */
-export type PickInput<E> = E extends Entity<infer I, any> ? I : never;
+export type PickInput<E extends AnyEntity> = E extends Entity<infer I, any> ? I : never;
 
 /**
  * Picks an `Entity`'s state type.
  */
-export type PickState<E> = E extends Entity<any, infer S> ? S : never;
+export type PickState<E extends AnyEntity> = E extends Entity<any, infer S> ? S : never;

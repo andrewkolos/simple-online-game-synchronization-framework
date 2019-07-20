@@ -1,36 +1,34 @@
-import { AnyEntity, PickState } from 'src/entity';
+import { AnyEntity, PickState } from 'src/entity/entity';
 import { EntityCollection } from '../entity-collection';
 import { TypedEventEmitter } from '../event-emitter';
 import { Interval, IntervalRunner } from "../interval-runner";
 import { EntityMessageKind, StateMessage } from '../networking';
 import { ServerEntityMessageBuffer } from '../networking/message-buffer';
 
-export interface ServerEntitySynchronizerEvents {
-  beforeSynchronization(): void;
-  synchronized(): void;
-}
 type ClientId = string;
-// export interface EntityStateBroadcastMessage<Entity extends AnyEntity> {
-//   entityId: string,
-//   state: PickState<Entity>;
-// }
+type EntityId = string;
+
+export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
+  beforeSynchronization(): void;
+  synchronized(entities: Map<EntityId, E>): void;
+}
 
 /**
  * Creates and synchronizes game entities for clients.
+ * @template E The type of entity/entities this synchronizer can work with.
  */
-export abstract class ServerEntitySynchronizer<E extends AnyEntity> {
+export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
 
-  public updateRateHz: number;
+  private updateRateHz: number;
 
-  public readonly eventEmitter: TypedEventEmitter<ServerEntitySynchronizerEvents> = new TypedEventEmitter();
-
-  public readonly entities: EntityCollection<E>;
+  private readonly entities: EntityCollection<E>;
 
   private readonly clients: Map<string, ClientInfo<E>>;
 
   private updateInterval?: IntervalRunner;
 
   constructor() {
+    super();
     this.clients = new Map();
     this.entities = new EntityCollection();
     this.updateRateHz = 10;
@@ -39,7 +37,6 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> {
   public connect(connection: ServerEntityMessageBuffer<E>): ClientId {
 
     const newClientId = this.getIdForNewClient();
-
     const client: ClientInfo<E> = {
       clientId: newClientId,
       connection,
@@ -111,13 +108,17 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> {
 
   protected abstract validateInput(entity: E, input: any): boolean;
 
+  /**
+   * Processes all inputs received from clients, updating entities, and then sends
+   * back to clients the state of the entities.
+   */
   private update() {
-    this.eventEmitter.emit("beforeSynchronization");
+    this.emit("beforeSynchronization");
 
     this.processInputs();
     this.sendWorldState();
 
-    this.eventEmitter.emit("synchronized");
+    this.emit("synchronized", this.entities.asIdKeyedMap());
   }
 
   /**
