@@ -1,22 +1,19 @@
-import { singleLineify } from 'src/util';
-import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from '../entity';
-import { EntityBoundInput } from '../entity-bound-input';
+import { singleLineify, DeepReadonly } from 'src/util';
+import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from '../../entity';
+import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
+import { ClientEntityMessageBuffer } from '../../networking/message-buffer';
+import { TypedEventEmitter } from '../../util/event-emitter';
+import { Interval, IntervalRunner } from "../../util/interval-runner";
 import { EntityCollection } from '../entity-collection';
-import { TypedEventEmitter } from '../event-emitter';
-import { InputCollectionStrategy } from '../input-collection-strategy';
-import { Interval, IntervalRunner } from "../interval-runner";
-import { EntityMessageKind, InputMessage, StateMessage } from '../networking';
-import { ClientEntityMessageBuffer, Timestamp } from '../networking/message-buffer';
-import { CheckedNewEntityHandler, NewEntityHandler, NonLocalEntityResponse } from '../new-entity-handler';
+import { EntityBoundInput } from './entity-bound-input';
+import { InputCollectionStrategy } from './input-collection-strategy';
+import { CheckedNewEntityHandler, NewEntityHandler, NonLocalEntityResponse } from './new-entity-handler';
 
-export type EntityId = string;
+type Timestamp = number;
+type EntityId = string;
 
 export interface ClientEntitySynchronizerEvents<E extends AnyEntity> {
-  /**
-   * asbeb.
-   * @param entities 
-   */
-  synchronized(entities: Map<EntityId, E>): void;
+  synchronized(entityMap: Map<EntityId, DeepReadonly<E>>): void;
 }
 
 export interface ClientEntitySynchronizerContext<E extends AnyEntity> {
@@ -41,7 +38,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
     return this.pendingInputs.length;
   }
   /** Contains game state and can accept inputs. */
-  public readonly entities: EntityCollection<E>;
+  private readonly entities: EntityCollection<E>;
 
   private readonly interpolatableEntities: EntityCollection<InterpolableEntity<PickInput<E>, PickState<E>>>;
   private readonly reckonableEntities: EntityCollection<ReckonableEntity<PickInput<E>, PickState<E>>>;
@@ -133,7 +130,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
     this.interpolateEntities();
 
-    this.emit('synchronized', this.entities.asIdKeyedMap());
+    this.emit('synchronized', this.entities.asIdKeyedMap() as Map<EntityId, DeepReadonly<E>>);
   }
 
   /**

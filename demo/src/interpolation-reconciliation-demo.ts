@@ -1,13 +1,13 @@
 // tslint:disable
 
 import { GameLoop } from '../../src/game-loop';
-import { InputCollectionStrategy } from '../../src/input-collection-strategy';
+import { InputCollectionStrategy } from '../../src/synchronizers/client/input-collection-strategy';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
 import { Entity, SyncStrategy, InterpolableEntity } from '../../src/entity';
-import { EntityBoundInput } from '../../src/entity-bound-input';
-import { ClientEntitySynchronizer } from '../../src/synchronizers/client-entity-synchronizer';
-import { ServerEntitySynchronizer } from '../../src/synchronizers/server-entity-synchronizer';
-import { NewEntityHandler, NonLocalEntityResponse } from '../../src/new-entity-handler';
+import { EntityBoundInput } from '../../src/synchronizers/client/entity-bound-input';
+import { ClientEntitySynchronizer } from '../../src/synchronizers/client/client-entity-synchronizer';
+import { ServerEntitySynchronizer } from '../../src/synchronizers/server/server-entity-synchronizer';
+import { NewEntityHandler, NonLocalEntityResponse } from '../../src/synchronizers/client/new-entity-handler';
 
 interface DemoPlayerState {
   position: number;
@@ -195,8 +195,7 @@ export class NewDemoEntityHandler implements NewEntityHandler<DemoEntity> {
 
 // Helper code for running the demo.
 
-function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLElement) {
-  const entities = client.entities.asArray();
+function displayGame(entities: DemoEntity[], displayElement: HTMLElement, numberOfPendingInputs: number) {
   const displayElementId = displayElement.id;
 
   const canvasElement = document.getElementById(`${displayElementId}_canvas`) as HTMLCanvasElement;
@@ -205,7 +204,7 @@ function displayGame(client: DemoClientEntitySynchronizer, displayElement: HTMLE
 
   renderWorldOntoCanvas(canvasElement, entities);
   writePositions(entities, positionsElement);
-  lastAckElement.innerText = `Non-acknowledged inputs: ${client.numberOfPendingInputs}`; 
+  lastAckElement.innerText = `Non-acknowledged inputs: ${numberOfPendingInputs}`; 
 }
 
 function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[] | ReadonlyArray<DemoEntity>) {
@@ -287,15 +286,16 @@ const client2Game = new GameLoop(noop);
 const server = new DemoServer();
 const network = new InMemoryClientServerNetwork<InputMessage<DemoEntity>, StateMessage<DemoEntity>>();
 
-const client1Id = server.connect(network.getNewClientConnection());
-const client2Id = server.connect(network.getNewClientConnection());
+const client1Id = server.connectClient(network.getNewClientConnection());
+const client2Id = server.connectClient(network.getNewClientConnection());
 
 const client1 = createClient(client1Id, 65, 68);
 const client2 = createClient(client2Id, 37, 39);
 
-serverGame.eventEmitter.on('postStep', () => {
+server.on("synchronized", (entityMap: Map<string, DemoPlayer>) => {
+  const entities = Array.from(entityMap.values());
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
-  renderWorldOntoCanvas(serverCanvas, server.getEntities());
+  renderWorldOntoCanvas(serverCanvas, entities);
 
   const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
   const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
@@ -303,16 +303,17 @@ serverGame.eventEmitter.on('postStep', () => {
   const serverStatus = document.getElementById('server_status') as HTMLDivElement;
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
     ` Player 2: #${lastProcessedInputForClient2}`;
-  writePositions(server.getEntities(), document.getElementById('server_positions') as HTMLDivElement);
+  writePositions(entities, document.getElementById('server_positions') as HTMLDivElement);
 });
 
-client1Game.eventEmitter.on('postStep', () => {
-  displayGame(client1, document.getElementById('client1') as HTMLElement);
+client1.on('synchronized', (entityMap: Map<string, DemoEntity>) => {
+  displayGame(Array.from(entityMap.values()), document.getElementById('client1') as HTMLElement, client1.numberOfPendingInputs);
 });
 
-client2Game.eventEmitter.on('postStep', () => {
-  displayGame(client2, document.getElementById('client2') as HTMLElement);
+client2.on('synchronized', (entityMap: Map<string, DemoEntity>) => {
+  displayGame(Array.from(entityMap.values()), document.getElementById('client2') as HTMLElement, client2.numberOfPendingInputs);
 });
+
 
 network.eventEmitter.on('clientSentMessageSent', handleMessageSent);
 network.eventEmitter.on('serverSentMessageSent', handleMessageSent);

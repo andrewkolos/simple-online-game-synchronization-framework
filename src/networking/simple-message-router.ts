@@ -1,4 +1,4 @@
-import { MessageBuffer } from './message-buffer';
+import { MessageBuffer, asIterableIterator } from './message-buffer';
 import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGivenKey, RouterTypeMap } from './message-router';
 
 /**
@@ -8,40 +8,43 @@ import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGiv
  * @template TypeMap @inheritdoc
  */
 export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
-                                                          
+
   private readonly collections: Partial<Record<keyof TypeMap, PickReceiveType<TypeMap>[]>>;
-  
-  public constructor(private readonly categorizer: MessageCategorizer<TypeMap>, 
+
+  public constructor(private readonly categorizer: MessageCategorizer<TypeMap>,
     private readonly buffer: MessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {
     this.collections = {};
   }
-  
+
   public getFilteredMessageBuffer<K extends keyof TypeMap>(bufferType: K)
     : MessageBuffer<PickReceiveTypeGivenKey<TypeMap, K>, PickSendTypeGivenKey<TypeMap, K>> {
 
-    return {
+    const hasNext = () => {
+      this.receiveAndOrganizeAllMessages();
+
+      const collection = this.collections[bufferType];
+
+      return collection != null && collection.length > 0;
+    }
+
+    const receive = () => {
+      this.receiveAndOrganizeAllMessages();
+
+      const collection = this.collections[bufferType];
+      if (collection == null || collection.length === 0) {
+        throw Error(`There are no messages belonging to the ${bufferType} buffer available.`);
+      }
+
+      return collection.splice(0, 1)[0];
+    };
+
+    return asIterableIterator({
       send: (message: PickSendType<TypeMap>) => {
         this.buffer.send(message);
       },
-      hasNext: () => {
-        this.receiveAndOrganizeAllMessages();
-
-        const collection = this.collections[bufferType];
-
-        return collection != null && collection.length > 0;
-      },
-      receive: () => {
-        this.receiveAndOrganizeAllMessages();
-
-        const collection = this.collections[bufferType];
-        if (collection == null || collection.length === 0) {
-          throw Error(`There are no messages belonging to the ${bufferType} buffer available.`);
-        }
-
-        return collection.splice(0,1)[0];
-      }
-
-    }  
+      hasNext,
+      receive
+    });
   }
 
   private receiveAndOrganizeAllMessages(): void {
@@ -57,7 +60,7 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
       this.collections[category]!.push(message);
     }
   }
-  
+
 }
 
 export interface MessageCategorizer<TypeMap extends RouterTypeMap> {

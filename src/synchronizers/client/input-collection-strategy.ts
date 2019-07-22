@@ -1,4 +1,4 @@
-import { AnyEntity } from './entity';
+import { AnyEntity } from '../../entity';
 import { EntityBoundInput } from "./entity-bound-input";
 
 /**

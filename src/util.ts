@@ -49,3 +49,8 @@ export function singleLineify(strings: TemplateStringsArray, ...values: string[]
     return line.replace(/^\s+/gm, '');
   }).join(' ').trim();
 }
+
+export function fromMapGetOrDefault<K, V>(map: Map<K,V>, key: K, defaultV: V) {
+  const value = map.get(key);
+  return value == null ? defaultV : value;
+}

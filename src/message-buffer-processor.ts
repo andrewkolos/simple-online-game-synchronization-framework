@@ -1,5 +1,5 @@
-import { Interval, IntervalRunner } from './interval-runner';
 import { MessageBuffer } from './networking';
+import { Interval, IntervalRunner } from './util/interval-runner';
 
 /**
  * Periodically retrieves messages from a supplied `MessageBuffer`, and performs an operation with that message

@@ -1,4 +1,4 @@
-import { TypedEventEmitter } from './event-emitter';
+import { TypedEventEmitter } from './util/event-emitter';
 
 export type TickHandler = (tickNumber: number) => void;
 

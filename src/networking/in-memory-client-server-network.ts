@@ -1,5 +1,5 @@
-import { TypedEventEmitter } from '../event-emitter';
-import { MessageBuffer } from './message-buffer';
+import { MessageBuffer, asIterableIterator } from './message-buffer';
+import { TypedEventEmitter } from 'src/util/event-emitter';
 
 interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
   serverSentMessageSent(message: ServerSendType): void;
@@ -20,8 +20,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
   private readonly serverSentMessageSendTimes: Map<ServerSendType, number> = new Map();
   private readonly serverSentMessageReferenceCounts: Map<ServerSendType, number> = new Map();
 
-  // tslint:disable-next-line: member-ordering
-  /**
+  /** 
    * Gives a new connection to the server.
    */
   public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
@@ -30,7 +29,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
     const clientIndex = this.serverSentMessageQueues.length - 1;
     const stateMessageQueue = this.serverSentMessageQueues[clientIndex];
 
-    return {
+    return asIterableIterator({
       send: (message: ClientSendType) => {
         const inputMessageQueue = this.clientSentMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
@@ -55,7 +54,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
 
         return nextMessageSentAt + lagMs <= new Date().getTime();
       }
-    };
+    });
   }
 
   /**
@@ -66,7 +65,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
     const clientIndex = this.clientSentMessageQueues.length - 1;
     const imQueue = this.clientSentMessageQueues[clientIndex];
 
-    return {
+    return asIterableIterator({
       send: (message: ServerSendType) => {
         this.serverSentMessageQueues[clientIndex].push(message);
 
@@ -84,7 +83,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
         return (imQueue.length > 0 &&
           this.clientSentMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
       }
-    };
+    });
   }
 
   public getInputMessageQueueLengths(): number[] {

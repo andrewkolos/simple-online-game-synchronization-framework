@@ -21,6 +21,7 @@
     "rootDir": "./src"
   },
   "exclude": [
-    "./demo/**"
+    "./demo/**",
+    "./dist/**"
   ]
 }
