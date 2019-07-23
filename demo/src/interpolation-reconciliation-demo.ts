@@ -265,7 +265,7 @@ function createClient(playerEntityId: string, moveLeftKeycode: number, moveRight
   const newEntityHandler = new NewDemoEntityHandler();
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({ serverConnection, newEntityHandler, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector });
+  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({ serverConnection, newEntityHandler, serverUpdateRateInHz: serverSyncUpdateRate, inputCollectionStrategy: inputCollector });
 
   return client;
 }

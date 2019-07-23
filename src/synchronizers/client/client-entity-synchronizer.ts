@@ -16,11 +16,18 @@ export interface ClientEntitySynchronizerEvents<E extends AnyEntity> {
   synchronized(entityMap: Map<EntityId, DeepReadonly<E>>): void;
 }
 
-export interface ClientEntitySynchronizerContext<E extends AnyEntity> {
+/**
+ * Contains the information needed to construct a `ClientEntitySynchronizer`.
+ */
+export interface ClientEntitySynchronizerArgs<E extends AnyEntity> {
+  /** A connection to the game server. */
   serverConnection: ClientEntityMessageBuffer<E>;
+  /** How often the server will be sending out the world state. */
   serverUpdateRateInHz: number;
+  /** A strategy to create local representations of new entities sent by the server. */
   newEntityHandler: NewEntityHandler<E>;
-  inputCollector: InputCollectionStrategy<E>;
+  /** A strategy to obtain inputs from the user that can be applied to entities in the game. */
+  inputCollectionStrategy: InputCollectionStrategy<E>;
 }
 
 /**
@@ -76,25 +83,19 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
   /**
    * Creates an instance of game client.
-   * @param server A connection to the game server.
-   * @param entityFactory A strategy to create local representations of
-   *   new entities sent by the server.
-   * @param serverUpdateRateInHz How often the server will be sending out
-   *  the world state.
-   * @param inputCollector Used to obtain inputs from the user that can be applied
-   *  to entities in the game.
+
    */
-  constructor(context: ClientEntitySynchronizerContext<E>) {
+  constructor(args: ClientEntitySynchronizerArgs<E>) {
     super();
 
     this.entities = new EntityCollection();
     this.interpolatableEntities = new EntityCollection();
     this.reckonableEntities = new EntityCollection();
 
-    this.server = context.serverConnection;
-    this.newEntityHandler = new CheckedNewEntityHandler(context.newEntityHandler);
-    this.serverUpdateRateInHz = context.serverUpdateRateInHz;
-    this.inputCollectionStrategy = context.inputCollector;
+    this.server = args.serverConnection;
+    this.newEntityHandler = new CheckedNewEntityHandler(args.newEntityHandler);
+    this.serverUpdateRateInHz = args.serverUpdateRateInHz;
+    this.inputCollectionStrategy = args.inputCollectionStrategy;
   }
 
   /**
