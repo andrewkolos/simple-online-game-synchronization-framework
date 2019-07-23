@@ -314,8 +314,8 @@ client2.on('synchronized', (entityMap: Map<string, DemoEntity>) => {
 });
 
 
-network.eventEmitter.on("serverSentMessages", handleMessageSent);
-network.eventEmitter.on('clientSentMessages', handleMessageSent);
+network.on("serverSentMessages", handleMessageSent);
+network.on('clientSentMessages', handleMessageSent);
 
 server.start(serverSyncUpdateRate);
 client1.start(clientUpdateRate);

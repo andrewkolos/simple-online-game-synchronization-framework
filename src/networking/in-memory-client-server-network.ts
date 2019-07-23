@@ -10,9 +10,7 @@ interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
  */
-export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
-
-  public readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>>();
+export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>> {
 
   private readonly clientSentMessageQueues: ClientSendType[][][] = [];
   private readonly serverSentMessageQueues: ServerSendType[][][] = [];
@@ -39,7 +37,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
         }
         inputMessageQueue.push(asArray);
         this.clientSentMessageReadyTimes.set(asArray, new Date().getTime() + lagMs);
-        this.eventEmitter.emit('clientSentMessages', asArray);
+        this.emit('clientSentMessages', asArray);
       },
       receive: () => {
         if (stateMessageQueue.length > 0) {
@@ -73,7 +71,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
 
         this.serverSentMessageSendTimes.set(asArray, new Date().getTime());
         increment(this.serverSentMessageReferenceCounts, asArray);
-        this.eventEmitter.emit('serverSentMessages', asArray);
+        this.emit('serverSentMessages', asArray);
       },
       receive: () => {
         if (imQueue.length > 0) {

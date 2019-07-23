@@ -11,9 +11,7 @@ export interface GameLoopEvents {
  * Executes (game) logic at a constant rate using safe fixed time steps across
  * any hardware.
  */
-export class GameLoop {
-
-  public readonly eventEmitter = new TypedEventEmitter<GameLoopEvents>();
+export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
 
   public tickRateHz: number;
   
@@ -23,6 +21,7 @@ export class GameLoop {
   private readonly tickHandler: TickHandler  
 
   public constructor(tickHandler: TickHandler) {
+    super();
     this.tickHandler = tickHandler;
   }
 
@@ -55,9 +54,9 @@ export class GameLoop {
   }
 
   private tick() {
-    this.eventEmitter.emit('preStep');
+    this.emit('preStep');
     this.tickCount += 1;
     this.tickHandler(this.tickCount);
-    this.eventEmitter.emit('postStep');
+    this.emit('postStep');
   }
 }
