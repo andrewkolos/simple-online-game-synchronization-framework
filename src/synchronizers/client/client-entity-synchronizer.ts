@@ -163,29 +163,28 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
     };
 
     const reckonIfReckoningEntity = (stateMessage: StateMessage<E>) => {
-      const reckonableEntity = this.reckonableEntities.getEntityById(stateMessage.entity.id);
+      const reckonableEntity = this.reckonableEntities.get(stateMessage.entity.id);
       if (reckonableEntity != null) {
         reckonableEntity.reckon(new Date().getTime() - stateMessage.timestampMs);
       }
     };
 
     const appendStateOntoBufferIfInterpolatingEntity = (stateMessage: StateMessage<E>) => {
-      const interpolableEntity = this.interpolatableEntities.getEntityById(stateMessage.entity.id);
+      const interpolableEntity = this.interpolatableEntities.get(stateMessage.entity.id);
       if (interpolableEntity != null) {
         this.appendStateOntoBuffer(interpolableEntity.id, stateMessage.entity.state);
       }
     };
 
     return () => {
-      while (this.server.hasNext()) {
-        const stateMessage = this.server.receive();
+      for (const stateMessage of this.server) {
         const stateMessageEntityId = stateMessage.entity.id;
 
         if (isFirstTimeSeeingEntity(stateMessageEntityId)) {
           handleNewEntity(stateMessage);
         }
 
-        const entity = this.entities.getEntityById(stateMessageEntityId);
+        const entity = this.entities.get(stateMessageEntityId);
         if (entity == null) {
           throw Error(singleLineify`
             Received state message with entity ID '${stateMessageEntityId}', but no entity with that ID exists on this client.
@@ -197,6 +196,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
         appendStateOntoBufferIfInterpolatingEntity(stateMessage);
       }
     }
+
   })();
 
   /**
@@ -207,15 +207,15 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
     const stateMessageEntityId = stateMessage.entity.id;
 
     const newEntityInfo: NonLocalEntityResponse<E> = this.newEntityHandler.createNonLocalEntityFromStateMessage(stateMessage);
-    this.entities.addEntity(newEntityInfo.entity as E);
+    this.entities.add(newEntityInfo.entity as E);
     this.entityStateBuffers.set(stateMessageEntityId, []); // Set up new state buffer for this entity, to be used for server reconciliation.
 
     switch (newEntityInfo.syncStrategy) {
       case SyncStrategy.DeadReckoning:
-        this.reckonableEntities.addEntity(newEntityInfo.entity);
+        this.reckonableEntities.add(newEntityInfo.entity);
         break;
       case SyncStrategy.Interpolation:
-        this.interpolatableEntities.addEntity(newEntityInfo.entity);
+        this.interpolatableEntities.add(newEntityInfo.entity);
         break;
       case SyncStrategy.Raw:
         break;
@@ -258,7 +258,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
       return input.inputSequenceNumber > stateMessage.lastProcessedInputSequenceNumber;
     });
     this.pendingInputs.forEach((inputMessage: InputMessage<E>) => {
-      const entity = this.entities.getEntityById(inputMessage.entityId);
+      const entity = this.entities.get(inputMessage.entityId);
       if (entity == null) {
         throw Error('Did not find entity corresponding to a pending input.');
       }
@@ -271,7 +271,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
     this.playerEntityIds.push(entity.id);
 
-    this.entities.addEntity(entity);
+    this.entities.add(entity);
   }
 
   /**
@@ -307,7 +307,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
       this.server.send(inputMessage);
 
-      const playerEntity = this.entities.getEntityById(input.entityId);
+      const playerEntity = this.entities.get(input.entityId);
 
       if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
 

@@ -54,3 +54,7 @@ export function fromMapGetOrDefault<K, V>(map: Map<K,V>, key: K, defaultV: V) {
   const value = map.get(key);
   return value == null ? defaultV : value;
 }
+
+export function arrayify<T>(item: T | T[]): T[] {
+  return Array.isArray(item) ? item : [item];
+}

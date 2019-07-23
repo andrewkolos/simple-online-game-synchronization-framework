@@ -25,8 +25,8 @@ export abstract class MessageBufferProcessor<Message> {
   protected abstract processMessage(message: Message): void;
 
   private processMessages() {
-    while (this.messageBuffer.hasNext()) {
-      this.processMessage(this.messageBuffer.receive());
+    for (const message of this.messageBuffer) {
+      this.processMessage(message);
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@akolos/ts-client-server-game-synchronization",
-  "version": "0.1.60",
+  "version": "0.1.62",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
@@ -42,6 +42,7 @@
     "eventemitter3": "^4.0.0",
     "keyboardjs": "^2.5.1",
     "queue-typescript": "^1.0.1",
-    "strict-event-emitter-types": "^2.0.0"
+    "strict-event-emitter-types": "^2.0.0",
+    "ts-priority-queue": "^0.1.1"
   }
 }

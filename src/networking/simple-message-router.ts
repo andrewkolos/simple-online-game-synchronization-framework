@@ -1,4 +1,4 @@
-import { MessageBuffer, asIterableIterator } from './message-buffer';
+import { MessageBuffer, asIterable } from './message-buffer';
 import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGivenKey, RouterTypeMap } from './message-router';
 
 /**
@@ -9,11 +9,10 @@ import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGiv
  */
 export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
 
-  private readonly collections: Partial<Record<keyof TypeMap, PickReceiveType<TypeMap>[]>>;
+  private readonly collections: Map<keyof TypeMap, PickReceiveType<TypeMap>[]> = new Map();
 
   public constructor(private readonly categorizer: MessageCategorizer<TypeMap>,
     private readonly buffer: MessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {
-    this.collections = {};
   }
 
   public getFilteredMessageBuffer<K extends keyof TypeMap>(bufferType: K)
@@ -22,7 +21,7 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
     const hasNext = () => {
       this.receiveAndOrganizeAllMessages();
 
-      const collection = this.collections[bufferType];
+      const collection = this.collections.get(bufferType);
 
       return collection != null && collection.length > 0;
     }
@@ -30,15 +29,12 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
     const receive = () => {
       this.receiveAndOrganizeAllMessages();
 
-      const collection = this.collections[bufferType];
-      if (collection == null || collection.length === 0) {
-        throw Error(`There are no messages belonging to the ${bufferType} buffer available.`);
-      }
+      const collection = this.collections.get(bufferType);
 
-      return collection.splice(0, 1)[0];
+      return collection == null ? [] : collection;
     };
 
-    return asIterableIterator({
+    return asIterable({
       send: (message: PickSendType<TypeMap>) => {
         this.buffer.send(message);
       },
@@ -48,16 +44,11 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
   }
 
   private receiveAndOrganizeAllMessages(): void {
-    while (this.buffer.hasNext()) {
-      const message = this.buffer.receive();
-
+    for (const message of this.buffer) {
       const category = this.categorizer.assignMessageCategory(message);
-
-      if (this.collections[category] == null) {
-        this.collections[category] = [];
-      }
-
-      this.collections[category]!.push(message);
+      const collection = this.collections.has(category) ? this.collections.get(category)! : [];
+      collection.push(message);
+      this.collections.set(category, collection);
     }
   }
 

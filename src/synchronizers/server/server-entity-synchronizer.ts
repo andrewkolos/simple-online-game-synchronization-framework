@@ -3,7 +3,7 @@ import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
 import { TypedEventEmitter } from '../../util/event-emitter';
 import { Interval, IntervalRunner } from "../../util/interval-runner";
 import { EntityCollection } from '../entity-collection';
-import { DeepReadonly, fromMapGetOrDefault } from 'src/util';
+import { fromMapGetOrDefault } from 'src/util';
 import { StateMessage, EntityMessageKind, InputMessage } from 'src/networking/messages';
 
 type ClientId = string;
@@ -12,7 +12,7 @@ type EntityId = string;
 export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
   beforeSynchronization(): void;
   beforeInputsApplied(inputs: InputMessage<E>[]): void;
-  synchronized(entityMap: Map<EntityId, DeepReadonly<E>>): void;
+  synchronized(): void;
 }
 
 /**
@@ -21,9 +21,13 @@ export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
  */
 export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
 
+  public get entities(): ReadonlyMap<EntityId, E> {
+    return this._entities.asIdKeyedMap();
+  }
+
   private updateRateHz: number;
 
-  private readonly entities: EntityCollection<E>;
+  private readonly _entities: EntityCollection<E>;
 
   private readonly clients: Map<string, ClientInfo<E>>;
 
@@ -32,7 +36,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
   constructor() {
     super();
     this.clients = new Map();
-    this.entities = new EntityCollection();
+    this._entities = new EntityCollection();
     this.updateRateHz = 10;
   }
 
@@ -63,7 +67,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
    * @param entity The entity to add to the server.
    */
   public addNonPlayerEntity(entity: E) {
-    this.entities.addEntity(entity);
+    this._entities.add(entity);
   }
 
   /**
@@ -72,7 +76,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
    * @param playerClientId 
    */
   public addPlayerEntity(entity: E, playerClientId: string) {
-    this.entities.addEntity(entity);
+    this._entities.add(entity);
     const client = this.clients.get(playerClientId);
 
     if (client != null) {
@@ -154,26 +158,26 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
     this.processInputs();
     this.sendStates();
 
-    this.emit("synchronized", this.entities.asIdKeyedMap() as Map<EntityId, DeepReadonly<E>>);
+    this.emit("synchronized");
   }
 
   /**
    * Processes all available inputs.
    */
   private processInputs() {
-    const inputs: Map<ClientInfo<E>, InputMessage<E>[]> = new Map();
+    const inputsByClient: Map<ClientInfo<E>, InputMessage<E>[]> = new Map();
 
     for (const client of this.clients.values()) {
       const messages = [...client.messageBuffer];
-      inputs.set(client, messages);
+      inputsByClient.set(client, messages);
     }
 
-    const asSingleArray: InputMessage<E>[] = [...inputs.values()].reduce((concatenated, current) => concatenated.concat(current));
+    const asSingleArray: InputMessage<E>[] = [...inputsByClient.values()].reduce((concatenated, current) => concatenated.concat(current));
     this.emit("beforeInputsApplied", asSingleArray);
 
-    for (const client of inputs.keys()) {
-      for (const input of fromMapGetOrDefault(inputs, client, [])) {
-        const entity = this.entities.getEntityById(input.entityId);
+    for (const client of inputsByClient.keys()) {
+      for (const input of fromMapGetOrDefault(inputsByClient, client, [])) {
+        const entity = this._entities.get(input.entityId);
 
         // Client sent an input for an entity it does not own.
         if (!client.ownedEntityIds.includes(input.entityId)) {
@@ -193,9 +197,9 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
    */
   private sendStates() {
     const clients = Array.from(this.clients.values());
-    const entities = this.entities.asArray();
+    const entities = this._entities.asArray();
     for (const client of clients) {
-      entities.forEach((entity: E) => {
+      client.messageBuffer.send(entities.map((entity: E) => {
         const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
 
         const networkedStateMessage: StateMessage<E> = {
@@ -210,8 +214,8 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
           timestampMs: new Date().getTime(),
         };
 
-        client.messageBuffer.send(networkedStateMessage);
-      });
+        return networkedStateMessage;
+      }));
     }
   }
 }

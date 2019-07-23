@@ -8,6 +8,7 @@ import { EntityBoundInput } from '../../src/synchronizers/client/entity-bound-in
 import { ClientEntitySynchronizer } from '../../src/synchronizers/client/client-entity-synchronizer';
 import { ServerEntitySynchronizer } from '../../src/synchronizers/server/server-entity-synchronizer';
 import { NewEntityHandler, NonLocalEntityResponse } from '../../src/synchronizers/client/new-entity-handler';
+import { LinearInterpolator } from "../../src/interpolate-linearly";
 
 interface DemoPlayerState {
   position: number;
@@ -51,9 +52,7 @@ export class DemoPlayer extends InterpolableEntity<DemoPlayerInput, DemoPlayerSt
   }
 
   public calculateInterpolatedState(state1: DemoPlayerState, state2: DemoPlayerState, timeRatio: number): DemoPlayerState {
-    return {
-      position: state1.position + (state1.position - state2.position) * timeRatio
-    };
+    return LinearInterpolator.from(state1).to(state2).interpolate(timeRatio);
   }
 }
 
@@ -185,7 +184,7 @@ export class NewDemoEntityHandler implements NewEntityHandler<DemoEntity> {
   }
 
   public createNonLocalEntityFromStateMessage(stateMessage: StateMessage<DemoEntity>): NonLocalEntityResponse<DemoEntity> {
-    return  {
+    return {
       entity: this.createLocalEntityFromStateMessage(stateMessage),
       syncStrategy: SyncStrategy.Interpolation,
     }
@@ -204,11 +203,11 @@ function displayGame(entities: DemoEntity[], displayElement: HTMLElement, number
 
   renderWorldOntoCanvas(canvasElement, entities);
   writePositions(entities, positionsElement);
-  lastAckElement.innerText = `Non-acknowledged inputs: ${numberOfPendingInputs}`; 
+  lastAckElement.innerText = `Non-acknowledged inputs: ${numberOfPendingInputs}`;
 }
 
 function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[] | ReadonlyArray<DemoEntity>) {
-  
+
   canvas.width = canvas.width; // Clears the canvas.
 
   const colors = {
@@ -216,10 +215,10 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoEntity[]
     c1: 'red'
   };
 
-  entities.forEach((entity: Entity<any,any>) => {
+  entities.forEach((entity: Entity<any, any>) => {
     if (!(entity instanceof DemoPlayer)) return;
 
-    const entityRadius = canvas.height*0.9/2;
+    const entityRadius = canvas.height * 0.9 / 2;
     const entityPosition = entity.state.position;
 
     const ctx = canvas.getContext('2d');
@@ -248,7 +247,7 @@ function writePositions(entities: DemoEntity[] | ReadonlyArray<DemoEntity>, el: 
 
 function handleMessageSent() {
   const misc = document.getElementById('misc') as HTMLDivElement;
-  
+
   let message = 'Input Message Queues <br />';
 
   message += network.getInputMessageQueueLengths().join('<br />');
@@ -266,18 +265,18 @@ function createClient(playerEntityId: string, moveLeftKeycode: number, moveRight
   const newEntityHandler = new NewDemoEntityHandler();
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
-  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({serverConnection, newEntityHandler, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector});
+  const client: DemoClientEntitySynchronizer = new ClientEntitySynchronizer({ serverConnection, newEntityHandler, serverUpdateRateInHz: serverSyncUpdateRate, inputCollector });
 
   return client;
 }
 
 // Start up clients, server, connect them, and start them.
 
-const serverGameUpdateRate = 120;
-const serverSyncUpdateRate = 30;
-const clientUpdateRate = 240;
+const serverGameUpdateRate = 60;
+const serverSyncUpdateRate = 60;
+const clientUpdateRate = 60;
 
-const noop = () => {};
+const noop = () => { };
 
 const serverGame = new GameLoop(noop);
 const client1Game = new GameLoop(noop);
@@ -292,8 +291,8 @@ const client2Id = server.connectClient(network.getNewClientConnection());
 const client1 = createClient(client1Id, 65, 68);
 const client2 = createClient(client2Id, 37, 39);
 
-server.on("synchronized", (entityMap: Map<string, DemoPlayer>) => {
-  const entities = Array.from(entityMap.values());
+server.on("synchronized", () => {
+  const entities = Array.from(server.entities.values());
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
   renderWorldOntoCanvas(serverCanvas, entities);
 
@@ -315,8 +314,8 @@ client2.on('synchronized', (entityMap: Map<string, DemoEntity>) => {
 });
 
 
-network.eventEmitter.on('clientSentMessageSent', handleMessageSent);
-network.eventEmitter.on('serverSentMessageSent', handleMessageSent);
+network.eventEmitter.on("serverSentMessages", handleMessageSent);
+network.eventEmitter.on('clientSentMessages', handleMessageSent);
 
 server.start(serverSyncUpdateRate);
 client1.start(clientUpdateRate);

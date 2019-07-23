@@ -1,9 +1,10 @@
-import { MessageBuffer, asIterableIterator } from './message-buffer';
+import { MessageBuffer, asIterable } from './message-buffer';
 import { TypedEventEmitter } from 'src/util/event-emitter';
+import { arrayify } from 'src/util';
 
 interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
-  serverSentMessageSent(message: ServerSendType): void;
-  clientSentMessageSent(message: ClientSendType): void;
+  serverSentMessages(messages: ServerSendType[]): void;
+  clientSentMessages(messages: ClientSendType[]): void;
 }
 
 /**
@@ -13,47 +14,47 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
 
   public readonly eventEmitter = new TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>>();
 
-  private readonly clientSentMessageQueues: ClientSendType[][] = [];
-  private readonly serverSentMessageQueues: ServerSendType[][] = [];
+  private readonly clientSentMessageQueues: ClientSendType[][][] = [];
+  private readonly serverSentMessageQueues: ServerSendType[][][] = [];
 
-  private readonly clientSentMessageReadyTimes: Map<ClientSendType, number> = new Map();
-  private readonly serverSentMessageSendTimes: Map<ServerSendType, number> = new Map();
-  private readonly serverSentMessageReferenceCounts: Map<ServerSendType, number> = new Map();
+  private readonly clientSentMessageReadyTimes: Map<ClientSendType[], number> = new Map();
+  private readonly serverSentMessageSendTimes: Map<ServerSendType[], number> = new Map();
+  private readonly serverSentMessageReferenceCounts: Map<ServerSendType[], number> = new Map();
 
   /** 
    * Gives a new connection to the server.
    */
   public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
-    const that = this;
     this.serverSentMessageQueues.push([]);
     const clientIndex = this.serverSentMessageQueues.length - 1;
     const stateMessageQueue = this.serverSentMessageQueues[clientIndex];
 
-    return asIterableIterator({
-      send: (message: ClientSendType) => {
+    return asIterable({
+      send: (messages: ClientSendType | ClientSendType[]) => {
+        const asArray = arrayify(messages);
+
         const inputMessageQueue = this.clientSentMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
           throw Error('Cannot send input to server before the client connection has been created.');
         }
-        inputMessageQueue.push(message);
-        this.clientSentMessageReadyTimes.set(message, new Date().getTime() + lagMs);
-        this.eventEmitter.emit('clientSentMessageSent', message);
+        inputMessageQueue.push(asArray);
+        this.clientSentMessageReadyTimes.set(asArray, new Date().getTime() + lagMs);
+        this.eventEmitter.emit('clientSentMessages', asArray);
       },
-      receive: function () {
-        if (!this.hasNext()) throw Error('No message ready.');
-        const message = stateMessageQueue[0];
-        stateMessageQueue.splice(0, 1);
-        decrementOrRemove(that.serverSentMessageReferenceCounts, message);
-
-        return message;
+      receive: () => {
+        if (stateMessageQueue.length > 0) {
+          const nextMessages = stateMessageQueue[0];
+          const sendTime = this.serverSentMessageSendTimes.get(nextMessages)!.valueOf();
+          if (sendTime + lagMs <= new Date().getTime()) {
+            stateMessageQueue.splice(0, 1);
+            decrementOrRemove(this.serverSentMessageReferenceCounts, nextMessages);
+            return nextMessages;
+          } else {
+            return [];
+          }
+        }
+        return [];
       },
-      hasNext: () => {
-        if (stateMessageQueue.length < 1) return false;
-        const nextMessage = stateMessageQueue[0];
-        const nextMessageSentAt = this.serverSentMessageSendTimes.get(nextMessage)!.valueOf();
-
-        return nextMessageSentAt + lagMs <= new Date().getTime();
-      }
     });
   }
 
@@ -65,23 +66,28 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> {
     const clientIndex = this.clientSentMessageQueues.length - 1;
     const imQueue = this.clientSentMessageQueues[clientIndex];
 
-    return asIterableIterator({
-      send: (message: ServerSendType) => {
-        this.serverSentMessageQueues[clientIndex].push(message);
+    return asIterable({
+      send: (messages: ServerSendType | ServerSendType[]) => {
+        const asArray = arrayify(messages);
+        this.serverSentMessageQueues[clientIndex].push(asArray);
 
-        this.serverSentMessageSendTimes.set(message, new Date().getTime());
-        increment(this.serverSentMessageReferenceCounts, message);
-        this.eventEmitter.emit('serverSentMessageSent', message);
+        this.serverSentMessageSendTimes.set(asArray, new Date().getTime());
+        increment(this.serverSentMessageReferenceCounts, asArray);
+        this.eventEmitter.emit('serverSentMessages', asArray);
       },
-      receive: function () {
-        if (!this.hasNext()) throw Error('No input message is ready.');
-        const message = imQueue[0];
-        imQueue.splice(0, 1);
-        return message;
-      },
-      hasNext: () => {
-        return (imQueue.length > 0 &&
-          this.clientSentMessageReadyTimes.get(imQueue[0])!.valueOf() <= new Date().getTime());
+      receive: () => {
+        if (imQueue.length > 0) {
+          const nextMessages = imQueue[0];
+          const readyTime = this.clientSentMessageReadyTimes.get(nextMessages)!;
+
+          if (readyTime <= new Date().getTime()) {
+            imQueue.splice(0, 1);
+            return nextMessages;
+          } else {
+            return [];
+          }
+        }
+        return [];
       }
     });
   }

@@ -26,7 +26,7 @@ export class EntityCollection<E extends AnyEntity> {
    * Adds an entity to the game world.
    * @param entity The entity to add the the world.
    */
-  public addEntity(entity: E) {
+  public add(entity: E) {
     this.entities.set(entity.id, entity);
   }
 
@@ -35,7 +35,7 @@ export class EntityCollection<E extends AnyEntity> {
    * @param id The ID of the entity to search for.
    * @returns The entity with the matching ID, if it exists.
    */
-  public getEntityById(id: EntityId): E | undefined {
+  public get(id: EntityId): E | undefined {
     return this.entities.get(id);
   }
 
