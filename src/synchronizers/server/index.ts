@@ -1,2 +1,2 @@
 export * from "./server-entity-synchronizer";
-export * from "./state-recorder";
+export * from "../../lag-compensation/state-history";

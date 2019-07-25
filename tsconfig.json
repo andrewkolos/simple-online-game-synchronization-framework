@@ -3,7 +3,7 @@
     "baseUrl": ".",
     "target": "es2016",
     "moduleResolution": "node",
-    "module": "ES2015",
+    "module": "commonjs",
     "allowSyntheticDefaultImports": true,
     "importHelpers": true,
     "jsx": "react",
@@ -18,7 +18,8 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "esModuleInterop": true
   },
   "exclude": [
     "./demo/**",
