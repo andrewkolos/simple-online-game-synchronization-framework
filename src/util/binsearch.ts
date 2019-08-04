@@ -8,7 +8,7 @@ type Match<T> = {
   displacementFromTarget: number;
 }
 
-type Comparator<A, T> = (o1: A, o2: T) => number;
+export type Comparator<A, T> = (o1: A, o2: T) => number;
 
 export namespace Comparator {
   export const NUMBER = makeComparator("number");

@@ -13,17 +13,28 @@ export type DeepReadonlyObject<T> = {
 export type ValueOf<T> = T[keyof T];
 
 export function compareDumbObjects<T>(o1: T, o2: T) {
-  const isDumbObject = Object.values(o1).every((value: any) => {
+  isDumbObjectUnsafe(o1);
+  return JSON.stringify(o1) === JSON.stringify(o2);
+}
+
+function isDumbObject(o: Object): boolean {
+  return Object.values(o).every((value: any) => {
     const t = typeof value;
-    
+
     return t !== "object" && t !== "function";
   });
+}
 
-  if (!isDumbObject) {
+function isDumbObjectUnsafe(o: Object): void | never {
+  if (!isDumbObject(o)) {
     throw Error("Object cannot contain non-value types.");
   }
+}
 
-  return JSON.stringify(o1) === JSON.stringify(o2);
+export function cloneDumbObject<T>(o: T): T {
+  if (o == null) return o;
+  isDumbObjectUnsafe(o);
+  return JSON.parse(JSON.stringify(o));
 }
 
 /**
@@ -50,7 +61,7 @@ export function singleLineify(strings: TemplateStringsArray, ...values: string[]
   }).join(' ').trim();
 }
 
-export function fromMapGetOrDefault<K, V>(map: Map<K,V>, key: K, defaultV: V) {
+export function fromMapGetOrDefault<K, V>(map: Map<K, V>, key: K, defaultV: V) {
   const value = map.get(key);
   return value == null ? defaultV : value;
 }
