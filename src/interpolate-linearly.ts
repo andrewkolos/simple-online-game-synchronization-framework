@@ -1,3 +1,7 @@
+export interface NumericObject {
+  [key: string]: number | NumericObject;
+}
+
 /**
  * Given two states and a time ratio (0 => state1, 0.5 => halfway between, 1.0 => state2), computes
  * a simple interpolation.
@@ -5,14 +9,17 @@
  * @param state2 The second state to interpolate towards.
  * @param timeRatio How far the computed state should be from state1 to state2.
  */
-export function interpolateStatesLinearly<T extends any>(state1: T, state2: T, timeRatio: number): T {
+export function interpolateStatesLinearly<T extends NumericObject>(state1: T, state2: T, timeRatio: number): T {
   const newState: any = {};
 
   Object.keys(state1).forEach((key: string) => {
-    if (typeof state1[key] === "number") {
-      newState[key] = interpolateLinearly(state1[key], state2[key], timeRatio);
-    } else if (typeof state1[key] === "object") {
-      newState[key] = interpolateStatesLinearly(state1[key], state2[key], timeRatio);
+    const state1Value = state1[key];
+    const state2Value = state2[key];
+
+    if (typeof state1Value === 'number' && typeof state2Value == 'number') {
+      newState[key] = interpolateLinearly(state1Value, state2Value, timeRatio);
+    } else if (typeof state1Value === 'object' && typeof state2Value === 'object') {
+      newState[key] = interpolateStatesLinearly(state1Value, state2Value, timeRatio);
     } else {
       throw Error(`Cannot interpolate non-number / non-number object property '${key}'.`);
     }
@@ -25,9 +32,9 @@ export function interpolateLinearly(state1: number, state2: number, timeRatio: n
   return state1 + (state2 - state1) * timeRatio;
 }
 
-export class LinearInterpolator<T> {
+export class LinearInterpolator<T extends NumericObject> {
 
-  public static from<T>(currentState: T) {
+  public static from<T extends NumericObject>(currentState: T) {
     return new LinearInterpolator(currentState);
   }
   private constructor(private from: T) { }
@@ -38,7 +45,7 @@ export class LinearInterpolator<T> {
 
 }
 
-class CompleteLinearInterpolator<T> {
+class CompleteLinearInterpolator<T extends NumericObject> {
   public constructor(private from: T, private to: T) { }
 
   public interpolate(timeRatio: number) {

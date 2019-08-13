@@ -1,4 +1,4 @@
-import { AnyEntity, PickState, PickInput } from 'src/entity';
+import { AnyPlayerEntity, PickState, PickInput } from 'src/entity';
 import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
 import { TypedEventEmitter } from '../../util/event-emitter';
 import { Interval, IntervalRunner } from '../../util/interval-runner';
@@ -9,7 +9,7 @@ import { StateMessage, EntityMessageKind, InputMessage } from 'src/networking/me
 type ClientId = string;
 type EntityId = string;
 
-export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
+export interface ServerEntitySynchronizerEvents<E extends AnyPlayerEntity> {
   beforeSynchronization(): void;
   beforeInputsApplied(inputs: Array<InputMessage<PickInput<E>>>): void;
   synchronized(): void;
@@ -19,7 +19,7 @@ export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
  * Creates and synchronizes game entities for clients.
  * @template E The type of entity/entities this synchronizer can work with.
  */
-export abstract class ServerEntitySynchronizer<E extends AnyEntity>
+export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
   extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
 
   public get entities(): ReadonlyMap<EntityId, E> {
@@ -208,12 +208,11 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity>
           messageKind: EntityMessageKind.State,
           entity: {
             id: entity.id,
-            kind: entity.kind,
             state: entity.state as PickState<E>,
             belongsToRecipientClient: entityBelongsToClient,
           },
           lastProcessedInputSequenceNumber: client.seqNumberOfLastProcessedInput,
-          timestampMs: new Date().getTime(),
+          sentAt: new Date().getTime(),
         };
 
         return networkedStateMessage;
@@ -226,7 +225,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity>
  * Information the server stores about a client.
  * @template E The type of entity/entities.
  */
-export interface ClientInfo<E extends AnyEntity> {
+export interface ClientInfo<E extends AnyPlayerEntity> {
   id: string;
   messageBuffer: ServerEntityMessageBuffer<E>;
   seqNumberOfLastProcessedInput: number;

@@ -1,4 +1,4 @@
-import { AnyEntity, PickState } from '../../entity';
+import { AnyPlayerEntity, PickState } from '../../entity';
 import { StateMessage } from '../../networking';
 import { compareDumbObjects, singleLineify } from '../../util';
 
@@ -7,7 +7,7 @@ import { compareDumbObjects, singleLineify } from '../../util';
  * Also tells the client how to synchronize entities not controlled by the local player interacting with the client.
  * @template E The type of entity/entities this handler can create representations of.
  */
-export interface EntityFactory<E extends AnyEntity> {
+export interface EntityFactory<E extends AnyPlayerEntity> {
   /**
    * Creates an entity that is to be controlled by the client. That is, the client will send inputs to the server
    * to control this entity.
@@ -21,7 +21,7 @@ export interface EntityFactory<E extends AnyEntity> {
  * Decorates an instance of `NewEntityHandler`, adding checks to ensure that the IDs and states of
  * entities created by the hanlder are consistent with the state messages they were created from.
  */
-export class CheckedNewEntityHandler<E extends AnyEntity> implements EntityFactory<E> {
+export class CheckedNewEntityHandler<E extends AnyPlayerEntity> implements EntityFactory<E> {
 
   public constructor(private readonly handler: EntityFactory<E>) { }
 

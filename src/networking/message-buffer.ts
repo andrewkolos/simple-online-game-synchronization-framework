@@ -1,4 +1,4 @@
-import { AnyEntity, PickState, PickInput } from 'src/entity';
+import { AnyPlayerEntity, PickState, PickInput } from 'src/entity';
 import { InputMessage, StateMessage } from './messages';
 
 export interface MessageBufferBase<ReceiveType, SendType> {
@@ -21,7 +21,7 @@ export function asIterable<M extends MessageBufferBase<R, S>, R, S>(buffer: M): 
   };
 }
 
-export interface ClientEntityMessageBuffer<E extends AnyEntity>
+export interface ClientEntityMessageBuffer<E extends AnyPlayerEntity>
   extends MessageBuffer<StateMessage<PickState<E>>, InputMessage<PickInput<E>>> { }
-export interface ServerEntityMessageBuffer<E extends AnyEntity>
+export interface ServerEntityMessageBuffer<E extends AnyPlayerEntity>
   extends MessageBuffer<InputMessage<PickInput<E>>, StateMessage<PickState<E>>> { }

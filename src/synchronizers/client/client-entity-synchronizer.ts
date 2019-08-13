@@ -1,5 +1,5 @@
 import { DeepReadonly, singleLineify } from 'src/util';
-import { AnyEntity, PickInput, PickState } from '../../entity';
+import { AnyPlayerEntity, PickInput, PickState } from '../../entity';
 import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
 import { ClientEntityMessageBuffer } from '../../networking/message-buffer';
 import { TypedEventEmitter } from '../../util/event-emitter';
@@ -11,14 +11,14 @@ import { CheckedNewEntityHandler, EntityFactory } from './entity-factory';
 
 type EntityId = string;
 
-export interface ClientEntitySynchronizerEvents<E extends AnyEntity> {
+export interface ClientEntitySynchronizerEvents<E extends AnyPlayerEntity> {
   synchronized(entityMap: Map<EntityId, DeepReadonly<E>>): void;
 }
 
 /**
  * Contains the information needed to construct a `ClientEntitySynchronizer`.
  */
-export interface ClientEntitySynchronizerArgs<E extends AnyEntity> {
+export interface ClientEntitySynchronizerArgs<E extends AnyPlayerEntity> {
   /** A connection to the game server. */
   serverConnection: ClientEntityMessageBuffer<E>;
   /** How often the server will be sending out the world state. */
@@ -34,7 +34,7 @@ export interface ClientEntitySynchronizerArgs<E extends AnyEntity> {
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class ClientEntitySynchronizer<E extends AnyEntity> extends
+export class ClientEntitySynchronizer<E extends AnyPlayerEntity> extends
  TypedEventEmitter<ClientEntitySynchronizerEvents<E>> {
 
   /**

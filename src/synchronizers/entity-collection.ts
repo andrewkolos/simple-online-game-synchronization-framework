@@ -1,11 +1,11 @@
-import { AnyEntity } from 'src/entity';
+import { AnyPlayerEntity } from 'src/entity';
 
 export type EntityId = string;
 
 /**
  * Contains entities, allowing retrieval by entity ID.
  */
-export class EntityCollection<E extends AnyEntity> {
+export class EntityCollection<E extends AnyPlayerEntity> {
 
   /** These compose the state of the game. */
   private readonly entities: Map<EntityId, E> = new Map();

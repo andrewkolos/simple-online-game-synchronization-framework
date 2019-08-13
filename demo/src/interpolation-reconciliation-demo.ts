@@ -1,6 +1,5 @@
 import { GameLoop } from '../../src/game-loop';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
-import { AnyEntity } from '../../src/entity';
 import { ClientEntitySynchronizer } from '../../src/synchronizers/client/client-entity-synchronizer';
 import { DemoPlayer, DemoPlayerInput, DemoPlayerState } from './demo-player';
 import { KeyboardDemoInputCollector } from './keyboard-demo-input-collector';
@@ -30,9 +29,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoPlayer[]
     c1: 'red',
   };
 
-  entities.forEach((entity: AnyEntity) => {
-    if (!(entity instanceof DemoPlayer)) return;
-
+  entities.forEach((entity: DemoPlayer) => {
     const entityRadius = canvas.height * 0.9 / 2;
     const entityPosition = entity.state.position;
 

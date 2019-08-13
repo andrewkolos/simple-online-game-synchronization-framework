@@ -1,8 +1,7 @@
-import { LinearInterpolator } from '../../src/interpolate-linearly';
-import { PlayerEntity } from '../../src/entity';
+import { PlayerEntity } from '../../src/entity/player-entity';
 
 export const enum DemoInputType {
-  Move = 'move'
+  Move = 'move',
 }
 
 export const enum MoveInputDirection {
@@ -10,9 +9,10 @@ export const enum MoveInputDirection {
   Backward = 'left',
 }
 
-export interface DemoPlayerState {
+// tslint:disable-next-line: interface-over-type-literal
+export type DemoPlayerState = {
   position: number;
-}
+};
 
 export interface DemoPlayerInput {
   direction: MoveInputDirection;
@@ -23,12 +23,8 @@ export interface DemoPlayerInput {
 type I = DemoPlayerInput;
 type S = DemoPlayerState;
 
-export class DemoPlayer extends PlayerEntity<I, S> {
+export class DemoPlayer extends PlayerEntity<DemoPlayerInput, DemoPlayerState> {
   private static MOVE_SPEED = 0.2;
-  public kind: 'demoPlayer';
-
-  /** @inheritdoc */
-  public state: S;
 
   public calcNextStateFromInput(currentState: S, input: I): S {
     const currentPosition = currentState.position;
@@ -46,8 +42,5 @@ export class DemoPlayer extends PlayerEntity<I, S> {
     return {
       position: nextPosition,
     };
-  }
-  public calculateInterpolatedState(state1: S, state2: S, timeRatio: number): S {
-    return LinearInterpolator.from(state1).to(state2).interpolate(timeRatio);
   }
 }

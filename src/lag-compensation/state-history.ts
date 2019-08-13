@@ -1,4 +1,4 @@
-import { AnyEntity, PickInput, PickState } from "src/entity";
+import { AnyPlayerEntity, PickInput, PickState } from "src/entity";
 import { binarySearch } from "src/util/binsearch";
 import LRU from "lru-cache";
 import { singleLineify } from "src/util";
@@ -17,7 +17,7 @@ export class Timestamp {
   }
 }
 
-export interface EntitySyncState<E extends AnyEntity> {
+export interface EntitySyncState<E extends AnyPlayerEntity> {
   entity: E;
   inputsToBeApplied: Array<PickInput<E>>;
   stateBeforeInputApplied: PickState<E>;

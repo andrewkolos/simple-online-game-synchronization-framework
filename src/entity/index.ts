@@ -1,5 +1,5 @@
 export * from './entity';
-export * from './interpolable';
+export { Interpolator, Interpolable } from './interpolable';
 export * from './player-controllable';
 export * from './player-entity';
 export * from './reckonable';
