@@ -1,22 +1,20 @@
-import { AnyEntity, PickInput, PickState } from "src/entity";
-
 export const enum EntityMessageKind {
-  Input = "entityInput",
-  State = "entityState",
+  Input = 'entityInput',
+  State = 'entityState',
 }
 
 export interface BufferMessage {
   messageKind: string;
 }
 
-export interface InputMessage<Entity extends AnyEntity> extends BufferMessage {
+export interface InputMessage<T> extends BufferMessage {
   messageKind: EntityMessageKind.Input;
-  input: PickInput<Entity>;
+  input: T;
   inputSequenceNumber: number;
   entityId: string;
 }
 
-export interface StateMessage<Entity extends AnyEntity> extends BufferMessage {
+export interface StateMessage<T> extends BufferMessage {
   /** Identifies this buffer message object as an entity state message. */
   messageKind: EntityMessageKind.State;
   /** Information regarding the entity. */
@@ -26,7 +24,7 @@ export interface StateMessage<Entity extends AnyEntity> extends BufferMessage {
     /** The kind of the entity, as defined by the entity object on the server. */
     kind: string;
     /** The state of the entity on the server at the time the message was swent. */
-    state: PickState<Entity>;
+    state: T;
     /** Whether or not this entity is meant to be controlled by the client that received this message. */
     belongsToRecipientClient?: boolean;
   };
@@ -36,13 +34,13 @@ export interface StateMessage<Entity extends AnyEntity> extends BufferMessage {
   timestampMs: number;
 }
 
-export function isEntityInputMessage(message: any): message is InputMessage<any> {
+export function isEntityInputMessage(message: any): message is InputMessage<unknown> {
   const asInputMessage = message as Partial<InputMessage<never>>;
 
   return asInputMessage.messageKind != null && asInputMessage.messageKind === EntityMessageKind.Input;
 }
 
-export function isEntityStateMessage(message: any): message is StateMessage<any> {
+export function isEntityStateMessage(message: any): message is StateMessage<unknown> {
   const asInputMessage = message as Partial<StateMessage<never>>;
 
   return asInputMessage.messageKind != null && asInputMessage.messageKind === EntityMessageKind.State;

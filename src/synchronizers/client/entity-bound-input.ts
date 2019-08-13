@@ -1,9 +1,8 @@
-import { AnyEntity, PickInput } from "../../entity";
 
-export interface EntityBoundInput<E extends AnyEntity> {
+export interface EntityBoundInput<I> {
   /**
    * The entity that is to react to the input.
    */
   entityId: string;
-  input: PickInput<E>;
+  input: I;
 }

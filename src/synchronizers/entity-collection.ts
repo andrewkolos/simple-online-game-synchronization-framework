@@ -1,4 +1,4 @@
-import { AnyEntity } from "../entity/entity";
+import { AnyEntity } from 'src/entity';
 
 export type EntityId = string;
 

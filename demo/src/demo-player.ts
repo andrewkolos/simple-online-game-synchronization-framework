@@ -1,5 +1,5 @@
-import { InterpolableEntity } from '../../src/entity';
 import { LinearInterpolator } from '../../src/interpolate-linearly';
+import { PlayerEntity } from '../../src/entity';
 
 export const enum DemoInputType {
   Move = 'move'
@@ -10,7 +10,7 @@ export const enum MoveInputDirection {
   Backward = 'left',
 }
 
-interface DemoPlayerState {
+export interface DemoPlayerState {
   position: number;
 }
 
@@ -23,12 +23,13 @@ export interface DemoPlayerInput {
 type I = DemoPlayerInput;
 type S = DemoPlayerState;
 
-export class DemoPlayer extends InterpolableEntity<I, S> {
+export class DemoPlayer extends PlayerEntity<I, S> {
   private static MOVE_SPEED = 0.2;
   public kind: 'demoPlayer';
-  constructor(id: string, initialState: S) {
-    super(id, initialState);
-  }
+
+  /** @inheritdoc */
+  public state: S;
+
   public calcNextStateFromInput(currentState: S, input: I): S {
     const currentPosition = currentState.position;
     let nextPosition;

@@ -1,11 +1,11 @@
 import { GameLoop } from '../../src/game-loop';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
-import { Entity } from '../../src/entity';
+import { AnyEntity } from '../../src/entity';
 import { ClientEntitySynchronizer } from '../../src/synchronizers/client/client-entity-synchronizer';
-import { DemoPlayer } from './demo-player';
+import { DemoPlayer, DemoPlayerInput, DemoPlayerState } from './demo-player';
 import { KeyboardDemoInputCollector } from './keyboard-demo-input-collector';
 import { DemoServer } from './demo-server';
-import { NewDemoPlayerHandler } from './new-demo-player-handler';
+import { DemoEntityFactory } from './demo-entity-factory';
 
 // Helper code for running the demo.
 
@@ -30,7 +30,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoPlayer[]
     c1: 'red',
   };
 
-  entities.forEach((entity: Entity<any, any>) => {
+  entities.forEach((entity: AnyEntity) => {
     if (!(entity instanceof DemoPlayer)) return;
 
     const entityRadius = canvas.height * 0.9 / 2;
@@ -77,7 +77,7 @@ function handleMessageSent() {
 function createClient(playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) {
 
   const serverConnection = network.getNewConnectionToServer(100);
-  const newEntityHandler = new NewDemoPlayerHandler();
+  const newEntityHandler = new DemoEntityFactory(serverSyncUpdateRate);
   const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
 
   const client = new ClientEntitySynchronizer({
@@ -104,7 +104,7 @@ const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
 const server = new DemoServer();
-const network = new InMemoryClientServerNetwork<InputMessage<DemoPlayer>, StateMessage<DemoPlayer>>();
+const network = new InMemoryClientServerNetwork<InputMessage<DemoPlayerInput>, StateMessage<DemoPlayerState>>();
 
 const client1Id = server.connectClient(network.getNewClientConnection());
 const client2Id = server.connectClient(network.getNewClientConnection());

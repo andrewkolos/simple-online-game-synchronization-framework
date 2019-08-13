@@ -1,5 +1,5 @@
-import { AnyEntity } from "src/entity";
-import { InputMessage, StateMessage } from "./messages";
+import { AnyEntity, PickState, PickInput } from 'src/entity';
+import { InputMessage, StateMessage } from './messages';
 
 export interface MessageBufferBase<ReceiveType, SendType> {
   send(messages: SendType | SendType[]): void;
@@ -22,6 +22,6 @@ export function asIterable<M extends MessageBufferBase<R, S>, R, S>(buffer: M): 
 }
 
 export interface ClientEntityMessageBuffer<E extends AnyEntity>
-  extends MessageBuffer<StateMessage<E>, InputMessage<E>> { }
+  extends MessageBuffer<StateMessage<PickState<E>>, InputMessage<PickInput<E>>> { }
 export interface ServerEntityMessageBuffer<E extends AnyEntity>
-  extends MessageBuffer<InputMessage<E>, StateMessage<E>> { }
+  extends MessageBuffer<InputMessage<PickInput<E>>, StateMessage<PickState<E>>> { }

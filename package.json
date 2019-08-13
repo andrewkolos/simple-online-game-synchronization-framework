@@ -28,17 +28,19 @@
     "prettier": "^1.18.2",
     "rimraf": "^2.6.3",
     "rollup": "^1.16.6",
-    "rollup-plugin-commonjs": "^10.0.1",
+    "rollup-plugin-commonjs": "^10.0.2",
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-typescript2": "^0.22.0",
     "ts-jest": "^24.0.2",
     "ts-loader": "^6.0.4",
+    "ts-nameof": "^3.2.0",
     "ts-node": "^8.3.0",
     "tslib": "^1.10.0",
     "tslint": "~5.18.0",
     "tslint-clean-code": "^0.2.9",
     "tslint-config-prettier": "1.18.0",
     "tslint-microsoft-contrib": "^6.2.0",
+    "tstl": "^2.2.3",
     "tsutils": "~3.14.0",
     "typescript": "^3.5.2",
     "webpack": "^4.35.2",
@@ -53,7 +55,6 @@
     "mheap": "^1.1.0",
     "priority-deque": "^1.0.3",
     "queue-typescript": "^1.0.1",
-    "strict-event-emitter-types": "^2.0.0",
-    "ts-nameof": "^3.2.0"
+    "strict-event-emitter-types": "^2.0.0"
   }
 }

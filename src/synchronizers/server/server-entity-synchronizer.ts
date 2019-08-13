@@ -1,17 +1,17 @@
-import { AnyEntity, PickState, PickInput } from "src/entity/entity";
-import { ServerEntityMessageBuffer } from "../../networking/message-buffer";
-import { TypedEventEmitter } from "../../util/event-emitter";
-import { Interval, IntervalRunner } from "../../util/interval-runner";
-import { EntityCollection } from "../entity-collection";
-import { fromMapGetOrDefault } from "src/util";
-import { StateMessage, EntityMessageKind, InputMessage } from "src/networking/messages";
+import { AnyEntity, PickState, PickInput } from 'src/entity';
+import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
+import { TypedEventEmitter } from '../../util/event-emitter';
+import { Interval, IntervalRunner } from '../../util/interval-runner';
+import { EntityCollection } from '../entity-collection';
+import { fromMapGetOrDefault } from 'src/util';
+import { StateMessage, EntityMessageKind, InputMessage } from 'src/networking/messages';
 
 type ClientId = string;
 type EntityId = string;
 
 export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
   beforeSynchronization(): void;
-  beforeInputsApplied(inputs: Array<InputMessage<E>>): void;
+  beforeInputsApplied(inputs: Array<InputMessage<PickInput<E>>>): void;
   synchronized(): void;
 }
 
@@ -154,28 +154,28 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity>
    * back to clients the state of the entities.
    */
   private update() {
-    this.emit("beforeSynchronization");
+    this.emit('beforeSynchronization');
 
     this.processInputs();
     this.sendStates();
 
-    this.emit("synchronized");
+    this.emit('synchronized');
   }
 
   /**
    * Processes all available inputs.
    */
   private processInputs() {
-    const inputsByClient: Map<ClientInfo<E>, Array<InputMessage<E>>> = new Map();
+    const inputsByClient: Map<ClientInfo<E>, Array<InputMessage<PickInput<E>>>> = new Map();
 
     for (const client of this.clients.values()) {
       const messages = [...client.messageBuffer];
       inputsByClient.set(client, messages);
     }
 
-    const asSingleArray: Array<InputMessage<E>> = [...inputsByClient.values()]
+    const asSingleArray: Array<InputMessage<PickInput<E>>> = [...inputsByClient.values()]
       .reduce((concatenated, current) => concatenated.concat(current));
-    this.emit("beforeInputsApplied", asSingleArray);
+    this.emit('beforeInputsApplied', asSingleArray);
 
     for (const client of inputsByClient.keys()) {
       for (const input of fromMapGetOrDefault(inputsByClient, client, [])) {
@@ -204,7 +204,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity>
       client.messageBuffer.send(entities.map((entity: E) => {
         const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
 
-        const networkedStateMessage: StateMessage<E> = {
+        const networkedStateMessage: StateMessage<PickState<E>> = {
           messageKind: EntityMessageKind.State,
           entity: {
             id: entity.id,

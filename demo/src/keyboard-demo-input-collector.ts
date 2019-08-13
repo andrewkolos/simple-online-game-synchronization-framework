@@ -1,8 +1,8 @@
 import { InputCollectionStrategy } from '../../src/synchronizers/client/input-collection-strategy';
 import { EntityBoundInput } from '../../src/synchronizers/client/entity-bound-input';
-import { DemoPlayer, MoveInputDirection } from './demo-player';
+import { MoveInputDirection, DemoPlayerInput } from './demo-player';
 
-export class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayer> {
+export class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayerInput> {
   private playerEntityId: string;
   private leftKeyIsDown: boolean = false;
   private rightKeyIsDown: boolean = false;
@@ -29,10 +29,10 @@ export class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoP
 
   public getInputs(dt: number) {
     const xor = (x: boolean, y: boolean) => (x && !y) || (!x && y);
-    const inputs: Array<EntityBoundInput<DemoPlayer>> = [];
+    const inputs: Array<EntityBoundInput<DemoPlayerInput>> = [];
     if (xor(this.leftKeyIsDown, this.rightKeyIsDown)) {
       const direction = this.leftKeyIsDown ? MoveInputDirection.Backward : MoveInputDirection.Forward;
-      const input: EntityBoundInput<DemoPlayer> = {
+      const input: EntityBoundInput<DemoPlayerInput> = {
         entityId: this.playerEntityId,
         input: {
           direction,
