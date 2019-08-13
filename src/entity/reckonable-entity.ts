@@ -1,4 +1,4 @@
-import { Entity } from './entity';
+import { Entity } from "./entity";
 
 /**
  * Represents any object in the game, physical or abstract. All objects together

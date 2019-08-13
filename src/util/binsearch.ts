@@ -1,4 +1,4 @@
-type Match<T> = {
+interface Match<T> {
   index: number;
   value: T;
   /**
@@ -12,22 +12,24 @@ export type Comparator<A, T> = (o1: A, o2: T) => number;
 
 export namespace Comparator {
   export const NUMBER = makeComparator("number");
-  export const STRING = makeComparator("string"); 
+  export const STRING = makeComparator("string");
 }
 
 export function binarySearch<A, T>(arr: A[], target: T, comparator: Comparator<A, T>): number | undefined {
   const closestMatch = binarySearchClosestMatch(arr, target, comparator);
   const matchFound = comparator(closestMatch.value, target) === 0;
-  return  matchFound ? closestMatch.index : undefined;
+  return matchFound ? closestMatch.index : undefined;
 }
 
 /**
- * 
- * @param arr The array to search, most be sorted least to greatest. Will not be checked to make sure this criteria is satisfied.
+ * Performs a binary search on array, yielding the closest match and it's position within the array.
+ * @param arr The array to search, most be sorted in non-decreasing order.
+ *  Will not be checked to make sure this criteria is satisfied.
  * @param target The value to search for (or the value closest to it).
- * @param comprator Function to determine the value of one element compared to another. 
+ * @param comprator Function to determine the value of one element compared to another.
  */
-export function binarySearchClosestMatch<A, T>(arr: A[], target: T, comparator: Comparator<A, T>): {value: A, index: number} {
+// tslint:disable-next-line: max-line-length
+export function binarySearchClosestMatch<A, T>(arr: A[], target: T, comparator: Comparator<A, T>): { value: A, index: number } {
   if (arr == null || arr.length === 0) {
     throw Error(`Array is null, undefined, or empty. Value: ${arr}`);
   }
@@ -51,7 +53,7 @@ export function binarySearchClosestMatch<A, T>(arr: A[], target: T, comparator: 
         index: i,
         value: currentValue,
         displacementFromTarget: c,
-      }
+      };
     }
 
     if (Math.sign(c) === 0) {
@@ -90,7 +92,7 @@ function makeComparator(type: "string" | "number") {
         }
       }
       return 0;
-    }
+    };
   } else {
     return (o1: number, o2: number) => o1 - o2;
   }

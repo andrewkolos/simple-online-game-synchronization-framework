@@ -1,4 +1,4 @@
-import { AnyEntity } from '../../entity';
+import { AnyEntity } from "../../entity";
 import { EntityBoundInput } from "./entity-bound-input";
 
 /**
@@ -10,5 +10,5 @@ export interface InputCollectionStrategy<Entity extends AnyEntity> {
    * to be applied against.
    * @param dt The amount of time that has elapsed since input was last collected.
    */
-  getInputs(dt: number): EntityBoundInput<Entity>[];
+  getInputs(dt: number): Array<EntityBoundInput<Entity>>;
 }

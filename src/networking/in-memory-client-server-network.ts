@@ -1,6 +1,6 @@
-import { MessageBuffer, asIterable } from './message-buffer';
-import { TypedEventEmitter } from 'src/util/event-emitter';
-import { arrayify } from 'src/util';
+import { MessageBuffer, asIterable } from "./message-buffer";
+import { TypedEventEmitter } from "src/util/event-emitter";
+import { arrayify } from "src/util";
 
 interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
   serverSentMessages(messages: ServerSendType[]): void;
@@ -10,7 +10,8 @@ interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
  */
-export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>> {
+export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
+  extends TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>> {
 
   private readonly clientSentMessageQueues: ClientSendType[][][] = [];
   private readonly serverSentMessageQueues: ServerSendType[][][] = [];
@@ -19,7 +20,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends
   private readonly serverSentMessageSendTimes: Map<ServerSendType[], number> = new Map();
   private readonly serverSentMessageReferenceCounts: Map<ServerSendType[], number> = new Map();
 
-  /** 
+  /**
    * Gives a new connection to the server.
    */
   public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
@@ -33,11 +34,11 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends
 
         const inputMessageQueue = this.clientSentMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
-          throw Error('Cannot send input to server before the client connection has been created.');
+          throw Error("Cannot send input to server before the client connection has been created.");
         }
         inputMessageQueue.push(asArray);
         this.clientSentMessageReadyTimes.set(asArray, new Date().getTime() + lagMs);
-        this.emit('clientSentMessages', asArray);
+        this.emit("clientSentMessages", asArray);
       },
       receive: () => {
         if (stateMessageQueue.length > 0) {
@@ -71,7 +72,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends
 
         this.serverSentMessageSendTimes.set(asArray, new Date().getTime());
         increment(this.serverSentMessageReferenceCounts, asArray);
-        this.emit('serverSentMessages', asArray);
+        this.emit("serverSentMessages", asArray);
       },
       receive: () => {
         if (imQueue.length > 0) {
@@ -86,23 +87,23 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType> extends
           }
         }
         return [];
-      }
+      },
     });
   }
 
   public getInputMessageQueueLengths(): number[] {
-    return this.clientSentMessageQueues.map(q => q.length);
+    return this.clientSentMessageQueues.map((q) => q.length);
   }
 
   public getStateMessageQueueLengths(): number[] {
-    return this.serverSentMessageQueues.map(q => q.length);
+    return this.serverSentMessageQueues.map((q) => q.length);
   }
 }
 
 function decrementOrRemove<K>(map: Map<K, number>, key: K): void {
   const value = map.get(key);
   if (value == undefined) {
-    throw Error('Tried to decrement map value that does not exist.');
+    throw Error("Tried to decrement map value that does not exist.");
   }
   if (value === 1) {
     map.delete(key);

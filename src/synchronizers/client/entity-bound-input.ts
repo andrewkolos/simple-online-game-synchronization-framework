@@ -1,4 +1,4 @@
-import { AnyEntity, PickInput } from '../../entity';
+import { AnyEntity, PickInput } from "../../entity";
 
 export interface EntityBoundInput<E extends AnyEntity> {
   /**

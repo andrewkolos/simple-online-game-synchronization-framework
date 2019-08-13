@@ -1,10 +1,10 @@
-import { TypedEventEmitter } from './util/event-emitter';
+import { TypedEventEmitter } from "./util/event-emitter";
 
 export type TickHandler = (tickNumber: number) => void;
 
 export interface GameLoopEvents {
-  preStep(): void
-  postStep(): void
+  preStep(): void;
+  postStep(): void;
 }
 
 /**
@@ -14,11 +14,11 @@ export interface GameLoopEvents {
 export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
 
   public tickRateHz: number;
-  
+
   /** How many ticks the timer has counted. */
   private tickCount: number = 0;
   private tickIntervalId?: NodeJS.Timer;
-  private readonly tickHandler: TickHandler  
+  private readonly tickHandler: TickHandler;
 
   public constructor(tickHandler: TickHandler) {
     super();
@@ -54,9 +54,9 @@ export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
   }
 
   private tick() {
-    this.emit('preStep');
+    this.emit("preStep");
     this.tickCount += 1;
     this.tickHandler(this.tickCount);
-    this.emit('postStep');
+    this.emit("postStep");
   }
 }

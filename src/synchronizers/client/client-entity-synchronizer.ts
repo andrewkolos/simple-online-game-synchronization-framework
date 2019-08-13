@@ -1,13 +1,13 @@
-import { singleLineify, DeepReadonly } from 'src/util';
-import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from '../../entity';
-import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
-import { ClientEntityMessageBuffer } from '../../networking/message-buffer';
-import { TypedEventEmitter } from '../../util/event-emitter';
+import { DeepReadonly, singleLineify } from "src/util";
+import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from "../../entity";
+import { EntityMessageKind, InputMessage, StateMessage } from "../../networking";
+import { ClientEntityMessageBuffer } from "../../networking/message-buffer";
+import { TypedEventEmitter } from "../../util/event-emitter";
 import { Interval, IntervalRunner } from "../../util/interval-runner";
-import { EntityCollection } from '../entity-collection';
-import { EntityBoundInput } from './entity-bound-input';
-import { InputCollectionStrategy } from './input-collection-strategy';
-import { CheckedNewEntityHandler, NewEntityHandler, NonLocalEntityResponse } from './new-entity-handler';
+import { EntityCollection } from "../entity-collection";
+import { EntityBoundInput } from "./entity-bound-input";
+import { InputCollectionStrategy } from "./input-collection-strategy";
+import { CheckedNewEntityHandler, NewEntityHandler, NonLocalEntityResponse } from "./new-entity-handler";
 
 type Timestamp = number;
 type EntityId = string;
@@ -35,7 +35,8 @@ export interface ClientEntitySynchronizerArgs<E extends AnyEntity> {
  * Translates inputs into intents specific to objects.
  * Sends intents to GameEngine on pre-tick, which will be applied on tick.
  */
-export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmitter<ClientEntitySynchronizerEvents<E>>{
+export class ClientEntitySynchronizer<E extends AnyEntity> extends
+ TypedEventEmitter<ClientEntitySynchronizerEvents<E>> {
 
   /**
    * Gets the number of inputs that this client has yet to receive an acknowledgement
@@ -67,7 +68,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
    * These inputs will be reapplied when the client receives a new authoritative state
    * sent by the server.
    */
-  private pendingInputs: InputMessage<E>[] = [];
+  private pendingInputs: Array<InputMessage<E>> = [];
 
   /** The time of the most recent input collection. */
   private lastInputCollectionTimestamp: number | undefined;
@@ -77,13 +78,12 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
    */
   private readonly playerEntityIds: EntityId[] = [];
 
-  private readonly entityStateBuffers = new Map<EntityId, { timestamp: Timestamp; state: PickState<E> }[]>();
+  private readonly entityStateBuffers = new Map<EntityId, Array<{ timestamp: Timestamp; state: PickState<E> }>>();
 
   private updateInterval?: IntervalRunner;
 
   /**
    * Creates an instance of game client.
-
    */
   constructor(args: ClientEntitySynchronizerArgs<E>) {
     super();
@@ -131,7 +131,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
     this.interpolateEntities();
 
-    this.emit('synchronized', this.entities.asIdKeyedMap() as Map<EntityId, DeepReadonly<E>>);
+    this.emit("synchronized", this.entities.asIdKeyedMap() as Map<EntityId, DeepReadonly<E>>);
   }
 
   /**
@@ -188,7 +188,8 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
         const entity = this.entities.get(stateMessageEntityId);
         if (entity == null) {
           throw Error(singleLineify`
-            Received state message with entity ID '${stateMessageEntityId}', but no entity with that ID exists on this client.
+            Received state message with entity ID '${stateMessageEntityId}',
+            but no entity with that ID exists on this client.
           `);
         }
 
@@ -196,7 +197,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
         reckonIfReckoningEntity(stateMessage);
         appendStateOntoBufferIfInterpolatingEntity(stateMessage);
       }
-    }
+    };
 
   })();
 
@@ -207,9 +208,13 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
   private addNewNonLocalPlayerEntity(stateMessage: StateMessage<E>) {
     const stateMessageEntityId = stateMessage.entity.id;
 
-    const newEntityInfo: NonLocalEntityResponse<E> = this.newEntityHandler.createNonLocalEntityFromStateMessage(stateMessage);
+    const newEntityInfo: NonLocalEntityResponse<E> = this.newEntityHandler
+      .createNonLocalEntityFromStateMessage(stateMessage);
+
     this.entities.add(newEntityInfo.entity as E);
-    this.entityStateBuffers.set(stateMessageEntityId, []); // Set up new state buffer for this entity, to be used for server reconciliation.
+
+    // Set up new state buffer for this entity, to be used for server reconciliation.
+    this.entityStateBuffers.set(stateMessageEntityId, []);
 
     switch (newEntityInfo.syncStrategy) {
       case SyncStrategy.DeadReckoning:
@@ -248,7 +253,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
     stateBuffer.push({ timestamp, state });
   }
 
-  /** 
+  /**
    * Perform server reconciliation. When the client receives an update about its entities
    * from the server, apply them, and then reapply all local pending inputs (have timestamps
    * later than the timestamp sent by the server).
@@ -261,7 +266,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
     this.pendingInputs.forEach((inputMessage: InputMessage<E>) => {
       const entity = this.entities.get(inputMessage.entityId);
       if (entity == null) {
-        throw Error('Did not find entity corresponding to a pending input.');
+        throw Error("Did not find entity corresponding to a pending input.");
       }
       entity.applyInput(inputMessage.input);
     });
@@ -283,7 +288,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
     const now = new Date().getTime();
 
-    const getInputs = (): EntityBoundInput<E>[] => {
+    const getInputs = (): Array<EntityBoundInput<E>> => {
 
       const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
         ? this.lastInputCollectionTimestamp : now;
@@ -293,17 +298,17 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
       this.lastInputCollectionTimestamp = now;
 
       return this.inputCollectionStrategy.getInputs(timeSinceLastInputCollection);
-    }
+    };
 
     const entityBoundInputs = getInputs();
 
-    entityBoundInputs.forEach(input => {
+    entityBoundInputs.forEach((input) => {
 
       const inputMessage: InputMessage<E> = {
-        messageKind: EntityMessageKind.Input,
         entityId: input.entityId,
+        input: input.input,
         inputSequenceNumber: this.currentInputSequenceNumber,
-        input: input.input
+        messageKind: EntityMessageKind.Input,
       };
 
       this.server.send(inputMessage);
@@ -337,7 +342,7 @@ export class ClientEntitySynchronizer<E extends AnyEntity> extends TypedEventEmi
 
       // Find the two authoritative positions surrounding the timestamp.
       const buffer = this.entityStateBuffers.get(entity.id);
-      if (buffer == undefined) { throw Error(`Could not find state buffer for entity ${entity.id}.`) }
+      if (buffer == undefined) { throw Error(`Could not find state buffer for entity ${entity.id}.`); }
 
       // Drop older positions.
       while (buffer.length >= 2 && buffer[1].timestamp <= renderTimestamp) {

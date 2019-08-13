@@ -1,16 +1,15 @@
-import { Entity } from './entity';
-
+import { Entity } from "./entity";
 
 /**
  * An entity that interpolates ea
- * @template Input 
- * @template State 
+ * @template Input
+ * @template State
  */
 export abstract class InterpolableEntity<Input, State> extends Entity<Input, State> {
-  
+
   /**
    * Creates a state for the entity by interpolating two other states (essentially creating
-   * an in-between state). 
+   * an in-between state).
    * @param state1 The first, past state.
    * @param state2 The second, future state.
    * @param timeRatio A ratio of how close the state should be to the second state. A time ratio

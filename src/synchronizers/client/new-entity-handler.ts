@@ -1,6 +1,6 @@
-import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from '../../entity';
-import { StateMessage } from '../../networking';
-import { compareDumbObjects, singleLineify } from '../../util';
+import { AnyEntity, InterpolableEntity, PickInput, PickState, ReckonableEntity, SyncStrategy } from "../../entity";
+import { StateMessage } from "../../networking";
+import { compareDumbObjects, singleLineify } from "../../util";
 
 interface InterpolableEntityResponse<E extends AnyEntity> {
   entity: InterpolableEntity<PickInput<E>, PickState<E>>;
@@ -17,7 +17,8 @@ interface RawEntityResponse<E extends AnyEntity> {
   syncStrategy: SyncStrategy.Raw;
 }
 
-export type NonLocalEntityResponse<E extends AnyEntity> = InterpolableEntityResponse<E> | ReckonableEntityResponse<E> | RawEntityResponse<E>;
+export type NonLocalEntityResponse<E extends AnyEntity> =
+  InterpolableEntityResponse<E> | ReckonableEntityResponse<E> | RawEntityResponse<E>;
 
 /**
  * Creates representations of entities on a server for a client from state messages given by the server.
@@ -46,9 +47,9 @@ export interface NewEntityHandler<E extends AnyEntity> {
  * entities created by the hanlder are consistent with the state messages they were created from.
  */
 export class CheckedNewEntityHandler<E extends AnyEntity> implements NewEntityHandler<E> {
-  
+
   public constructor(private readonly handler: NewEntityHandler<E>) { }
-  
+
   /** @inheritdoc */
   public createLocalEntityFromStateMessage(stateMessage: StateMessage<E>): E {
     const entity = this.handler.createLocalEntityFromStateMessage(stateMessage);
@@ -60,7 +61,7 @@ export class CheckedNewEntityHandler<E extends AnyEntity> implements NewEntityHa
   public createNonLocalEntityFromStateMessage(stateMessage: StateMessage<E>): NonLocalEntityResponse<E> {
     const response = this.handler.createNonLocalEntityFromStateMessage(stateMessage);
     this.check(response.entity as E, stateMessage);
-     
+
     return response;
   }
 
@@ -74,7 +75,8 @@ export class CheckedNewEntityHandler<E extends AnyEntity> implements NewEntityHa
     }
     if (!compareDumbObjects(createdEntity.state, creatingStateMessage.entity.state)) {
       throw Error(singleLineify`
-        The state of the entity created from the state message is not identical to state perscribed in the state message.
+        The state of the entity created from the state message is not
+        identical to state perscribed in the state message.
       `);
     }
 

@@ -3,7 +3,7 @@
     "baseUrl": ".",
     "target": "es2016",
     "moduleResolution": "node",
-    "module": "commonjs",
+    "module": "es2015",
     "allowSyntheticDefaultImports": true,
     "importHelpers": true,
     "jsx": "react",

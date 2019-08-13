@@ -1,4 +1,4 @@
-import { AnyEntity, PickInput, PickState } from 'src/entity';
+import { AnyEntity, PickInput, PickState } from "src/entity";
 
 export const enum EntityMessageKind {
   Input = "entityInput",
@@ -11,9 +11,9 @@ export interface BufferMessage {
 
 export interface InputMessage<Entity extends AnyEntity> extends BufferMessage {
   messageKind: EntityMessageKind.Input;
-  entityId: string;
   input: PickInput<Entity>;
   inputSequenceNumber: number;
+  entityId: string;
 }
 
 export interface StateMessage<Entity extends AnyEntity> extends BufferMessage {

@@ -1,17 +1,17 @@
-import { AnyEntity, PickState, PickInput } from 'src/entity/entity';
-import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
-import { TypedEventEmitter } from '../../util/event-emitter';
+import { AnyEntity, PickState, PickInput } from "src/entity/entity";
+import { ServerEntityMessageBuffer } from "../../networking/message-buffer";
+import { TypedEventEmitter } from "../../util/event-emitter";
 import { Interval, IntervalRunner } from "../../util/interval-runner";
-import { EntityCollection } from '../entity-collection';
-import { fromMapGetOrDefault } from 'src/util';
-import { StateMessage, EntityMessageKind, InputMessage } from 'src/networking/messages';
+import { EntityCollection } from "../entity-collection";
+import { fromMapGetOrDefault } from "src/util";
+import { StateMessage, EntityMessageKind, InputMessage } from "src/networking/messages";
 
 type ClientId = string;
 type EntityId = string;
 
 export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
   beforeSynchronization(): void;
-  beforeInputsApplied(inputs: InputMessage<E>[]): void;
+  beforeInputsApplied(inputs: Array<InputMessage<E>>): void;
   synchronized(): void;
 }
 
@@ -19,7 +19,8 @@ export interface ServerEntitySynchronizerEvents<E extends AnyEntity> {
  * Creates and synchronizes game entities for clients.
  * @template E The type of entity/entities this synchronizer can work with.
  */
-export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
+export abstract class ServerEntitySynchronizer<E extends AnyEntity>
+  extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
 
   public get entities(): ReadonlyMap<EntityId, E> {
     return this._entities.asIdKeyedMap();
@@ -52,7 +53,7 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
       id: newClientId,
       messageBuffer: connection,
       seqNumberOfLastProcessedInput: 0,
-      ownedEntityIds: []
+      ownedEntityIds: [],
     };
 
     this.clients.set(newClientId, client);
@@ -72,8 +73,8 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
 
   /**
    * Adds a player entity (i.e. to be controlled by a player via a client).
-   * @param entity 
-   * @param playerClientId 
+   * @param entity
+   * @param playerClientId
    */
   public addPlayerEntity(entity: E, playerClientId: string) {
     this._entities.add(entity);
@@ -165,14 +166,15 @@ export abstract class ServerEntitySynchronizer<E extends AnyEntity> extends Type
    * Processes all available inputs.
    */
   private processInputs() {
-    const inputsByClient: Map<ClientInfo<E>, InputMessage<E>[]> = new Map();
+    const inputsByClient: Map<ClientInfo<E>, Array<InputMessage<E>>> = new Map();
 
     for (const client of this.clients.values()) {
       const messages = [...client.messageBuffer];
       inputsByClient.set(client, messages);
     }
 
-    const asSingleArray: InputMessage<E>[] = [...inputsByClient.values()].reduce((concatenated, current) => concatenated.concat(current));
+    const asSingleArray: Array<InputMessage<E>> = [...inputsByClient.values()]
+      .reduce((concatenated, current) => concatenated.concat(current));
     this.emit("beforeInputsApplied", asSingleArray);
 
     for (const client of inputsByClient.keys()) {

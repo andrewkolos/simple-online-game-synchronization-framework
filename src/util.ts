@@ -1,5 +1,5 @@
 export type DeepReadonly<T> =
-  T extends (infer R)[] ? DeepReadonlyArray<R> :
+  T extends Array<infer R> ? DeepReadonlyArray<R> :
   T extends Function ? T :
   T extends object ? DeepReadonlyObject<T> :
   T;
@@ -46,7 +46,7 @@ export function cloneDumbObject<T>(o: T): T {
 export function singleLineify(strings: TemplateStringsArray, ...values: string[]) {
   // Interweave the strings with the
   // substitution vars first.
-  let output = '';
+  let output = "";
   for (let i = 0; i < values.length; i += 1) {
     output += strings[i] + values[i];
   }
@@ -57,8 +57,8 @@ export function singleLineify(strings: TemplateStringsArray, ...values: string[]
 
   // Rip out the leading whitespace.
   return lines.map((line) => {
-    return line.replace(/^\s+/gm, '');
-  }).join(' ').trim();
+    return line.replace(/^\s+/gm, "");
+  }).join(" ").trim();
 }
 
 export function fromMapGetOrDefault<K, V>(map: Map<K, V>, key: K, defaultV: V) {

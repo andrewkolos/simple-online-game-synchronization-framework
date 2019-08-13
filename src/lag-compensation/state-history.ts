@@ -1,7 +1,7 @@
-import { AnyEntity, PickInput, PickState } from 'src/entity';
-import { binarySearch } from 'src/util/binsearch';
+import { AnyEntity, PickInput, PickState } from "src/entity";
+import { binarySearch } from "src/util/binsearch";
 import LRU from "lru-cache";
-import { singleLineify } from 'src/util';
+import { singleLineify } from "src/util";
 
 class Index {
   public constructor(public readonly value: number) { }
@@ -17,14 +17,14 @@ export class Timestamp {
   }
 }
 
-export type EntitySyncState<E extends AnyEntity> = {
+export interface EntitySyncState<E extends AnyEntity> {
   entity: E;
-  inputsToBeApplied: PickInput<E>[];
+  inputsToBeApplied: Array<PickInput<E>>;
   stateBeforeInputApplied: PickState<E>;
   locked: boolean;
 }
 
-export type Timestamped<T> = {
+export interface Timestamped<T> {
   value: T;
   timestamp: Timestamp;
 }
@@ -33,7 +33,7 @@ const enum SearchOutcome {
   Found,
   TooOldToStillExist,
   TooNewToExist,
-  NeverCouldHaveExisted
+  NeverCouldHaveExisted,
 }
 
 interface FoundSearchResult {
@@ -67,7 +67,7 @@ export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
  */
 export class StateHistory<State> {
 
-  private states: Timestamped<State>[] = [];
+  private states: Array<Timestamped<State>> = [];
 
   private recordLengthMs: number;
 
@@ -109,7 +109,7 @@ export class StateHistory<State> {
    * Gets the state (and its timestamp) that immediately follows a given timestamp.
    * @param timestamp The timestamp to search for to find the following state.
    * @returns The state (and its timestamp) that immediately follows the state at the argued timestamp.
-   * `undefined` if there is no state after the provided timestamp (i.e. the provided timestamp is the 
+   * `undefined` if there is no state after the provided timestamp (i.e. the provided timestamp is the
    * timestamp of the latest recorded state).
    * @throws Error if the provided timestamp doesn't exist in this history.
    */
@@ -147,13 +147,13 @@ export class StateHistory<State> {
     this.purgeStatesOlderThanRecordLength();
 
     if (this.states.length > 0 && this.states[this.states.length - 1].timestamp.value > timestamp.value) {
-      throw "Cannot record a state at a timestamp prior to the last one recorded.";
+      throw new Error("Cannot record a state at a timestamp prior to the last one recorded.");
     }
 
     const timestampedState = {
       value: state,
-      timestamp
-    }
+      timestamp,
+    };
 
     this.states.push(timestampedState);
   }
@@ -191,7 +191,8 @@ export class StateHistory<State> {
       return { outcome: SearchOutcome.TooNewToExist };
     }
 
-    const index = binarySearch(this.states, timestamp, (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp.value - o2.value);
+    const comparator = (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp.value - o2.value;
+    const index = binarySearch(this.states, timestamp, comparator);
 
     if (index == null) {
       return { outcome: SearchOutcome.NeverCouldHaveExisted };
@@ -200,7 +201,7 @@ export class StateHistory<State> {
     return {
       outcome: SearchOutcome.Found,
       index: new Index(index),
-    }
+    };
   }
 
   private indexOfStateAtUnsafe(timestamp: Timestamp): number {
@@ -208,23 +209,22 @@ export class StateHistory<State> {
 
     switch (result.outcome) {
       case SearchOutcome.NeverCouldHaveExisted:
-        throw "This history does not contain a state at the provided timestamp."
+        throw new Error("This history does not contain a state at the provided timestamp.");
       case SearchOutcome.TooNewToExist:
-        throw "Timestamp to search for is later than that of the last recorded state."
+        throw new Error("Timestamp to search for is later than that of the last recorded state.");
       case SearchOutcome.TooOldToStillExist:
         throw singleLineify`
-          This history may have had a state with the provided timestamp, but by now has been cleared 
+          This history may have had a state with the provided timestamp, but by now has been cleared
           after recording another entry.
-        `
+        `;
     }
 
     return result.index.value;
   }
 
-
   private searchCache(timestamp: Timestamp): number | undefined {
-    const index = this.indexCache.values().findIndex((index: Index) =>
-      this.states[index.value].timestamp.value === timestamp.value);
+    const index = this.indexCache.values().findIndex((i: Index) =>
+      this.states[i.value].timestamp.value === timestamp.value);
     return index === -1 ? undefined : index;
   }
 }
