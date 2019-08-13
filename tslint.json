@@ -33,13 +33,17 @@
     "ordered-imports": false,
     "eofline": true,
     "ban-types": false,
-    "no-namespace": false
-  },
-  "max-line-length": [
-    true,
-    {
-      "limit": 120,
-      "ignore-pattern": "^import [^,]+ from |^export | implements "
-    }
-  ]
+    "no-namespace": false,
+    "quotemark": [
+      true,
+      "single"
+    ],
+    "max-line-length": [
+      true,
+      {
+        "limit": 130,
+        "ignore-pattern": "^import |^export {(.*?)}"
+      }
+    ]
+  }
 }
