@@ -1,5 +1,5 @@
-import { MessageBuffer, asIterable } from "./message-buffer";
-import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGivenKey, RouterTypeMap } from "./message-router";
+import { MessageBuffer, asIterable } from './message-buffer';
+import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGivenKey, RouterTypeMap } from './message-router';
 
 /**
  * A simple implementation of `MessageRouter`. Any filtered message buffer generated from the router will

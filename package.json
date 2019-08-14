@@ -1,9 +1,9 @@
 {
   "name": "@akolos/ts-client-server-game-synchronization",
-  "version": "0.1.62",
+  "version": "0.1.64",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/src/index.d.ts",
   "description": "TypeScript Game Client and Server Framework",
   "engineStrict": true,
   "engines": {

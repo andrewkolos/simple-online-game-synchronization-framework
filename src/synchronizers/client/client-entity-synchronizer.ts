@@ -1,4 +1,4 @@
-import { DeepReadonly, singleLineify } from 'src/util';
+import { DeepReadonly, singleLineify } from '../../util';
 import { AnyPlayerEntity, PickInput, PickState } from '../../entity';
 import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
 import { ClientEntityMessageBuffer } from '../../networking/message-buffer';

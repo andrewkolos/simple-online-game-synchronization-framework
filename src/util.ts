@@ -21,13 +21,13 @@ function isDumbObject(o: Object): boolean {
   return Object.values(o).every((value: any) => {
     const t = typeof value;
 
-    return t !== "object" && t !== "function";
+    return t !== 'object' && t !== 'function';
   });
 }
 
 function isDumbObjectUnsafe(o: Object): void | never {
   if (!isDumbObject(o)) {
-    throw Error("Object cannot contain non-value types.");
+    throw Error('Object cannot contain non-value types.');
   }
 }
 
@@ -46,7 +46,7 @@ export function cloneDumbObject<T>(o: T): T {
 export function singleLineify(strings: TemplateStringsArray, ...values: string[]) {
   // Interweave the strings with the
   // substitution vars first.
-  let output = "";
+  let output = '';
   for (let i = 0; i < values.length; i += 1) {
     output += strings[i] + values[i];
   }
@@ -57,8 +57,8 @@ export function singleLineify(strings: TemplateStringsArray, ...values: string[]
 
   // Rip out the leading whitespace.
   return lines.map((line) => {
-    return line.replace(/^\s+/gm, "");
-  }).join(" ").trim();
+    return line.replace(/^\s+/gm, '');
+  }).join(' ').trim();
 }
 
 export function fromMapGetOrDefault<K, V>(map: Map<K, V>, key: K, defaultV: V) {

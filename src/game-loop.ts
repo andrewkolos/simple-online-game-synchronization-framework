@@ -1,4 +1,4 @@
-import { TypedEventEmitter } from "./util/event-emitter";
+import { TypedEventEmitter } from './util/event-emitter';
 
 export type TickHandler = (tickNumber: number) => void;
 
@@ -54,9 +54,9 @@ export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
   }
 
   private tick() {
-    this.emit("preStep");
+    this.emit('preStep');
     this.tickCount += 1;
     this.tickHandler(this.tickCount);
-    this.emit("postStep");
+    this.emit('postStep');
   }
 }

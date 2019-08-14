@@ -1,4 +1,4 @@
-import { Entity } from 'src/entity/entity';
+import { Entity } from '../entity';
 import { PlayerControllable } from './player-controllable';
 
 export abstract class PlayerEntity<Input, State> extends Entity<State> implements PlayerControllable<Input> {

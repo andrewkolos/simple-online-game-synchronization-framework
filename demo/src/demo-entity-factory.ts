@@ -10,8 +10,8 @@ export class DemoEntityFactory implements EntityFactory<DemoPlayer> {
   public fromStateMessage(stateMessage: StateMessage<DemoPlayerState>): DemoPlayer {
     const {id, state} = stateMessage.entity;
     if (state != null && state.position != null) {
-      return new DemoPlayer(id, state, SyncToServerStrategy.linearInterpolation<DemoPlayerState>(this.serverUpdateRateHz));
+      return new DemoPlayer(id, state, SyncToServerStrategy.linearInterpolation(this.serverUpdateRateHz));
     }
-    throw Error('Unable to convert state message into a game entity.');
+    throw Error('Failed to convert state message into a game entity.');
   }
 }

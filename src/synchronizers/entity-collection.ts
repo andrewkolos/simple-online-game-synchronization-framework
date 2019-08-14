@@ -1,4 +1,4 @@
-import { AnyPlayerEntity } from 'src/entity';
+import { AnyPlayerEntity } from '../entity';
 
 export type EntityId = string;
 

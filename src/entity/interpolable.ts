@@ -1,6 +1,6 @@
-import { StateMessage } from 'src/networking';
-import { Interval } from 'src/util/interval-runner';
-import { interpolateStatesLinearly, NumericObject } from 'src/interpolate-linearly';
+import { StateMessage } from '../networking';
+import { Interval } from '../util/interval-runner';
+import { interpolateStatesLinearly, NumericObject } from '../interpolate-linearly';
 import { SyncToServerStrategy } from './synchronizable';
 
 export type Interpolator<State> = (pastState: State, futureState: State, timeRatio: number) => State;
@@ -55,6 +55,6 @@ class InterpolationSyncStrategy<State> {
       return this.interpolator(buffer[0].message.entity.state, buffer[1].message.entity.state, timeRatio);
     }
 
-    return this.state;
+    return this.state || stateMessage.entity.state;
   }
 }

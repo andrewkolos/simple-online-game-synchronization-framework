@@ -1,6 +1,6 @@
-import { ValueOf } from "../util";
-import { MessageBuffer } from "./message-buffer";
-import { BufferMessage } from "./messages";
+import { ValueOf } from '../util';
+import { MessageBuffer } from './message-buffer';
+import { BufferMessage } from './messages';
 
 /**
  * Maps a set of `string` keys to a pair of types implementing the `BufferMessage` interface: one to a type
@@ -18,7 +18,7 @@ export interface RouterTypeMap {
  * type mapping of a router that is communicating with a router using the given `RouterTypeMap`.
  */
 export type InvertRouterTypeMap<T extends RouterTypeMap> = {
-  [key in keyof T]: { receiveType: T[key]["sendType"]; sendType: T[key]["receiveType"] };
+  [key in keyof T]: { receiveType: T[key]['sendType']; sendType: T[key]['receiveType'] };
 };
 
 interface TypeMap { [key: string]: any }
@@ -26,11 +26,11 @@ interface TypeMap { [key: string]: any }
 export type PickTypeFromMap<T extends TypeMap, K extends string> = ValueOf<T>[K];
 type PickTypeGivenKey<M extends TypeMap, K extends keyof M, T extends keyof M[K]> = M[K][T];
 
-export type PickSendType<T extends RouterTypeMap> = PickTypeFromMap<T, "sendType">;
-export type PickReceiveType<T extends RouterTypeMap> = PickTypeFromMap<T, "receiveType">;
+export type PickSendType<T extends RouterTypeMap> = PickTypeFromMap<T, 'sendType'>;
+export type PickReceiveType<T extends RouterTypeMap> = PickTypeFromMap<T, 'receiveType'>;
 
-export type PickSendTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, "sendType">;
-export type PickReceiveTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, "receiveType">;
+export type PickSendTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, 'sendType'>;
+export type PickReceiveTypeGivenKey<T extends RouterTypeMap, K extends keyof T> = PickTypeGivenKey<T, K, 'receiveType'>;
 
 /**
  * Given a message buffer, a `MessageRouter` can generate filtered message buffers that are
@@ -45,5 +45,5 @@ export interface MessageRouter<T extends RouterTypeMap> {
    * @param bufferType The key of the type mapping that describes what types of messages the new `MessageBuffer` will be
    *                   able to receive/send.
    */
-  getFilteredMessageBuffer<K extends keyof T>(bufferType: K): MessageBuffer<T[K]["receiveType"], T[K]["sendType"]>;
+  getFilteredMessageBuffer<K extends keyof T>(bufferType: K): MessageBuffer<T[K]['receiveType'], T[K]['sendType']>;
 }

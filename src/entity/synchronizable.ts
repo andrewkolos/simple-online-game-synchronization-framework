@@ -1,7 +1,7 @@
-import { StateMessage } from 'src/networking';
+import { StateMessage } from '../networking';
 import { Interpolator, InterpolationSyncStrategyFactory } from './interpolable';
 import { Reckoner } from './reckonable';
-import { NumericObject } from 'src/interpolate-linearly';
+import { NumericObject } from '../interpolate-linearly';
 
 export type SyncToServerStrategy<State> = (stateMessage: StateMessage<State>) => State;
 

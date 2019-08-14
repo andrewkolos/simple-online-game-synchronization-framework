@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "target": "es2016",
     "moduleResolution": "node",
     "module": "es2015",
@@ -18,7 +17,6 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    "rootDir": ".",
     "esModuleInterop": true
   },
   "exclude": [

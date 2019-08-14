@@ -1,4 +1,4 @@
-import { AnyPlayerEntity, PickState, PickInput } from 'src/entity';
+import { AnyPlayerEntity, PickState, PickInput } from '../entity';
 import { InputMessage, StateMessage } from './messages';
 
 export interface MessageBufferBase<ReceiveType, SendType> {

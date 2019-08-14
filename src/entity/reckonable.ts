@@ -1,5 +1,3 @@
-import { SyncToServerStrategy } from './synchronizable';
-
 export type Reckoner<State> = (fromState: State, reckonTimeMs: number) => State;
 
 export interface Reckonable<State> {

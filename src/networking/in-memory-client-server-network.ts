@@ -1,6 +1,6 @@
 import { MessageBuffer, asIterable } from './message-buffer';
-import { TypedEventEmitter } from 'src/util/event-emitter';
-import { arrayify } from 'src/util';
+import { TypedEventEmitter } from '../util/event-emitter';
+import { arrayify } from '../util';
 
 interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
   serverSentMessages(messages: ServerSendType[]): void;

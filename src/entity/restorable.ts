@@ -1,4 +1,4 @@
-import { StateHistory } from 'src/synchronizers';
+import { StateHistory } from '../synchronizers';
 
 export type RestorationStrategy<State> = (to: number, states: StateHistory<State>) => State;
 

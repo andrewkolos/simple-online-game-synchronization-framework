@@ -1,4 +1,4 @@
-import { AnyEntity, Entity } from 'src/entity/entity';
+import { AnyEntity, Entity } from '../entity/entity';
 import { PlayerEntity } from './player-entity';
 
 /**

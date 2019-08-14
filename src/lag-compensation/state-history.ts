@@ -1,7 +1,7 @@
-import { AnyPlayerEntity, PickInput, PickState } from "src/entity";
-import { binarySearch } from "src/util/binsearch";
-import LRU from "lru-cache";
-import { singleLineify } from "src/util";
+import { AnyPlayerEntity, PickInput, PickState } from '../entity';
+import { binarySearch } from '../util/binsearch';
+import LRU from 'lru-cache';
+import { singleLineify } from '../util';
 
 class Index {
   public constructor(public readonly value: number) { }
@@ -147,7 +147,7 @@ export class StateHistory<State> {
     this.purgeStatesOlderThanRecordLength();
 
     if (this.states.length > 0 && this.states[this.states.length - 1].timestamp.value > timestamp.value) {
-      throw new Error("Cannot record a state at a timestamp prior to the last one recorded.");
+      throw new Error('Cannot record a state at a timestamp prior to the last one recorded.');
     }
 
     const timestampedState = {
@@ -209,9 +209,9 @@ export class StateHistory<State> {
 
     switch (result.outcome) {
       case SearchOutcome.NeverCouldHaveExisted:
-        throw new Error("This history does not contain a state at the provided timestamp.");
+        throw new Error('This history does not contain a state at the provided timestamp.');
       case SearchOutcome.TooNewToExist:
-        throw new Error("Timestamp to search for is later than that of the last recorded state.");
+        throw new Error('Timestamp to search for is later than that of the last recorded state.');
       case SearchOutcome.TooOldToStillExist:
         throw singleLineify`
           This history may have had a state with the provided timestamp, but by now has been cleared

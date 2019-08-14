@@ -1,10 +1,10 @@
-import { AnyPlayerEntity, PickState, PickInput } from 'src/entity';
+import { AnyPlayerEntity, PickState, PickInput } from '../../entity';
 import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
 import { TypedEventEmitter } from '../../util/event-emitter';
 import { Interval, IntervalRunner } from '../../util/interval-runner';
 import { EntityCollection } from '../entity-collection';
-import { fromMapGetOrDefault } from 'src/util';
-import { StateMessage, EntityMessageKind, InputMessage } from 'src/networking/messages';
+import { fromMapGetOrDefault } from '../../util';
+import { StateMessage, EntityMessageKind, InputMessage } from '../../networking/messages';
 
 type ClientId = string;
 type EntityId = string;
