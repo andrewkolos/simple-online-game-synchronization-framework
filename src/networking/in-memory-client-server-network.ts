@@ -1,4 +1,4 @@
-import { MessageBuffer, asIterable } from './message-buffer';
+import { TwoWayMessageBuffer } from './message-buffer';
 import { TypedEventEmitter } from '../util/event-emitter';
 import { arrayify } from '../util';
 
@@ -23,12 +23,12 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
   /**
    * Gives a new connection to the server.
    */
-  public getNewConnectionToServer(lagMs: number): MessageBuffer<ServerSendType, ClientSendType> {
+  public getNewConnectionToServer(lagMs: number): TwoWayMessageBuffer<ServerSendType, ClientSendType> {
     this.serverSentMessageQueues.push([]);
     const clientIndex = this.serverSentMessageQueues.length - 1;
     const stateMessageQueue = this.serverSentMessageQueues[clientIndex];
 
-    return asIterable({
+    return {
       send: (messages: ClientSendType | ClientSendType[]) => {
         const asArray = arrayify(messages);
 
@@ -54,18 +54,21 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
         }
         return [];
       },
-    });
+      [Symbol.iterator]() {
+        return this.receive().values();
+      },
+    };
   }
 
   /**
    * Get a connection to a client.
    */
-  public getNewClientConnection(): MessageBuffer<ClientSendType, ServerSendType> {
+  public getNewClientConnection(): TwoWayMessageBuffer<ClientSendType, ServerSendType> {
     this.clientSentMessageQueues.push([]);
     const clientIndex = this.clientSentMessageQueues.length - 1;
     const imQueue = this.clientSentMessageQueues[clientIndex];
 
-    return asIterable({
+    return {
       send: (messages: ServerSendType | ServerSendType[]) => {
         const asArray = arrayify(messages);
         this.serverSentMessageQueues[clientIndex].push(asArray);
@@ -88,7 +91,10 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
         }
         return [];
       },
-    });
+      [Symbol.iterator]() {
+        return this.receive().values();
+      },
+    };
   }
 
   public getInputMessageQueueLengths(): number[] {

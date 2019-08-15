@@ -45,6 +45,7 @@
         "ignore-pattern": "^import |^export {(.*?)}"
       }
     ],
-    "no-parameter-reassignment": true
+    "no-parameter-reassignment": true,
+    "align": false
   }
 }
