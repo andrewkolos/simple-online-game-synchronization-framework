@@ -1,13 +1,9 @@
 import { StateMessage } from '../networking';
 import { Interval } from '../util/interval-runner';
 import { interpolateStatesLinearly, NumericObject } from '../interpolate-linearly';
-import { SyncToServerStrategy } from './synchronizable';
+import { SyncToServerStrategy } from './sync-to-server-strategy';
 
 export type Interpolator<State> = (pastState: State, futureState: State, timeRatio: number) => State;
-
-export interface Interpolable<State> {
-  interpolate(pastState: State, futureState: State, timeRatio: number): void;
-}
 
 export class InterpolationSyncStrategyFactory {
 

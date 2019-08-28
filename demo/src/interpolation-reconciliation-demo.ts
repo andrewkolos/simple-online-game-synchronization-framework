@@ -1,10 +1,9 @@
 import { GameLoop } from '../../src/game-loop';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
-import { ClientEntitySynchronizer } from '../../src/synchronizers/client/client-entity-synchronizer';
-import { DemoPlayer, DemoPlayerInput, DemoPlayerState } from './demo-player';
-import { KeyboardDemoInputCollector } from './keyboard-demo-input-collector';
-import { DemoServer } from './demo-server';
-import { DemoEntityFactory } from './demo-entity-factory';
+import { DemoPlayer, DemoPlayerInput, DemoPlayerState, demoPlayerInputApplicator } from './demo-player';
+import { createDemoServerSyncer } from './demo-server';
+import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes } from './keyboard-demo-input-collector';
+import { PlayerClientEntitySyncer, ServerEntitySyncerRunner, ClientEntitySyncerRunner } from '../../src/synchronizers';
 
 // Helper code for running the demo.
 
@@ -48,9 +47,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoPlayer[]
 }
 
 function writePositions(entities: DemoPlayer[] | ReadonlyArray<DemoPlayer>, el: HTMLElement) {
-  const message = entities.map((entity) => {
-    if (!(entity instanceof DemoPlayer)) return;
-
+  const message = entities.map((entity: DemoPlayer) => {
     return `${entity.id}: ${entity.state.position.toFixed(3)}`;
   }).join(' ');
 
@@ -71,17 +68,18 @@ function handleMessageSent() {
   misc.innerHTML = message;
 }
 
-function createClient(playerEntityId: string, moveLeftKeycode: number, moveRightKeyCode: number) {
+function createClient(playerEntityId: string, keyMappings: KeyboardDemoinputCollectorKeycodes, serverUpdateRateHz: number) {
 
-  const serverConnection = network.getNewConnectionToServer(100);
-  const newEntityHandler = new DemoEntityFactory(serverSyncUpdateRate);
-  const inputCollector = new KeyboardDemoInputCollector(playerEntityId, moveLeftKeycode, moveRightKeyCode);
+  const connection = network.getNewConnectionToServer(100);
+  const inputCollector = createKeyboardDemoInputCollector(playerEntityId, keyMappings);
 
-  const client = new ClientEntitySynchronizer({
-    serverConnection,
-    newEntityHandler,
-    serverUpdateRateInHz: serverSyncUpdateRate,
-    inputCollectionStrategy: inputCollector,
+  const client = new PlayerClientEntitySyncer({
+    connection,
+    localPlayerSyncStrategy: {
+      inputApplicator: demoPlayerInputApplicator,
+      inputSource: inputCollector,
+    },
+    serverUpdateRateHz,
   });
 
   return client;
@@ -100,22 +98,22 @@ const serverGame = new GameLoop(noop);
 const client1Game = new GameLoop(noop);
 const client2Game = new GameLoop(noop);
 
-const server = new DemoServer();
+const serverSyncer = createDemoServerSyncer();
+const serverRunner = new ServerEntitySyncerRunner(serverSyncer);
 const network = new InMemoryClientServerNetwork<InputMessage<DemoPlayerInput>, StateMessage<DemoPlayerState>>();
 
-const client1Id = server.connectClient(network.getNewClientConnection());
-const client2Id = server.connectClient(network.getNewClientConnection());
+const client1Id = serverSyncer.connectClient(network.getNewClientConnection());
+const client2Id = serverSyncer.connectClient(network.getNewClientConnection());
 
-const client1 = createClient(client1Id, 65, 68);
-const client2 = createClient(client2Id, 37, 39);
+const client1Runner = new ClientEntitySyncerRunner(createClient(client1Id, { moveLeft: 65, moveRight: 68}, serverSyncUpdateRate));
+const client2Runner = new ClientEntitySyncerRunner(createClient(client2Id, { moveLeft: 37, moveRight: 39}, serverSyncUpdateRate));
 
-server.on('synchronized', () => {
-  const entities = Array.from(server.entities.values());
+serverRunner.on('synchronized', (entities: DemoPlayer[]) => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
   renderWorldOntoCanvas(serverCanvas, entities);
 
-  const lastProcessedInputForClient1 = server.getLastProcessedInputForClient(client1Id);
-  const lastProcessedInputForClient2 = server.getLastProcessedInputForClient(client2Id);
+  const lastProcessedInputForClient1 = serverSyncer.getLastProcessedInputForClient(client1Id);
+  const lastProcessedInputForClient2 = serverSyncer.getLastProcessedInputForClient(client2Id);
 
   const serverStatus = document.getElementById('server_status') as HTMLDivElement;
   serverStatus.innerText = `Last acknowledged input: Player 1: #${lastProcessedInputForClient1}` +
@@ -123,20 +121,20 @@ server.on('synchronized', () => {
   writePositions(entities, document.getElementById('server_positions') as HTMLDivElement);
 });
 
-client1.on('synchronized', (entityMap: Map<string, DemoPlayer>) => {
-  displayGame(Array.from(entityMap.values()), document.getElementById('client1') as HTMLElement, client1.numberOfPendingInputs);
+client1Runner.on('synchronized', (entities: DemoPlayer[]) => {
+  displayGame(entities, document.getElementById('client1') as HTMLElement, client1Runner.synchronizer.getNumberOfPendingInputs());
 });
 
-client2.on('synchronized', (entityMap: Map<string, DemoPlayer>) => {
-  displayGame(Array.from(entityMap.values()), document.getElementById('client2') as HTMLElement, client2.numberOfPendingInputs);
+client2Runner.on('synchronized', (entities: DemoPlayer[]) => {
+  displayGame(entities, document.getElementById('client2') as HTMLElement, client2Runner.synchronizer.getNumberOfPendingInputs());
 });
 
 network.on('serverSentMessages', handleMessageSent);
 network.on('clientSentMessages', handleMessageSent);
 
-server.start(serverSyncUpdateRate);
-client1.start(clientUpdateRate);
-client2.start(clientUpdateRate);
+serverRunner.start(serverSyncUpdateRate);
+client1Runner.start(clientUpdateRate);
+client2Runner.start(clientUpdateRate);
 
 client1Game.start(clientUpdateRate);
 client2Game.start(clientUpdateRate);

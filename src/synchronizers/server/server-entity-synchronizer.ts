@@ -1,44 +1,68 @@
-import { AnyPlayerEntity, PickState, PickInput } from '../../entity';
-import { ServerEntityMessageBuffer } from '../../networking/message-buffer';
 import { TypedEventEmitter } from '../../util/event-emitter';
-import { Interval, IntervalRunner } from '../../util/interval-runner';
 import { EntityCollection } from '../entity-collection';
-import { fromMapGetOrDefault } from '../../util';
-import { StateMessage, EntityMessageKind, InputMessage } from '../../networking/messages';
+import { fromMapGetOrDefault, singleLineify } from '../../util';
+import { InputMessage, TwoWayMessageBuffer, StateMessage, EntityMessageKind } from '../../networking';
+import { Entity, InputApplicator } from '../../entity';
 
 type ClientId = string;
-type EntityId = string;
 
-export interface ServerEntitySynchronizerEvents<E extends AnyPlayerEntity> {
+type ConnectionToClient<Input, State> = TwoWayMessageBuffer<InputMessage<Input>, StateMessage<State>>;
+
+export interface ServerEntitySynchronizerEvents<Input> {
   beforeSynchronization(): void;
-  beforeInputsApplied(inputs: Array<InputMessage<PickInput<E>>>): void;
+  beforeInputsApplied(inputs: Array<InputMessage<Input>>): void;
   synchronized(): void;
+}
+
+/**
+ * Validates inputs sent by the clients.
+ * @param entity The entity that a client is attempting to apply the input to.
+ * @param input The input that is meant to be applied to the entity.
+ * @returns `true` if the input is acceptable and may be applied to the entity, `false` otherwise.
+ */
+type InputValidator<Input, State> = (entity: Entity<State>, input: Input) => boolean;
+
+export interface ServerEntitySyncherArgs<Input, State> {
+  /**
+   * Validates inputs, preventing them from being applied if they are invalid/fraudulent.
+   */
+  inputValidator: InputValidator<Input, State>;
+  /**
+   * Determines the state of an entity after and an input is applied to it.
+   */
+  inputApplicator: InputApplicator<Input, State>;
+  /**
+   * Called when a new client connects to the server. Can be used, for example,
+   * to create a player entity for the new client and add it to the game.
+   * @param newClientId The id assigned to the new client.
+   */
+  connectionHandler: (newClientId: string) => void;
+  /**
+   * Determines the ID a new client should be assigned.
+   * @returns The ID to be assigned to the new client.
+   */
+  clientIdAssigner: () => string;
 }
 
 /**
  * Creates and synchronizes game entities for clients.
  * @template E The type of entity/entities this synchronizer can work with.
  */
-export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
-  extends TypedEventEmitter<ServerEntitySynchronizerEvents<E>> {
+export class ServerEntitySyncer<Input, State> extends TypedEventEmitter<ServerEntitySynchronizerEvents<Input>> {
 
-  public get entities(): ReadonlyMap<EntityId, E> {
-    return this._entities.asIdKeyedMap();
-  }
+  private readonly inputValidator: InputValidator<Input, State>;
+  private readonly inputApplicator: InputApplicator<Input, State>;
+  private readonly connectionHandler: (newClientId: string) => void;
+  private readonly clientIdAssigner: () => string;
 
-  private updateRateHz: number;
+  private readonly _entities: EntityCollection<State>;
+  private readonly clients: Map<string, ClientInfo<Input, State>>;
 
-  private readonly _entities: EntityCollection<E>;
-
-  private readonly clients: Map<string, ClientInfo<E>>;
-
-  private updateInterval?: IntervalRunner;
-
-  constructor() {
+  constructor(args: ServerEntitySyncherArgs<Input, State>) {
     super();
+    Object.assign(this, args);
     this.clients = new Map();
     this._entities = new EntityCollection();
-    this.updateRateHz = 10;
   }
 
   /**
@@ -46,19 +70,19 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
    * @param connection A connection to the client, in the form of a message buffer.
    * @returns The ID assigned to the client.
    */
-  public connectClient(connection: ServerEntityMessageBuffer<E>): ClientId {
+  public connectClient(connection: ConnectionToClient<Input, State>): ClientId {
 
-    const newClientId = this.getIdForNewClient();
-    const client: ClientInfo<E> = {
+    const newClientId = this.clientIdAssigner();
+    const client: ClientInfo<Input, State> = {
       id: newClientId,
-      messageBuffer: connection,
+      connection,
       seqNumberOfLastProcessedInput: 0,
       ownedEntityIds: [],
     };
 
     this.clients.set(newClientId, client);
 
-    this.handleClientConnection(newClientId);
+    this.connectionHandler(newClientId);
 
     return newClientId;
   }
@@ -67,8 +91,8 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
    * Adds a non-player entity (i.e. not controlled by any player/client).
    * @param entity The entity to add to the server.
    */
-  public addNonPlayerEntity(entity: E) {
-    this._entities.add(entity);
+  public addNonPlayerEntity(entity: Entity<State>) {
+    this._entities.set(entity);
   }
 
   /**
@@ -76,38 +100,14 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
    * @param entity
    * @param playerClientId
    */
-  public addPlayerEntity(entity: E, playerClientId: string) {
-    this._entities.add(entity);
+  public addPlayerEntity(entity: Entity<State>, playerClientId: string) {
+    this._entities.set(entity);
     const client = this.clients.get(playerClientId);
 
     if (client != null) {
       client.ownedEntityIds.push(entity.id);
     } else {
       throw Error(`Unknown client ${playerClientId} when adding new player entity.`);
-    }
-  }
-
-  /**
-   * Starts the server.
-   * @param updateRateHz The rate at which the server should update.
-   */
-  public start(updateRateHz: number) {
-    this.updateRateHz = updateRateHz;
-
-    this.stop();
-
-    if (updateRateHz > 0) {
-      this.updateInterval = new IntervalRunner(() => this.update(), Interval.fromHz(this.updateRateHz));
-      this.updateInterval.start();
-    }
-  }
-
-  /**
-   * Stops the server.
-   */
-  public stop() {
-    if (this.updateInterval != null && this.updateInterval.isRunning()) {
-      this.updateInterval.stop();
     }
   }
 
@@ -128,66 +128,62 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
   }
 
   /**
-   * Called when a new client connects to the server. Can be used, for example,
-   * to create a player entity for the new client and add it to the game.
-   * @param newClientId The id assigned to the new client.
+   * Process all inputs received from clients, updating entities, and then send
+   * the states of all entities to all clients.
+   * @param entityStates Overrides this synchronizer's current representation
+   * of certain entities. This parameter should be used unless the state of
+   * the world is completely determined by player inputs.
    */
-  protected abstract handleClientConnection(newClientId: string): void;
-
-  /**
-   * Determines the ID a new client should be assigned.
-   * @returns The ID to be assigned to the new client.
-   */
-  protected abstract getIdForNewClient(): ClientId;
-
-  /**
-   * Validates inputs sent by the clients, to make sure they are not fradulent,
-   * before letting them be applied to the entities.
-   * @param entity The entity that a client is attempting to apply the input to.
-   * @param input The input that is meant to be applied to the entity.
-   * @returns `true` if the input is acceptable and may be applied to the entity, `false` otherwise.
-   */
-  protected abstract validateInput(entity: E, input: PickInput<E>): boolean;
-
-  /**
-   * Processes all inputs received from clients, updating entities, and then sends
-   * back to clients the state of the entities.
-   */
-  private update() {
+  public synchronize(entityStates?: Array<Entity<State>>): ReadonlyArray<Entity<State>> {
     this.emit('beforeSynchronization');
 
+    if (entityStates != null) this.setEntityState(...entityStates);
     this.processInputs();
     this.sendStates();
 
     this.emit('synchronized');
+
+    return this._entities.asArray();
+  }
+
+  private setEntityState(...entities: Array<Entity<State>>) {
+    for (const entity of entities) {
+      const localState = this._entities.getEntityState(entity.id);
+      if (localState == null) {
+        throw Error(singleLineify`
+          Unknown entity ${entity.id}. The entity must be added to this synchronizer before
+          manually changing its state.
+        `);
+      }
+    }
   }
 
   /**
    * Processes all available inputs.
    */
   private processInputs() {
-    const inputsByClient: Map<ClientInfo<E>, Array<InputMessage<PickInput<E>>>> = new Map();
+    const inputsByClient: Map<ClientInfo<Input, State>, Array<InputMessage<Input>>> = new Map();
 
     for (const client of this.clients.values()) {
-      const messages = [...client.messageBuffer];
+      const messages = [...client.connection];
       inputsByClient.set(client, messages);
     }
 
-    const asSingleArray: Array<InputMessage<PickInput<E>>> = [...inputsByClient.values()]
+    const asSingleArray: Array<InputMessage<Input>> = [...inputsByClient.values()]
       .reduce((concatenated, current) => concatenated.concat(current));
     this.emit('beforeInputsApplied', asSingleArray);
 
     for (const client of inputsByClient.keys()) {
       for (const input of fromMapGetOrDefault(inputsByClient, client, [])) {
-        const entity = this._entities.get(input.entityId);
+        const state = this._entities.getEntityState(input.entityId);
 
         // Client sent an input for an entity it does not own.
         if (!client.ownedEntityIds.includes(input.entityId)) {
           continue;
         }
 
-        if (entity != undefined && this.validateInput(entity, input.input)) {
-          entity.applyInput(input.input);
+        if (state != undefined && this.inputValidator({id: input.entityId, state}, input.input)) {
+          this._entities.set({id: input.entityId, state: this.inputApplicator(state, input.input)});
           client.seqNumberOfLastProcessedInput = input.inputSequenceNumber;
         }
       }
@@ -201,22 +197,29 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
     const clients = Array.from(this.clients.values());
     const entities = this._entities.asArray();
     for (const client of clients) {
-      client.messageBuffer.send(entities.map((entity: E) => {
+      const messages: Array<StateMessage<State>> = entities.map((entity: Entity<State>) => {
         const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
 
-        const networkedStateMessage: StateMessage<PickState<E>> = {
+        const networkedStateMessageBase: StateMessage<State> = {
           messageKind: EntityMessageKind.State,
           entity: {
             id: entity.id,
-            state: entity.state as PickState<E>,
-            belongsToRecipientClient: entityBelongsToClient,
+            state: entity.state,
           },
-          lastProcessedInputSequenceNumber: client.seqNumberOfLastProcessedInput,
           sentAt: new Date().getTime(),
         };
 
-        return networkedStateMessage;
-      }));
+        if (entityBelongsToClient) {
+          return {
+            ...networkedStateMessageBase,
+            entityBelongsToRecipientClient: true,
+            lastProcessedInputSequenceNumber: client.seqNumberOfLastProcessedInput,
+          };
+        } else {
+          return networkedStateMessageBase;
+        }
+      });
+      client.connection.send(messages);
     }
   }
 }
@@ -225,9 +228,9 @@ export abstract class ServerEntitySynchronizer<E extends AnyPlayerEntity>
  * Information the server stores about a client.
  * @template E The type of entity/entities.
  */
-export interface ClientInfo<E extends AnyPlayerEntity> {
+export interface ClientInfo<Input, State> {
   id: string;
-  messageBuffer: ServerEntityMessageBuffer<E>;
+  connection: ConnectionToClient<Input, State>;
   seqNumberOfLastProcessedInput: number;
   ownedEntityIds: string[];
 }

@@ -1,7 +1,6 @@
 export * from './entity';
-export { Interpolator, Interpolable } from './interpolable';
-export * from './player-controllable';
-export * from './player-entity';
-export * from './reckonable';
+export { Interpolator } from './interpolator';
+export * from './input-applicator';
+export * from './reckoner';
 export * from './restorable';
-export * from './synchronizable';
+export * from './sync-to-server-strategy';

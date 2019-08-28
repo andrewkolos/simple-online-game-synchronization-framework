@@ -1,33 +1,33 @@
-import { AnyPlayerEntity } from '../entity';
+import { Entity } from '../entity';
 
 export type EntityId = string;
 
 /**
  * Contains entities, allowing retrieval by entity ID.
  */
-export class EntityCollection<E extends AnyPlayerEntity> {
+export class EntityCollection<State> {
 
   /** These compose the state of the game. */
-  private readonly entities: Map<EntityId, E> = new Map();
+  private readonly entities: Map<EntityId, State> = new Map();
 
   /**
    * Creates an instance of an entity collection.
    * @param entities Entities to add to the entity collection to begin with, if any.
    */
-  constructor(entities?: E[]) {
+  constructor(entities?: Array<Entity<State>>) {
     if (entities != null) {
-      entities.forEach((entity: E) => {
-        this.entities.set(entity.id, entity);
+      entities.forEach((entity: Entity<State>) => {
+        this.entities.set(entity.id, entity.state);
       });
     }
   }
 
   /**
-   * Adds an entity to the game world.
-   * @param entity The entity to add the the world.
+   * Adds/overwrites the entity.
+   * @param entity The entity to add.
    */
-  public add(entity: E) {
-    this.entities.set(entity.id, entity);
+  public set(entity: Entity<State>) {
+    this.entities.set(entity.id, entity.state);
   }
 
   /**
@@ -35,7 +35,7 @@ export class EntityCollection<E extends AnyPlayerEntity> {
    * @param id The ID of the entity to search for.
    * @returns The entity with the matching ID, if it exists.
    */
-  public get(id: EntityId): E | undefined {
+  public getEntityState(id: EntityId): State | undefined {
     return this.entities.get(id);
   }
 
@@ -43,15 +43,15 @@ export class EntityCollection<E extends AnyPlayerEntity> {
    * Gets all entities in this collection, as an array.
    * @returns The entities in this collection.
    */
-  public asArray(): E[] {
-    return Array.from(this.entities.values());
+  public asArray(): Array<Entity<State>> {
+    return [...this.entities].map(([id, state]) => ({id, state}));
   }
 
   /**
    * Gets all entities in this collection, as a map keyed by an entity ID.
    * @returns The entities in this collection.
    */
-  public asIdKeyedMap(): Map<EntityId, E> {
+  public asIdKeyedMap(): Map<EntityId, State> {
     return new Map(this.entities);
   }
 }

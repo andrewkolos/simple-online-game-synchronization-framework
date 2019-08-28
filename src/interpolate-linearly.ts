@@ -2,6 +2,21 @@ export interface NumericObject {
   [key: string]: number | NumericObject;
 }
 
+export function isNumericObject(o: unknown): o is NumericObject {
+  if (typeof o !== 'object' || o == null) {
+    return false;
+  }
+
+  const result = Object.keys(o).every((key: string) => {
+    const value = (o as any)[key];
+    if (typeof value === 'object' && isNumericObject(value)) return true;
+    if (typeof value === 'number') return true;
+    return false;
+  });
+
+  return result;
+}
+
 /**
  * Given two states and a time ratio (0 => state1, 0.5 => halfway between, 1.0 => state2), computes
  * a simple interpolation.

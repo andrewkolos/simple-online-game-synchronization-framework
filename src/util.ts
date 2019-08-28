@@ -10,6 +10,8 @@ export type DeepReadonlyObject<T> = {
   readonly [P in keyof T]: DeepReadonly<T[P]>;
 };
 
+export type Interface<T> = { [P in keyof T]: T[P] };
+
 export type ValueOf<T> = T[keyof T];
 
 export function compareDumbObjects<T>(o1: T, o2: T) {

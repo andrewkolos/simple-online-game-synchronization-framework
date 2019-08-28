@@ -1,2 +1,2 @@
-export * from "./server-entity-synchronizer";
-export * from "../../lag-compensation/state-history";
+export * from './server-entity-synchronizer-runner';
+export * from './server-entity-synchronizer';

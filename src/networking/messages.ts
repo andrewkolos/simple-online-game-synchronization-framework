@@ -14,7 +14,9 @@ export interface InputMessage<T> extends BufferMessage {
   entityId: string;
 }
 
-export interface StateMessage<T> extends BufferMessage {
+export type StateMessage<T> = StateMessageWithoutSyncInfo<T> | StateMessageWithSyncInfo<T>;
+
+type StateMessageWithoutSyncInfo<T> = BufferMessage & {
   /** Identifies this buffer message object as an entity state message. */
   messageKind: EntityMessageKind.State;
   /** Information regarding the entity. */
@@ -23,14 +25,19 @@ export interface StateMessage<T> extends BufferMessage {
     id: string;
     /** The state of the entity on the server at the time the message was swent. */
     state: T;
-    /** Whether or not this entity is meant to be controlled by the client that received this message. */
-    belongsToRecipientClient?: boolean;
   };
-  /** The sequence number of the input message last processed on the server before sending this message. */
-  lastProcessedInputSequenceNumber: number;
+  /** Indicates that the entity is to be controlled by the client receiving this state message. */
+  entityBelongsToRecipientClient?: boolean;
   /** The UTC timestamp at which the server sent the state (UNIX time, in millseconds). */
   sentAt: number;
-}
+};
+
+export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T>  & {
+  /** Indicates that the entity is to be controlled by the client receiving this state message. */
+  entityBelongsToRecipientClient: true;
+  /** The sequence number of the input message last processed on the server before sending this message. */
+  lastProcessedInputSequenceNumber: number;
+};
 
 export function isEntityInputMessage(message: any): message is InputMessage<unknown> {
   const asInputMessage = message as Partial<InputMessage<never>>;

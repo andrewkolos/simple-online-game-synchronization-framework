@@ -1,6 +1,5 @@
-import { ServerEntitySynchronizer } from '../../src/synchronizers/server/server-entity-synchronizer';
-import { DemoPlayer, DemoPlayerInput } from './demo-player';
-import { PlayerEntity } from '../../src/entity';
+import { ServerEntitySyncer } from '../../src/synchronizers/server/server-entity-synchronizer';
+import { DemoPlayer, DemoPlayerInput, DemoPlayerState, demoPlayerInputApplicator } from './demo-player';
 
 interface PlayerMovementInfo {
   entityId: string;
@@ -9,16 +8,22 @@ interface PlayerMovementInfo {
   totalPressTimeInLast10Ms: number;
 }
 
-export class DemoServer extends ServerEntitySynchronizer<DemoPlayer> {
+export function createDemoServerSyncer(): ServerEntitySyncer<DemoPlayerInput, DemoPlayerState> {
 
-  private players: DemoPlayer[] = [];
-  private playerMovementInfos: PlayerMovementInfo[] = [];
+  const players: DemoPlayer[] = [];
+  const playerMovementInfos: PlayerMovementInfo[] = [];
+  const syncer = new ServerEntitySyncer({
+    clientIdAssigner: getIdForNewClient,
+    connectionHandler: handleClientConnection,
+    inputApplicator: demoPlayerInputApplicator,
+    inputValidator: validateInput,
+  });
 
-  protected handleClientConnection(clientId: string): void {
-    const newPlayer = new DemoPlayer(clientId, {position: 0}, () => 0 as any);
-    this.players.push(newPlayer);
-    this.addPlayerEntity(newPlayer, clientId);
-    this.playerMovementInfos.push({
+  function handleClientConnection(clientId: string): void {
+    const newPlayer: DemoPlayer = { id: clientId, state: { position: 0 } };
+    players.push(newPlayer);
+    syncer.addPlayerEntity(newPlayer, clientId);
+    playerMovementInfos.push({
       entityId: newPlayer.id,
       lastInputTimestamp: new Date().getTime(),
       pressTimeDuringLastInput: 0,
@@ -26,14 +31,14 @@ export class DemoServer extends ServerEntitySynchronizer<DemoPlayer> {
     });
   }
 
-  protected getIdForNewClient(): string {
-    return `c${this.players.length}`;
+  function getIdForNewClient(): string {
+    return `c${players.length}`;
   }
 
-  protected validateInput(entity: DemoPlayer, input: any) {
-    if (entity instanceof PlayerEntity && (input as DemoPlayerInput).direction != null) {
+  function validateInput(entity: DemoPlayer, input: DemoPlayerInput) {
+    if ((input as DemoPlayerInput).direction != null) {
       const demoPlayerInput = input as DemoPlayerInput;
-      const player = this.playerMovementInfos.find((info: PlayerMovementInfo) => {
+      const player = playerMovementInfos.find((info: PlayerMovementInfo) => {
         return info.entityId === entity.id;
       });
       if (player != null && demoPlayerInput.pressTime != null) {
@@ -42,4 +47,6 @@ export class DemoServer extends ServerEntitySynchronizer<DemoPlayer> {
     }
     return false;
   }
+
+  return syncer;
 }

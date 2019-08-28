@@ -1,39 +1,45 @@
-import { InputCollectionStrategy } from '../../src/synchronizers/client/input-collection-strategy';
 import { EntityBoundInput } from '../../src/synchronizers/client/entity-bound-input';
 import { MoveInputDirection, DemoPlayerInput } from './demo-player';
 
-export class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoPlayerInput> {
-  private playerEntityId: string;
-  private leftKeyIsDown: boolean = false;
-  private rightKeyIsDown: boolean = false;
+export interface KeyboardDemoinputCollectorKeycodes {
+  moveLeft: number;
+  moveRight: number;
+}
 
-  constructor(playerEntityId: string, moveLeftKeyCode: number, moveRightKeyCode: number) {
-    this.playerEntityId = playerEntityId;
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.keyCode === moveLeftKeyCode) {
-        this.leftKeyIsDown = true;
-      }
-      if (e.keyCode === moveRightKeyCode) {
-        this.rightKeyIsDown = true;
-      }
-    });
-    window.addEventListener('keyup', (e: KeyboardEvent) => {
-      if (e.keyCode === moveLeftKeyCode) {
-        this.leftKeyIsDown = false;
-      }
-      if (e.keyCode === moveRightKeyCode) {
-        this.rightKeyIsDown = false;
-      }
-    });
-  }
+export const createKeyboardDemoInputCollector = (playerEntityId: string, keyMappings: KeyboardDemoinputCollectorKeycodes) => {
+  let lastCollectionTime: number;
 
-  public getInputs(dt: number) {
+  let leftKeyIsDown = false;
+  let rightKeyIsDown = false;
+
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.keyCode === keyMappings.moveLeft) {
+      leftKeyIsDown = true;
+    }
+    if (e.keyCode === keyMappings.moveRight) {
+      rightKeyIsDown = true;
+    }
+  });
+  window.addEventListener('keyup', (e: KeyboardEvent) => {
+    if (e.keyCode === keyMappings.moveLeft) {
+      leftKeyIsDown = false;
+    }
+    if (e.keyCode === keyMappings.moveRight) {
+      rightKeyIsDown = false;
+    }
+  });
+
+  const inputCollector = () => {
+    const now = new Date().getTime();
+    const dt = lastCollectionTime != null ? now - lastCollectionTime : 0;
+    lastCollectionTime = now;
+
     const xor = (x: boolean, y: boolean) => (x && !y) || (!x && y);
     const inputs: Array<EntityBoundInput<DemoPlayerInput>> = [];
-    if (xor(this.leftKeyIsDown, this.rightKeyIsDown)) {
-      const direction = this.leftKeyIsDown ? MoveInputDirection.Backward : MoveInputDirection.Forward;
+    if (xor(leftKeyIsDown, rightKeyIsDown)) {
+      const direction = leftKeyIsDown ? MoveInputDirection.Backward : MoveInputDirection.Forward;
       const input: EntityBoundInput<DemoPlayerInput> = {
-        entityId: this.playerEntityId,
+        entityId: playerEntityId,
         input: {
           direction,
           pressTime: dt,
@@ -42,5 +48,7 @@ export class KeyboardDemoInputCollector implements InputCollectionStrategy<DemoP
       inputs.push(input);
     }
     return inputs;
-  }
-}
+  };
+
+  return inputCollector;
+};

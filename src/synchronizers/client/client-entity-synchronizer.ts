@@ -1,246 +1,185 @@
-import { DeepReadonly, singleLineify } from '../../util';
-import { AnyPlayerEntity, PickInput, PickState } from '../../entity';
-import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
-import { ClientEntityMessageBuffer } from '../../networking/message-buffer';
-import { TypedEventEmitter } from '../../util/event-emitter';
-import { Interval, IntervalRunner } from '../../util/interval-runner';
-import { EntityCollection } from '../entity-collection';
+import { StateMessage, RecipientMessageBuffer, TwoWayMessageBuffer, InputMessage, StateMessageWithSyncInfo, EntityMessageKind } from '../../networking';
+import { DefaultMap } from '../../util/default-map';
 import { EntityBoundInput } from './entity-bound-input';
-import { InputCollectionStrategy } from './input-collection-strategy';
-import { CheckedNewEntityHandler, EntityFactory } from './entity-factory';
+import { MultiEntityStateInterpolator } from './state-interpolator';
+import { NumericObject } from '../../interpolate-linearly';
+import { findLatestMessage } from '../../util/findLatestMessage';
+import { InputApplicator } from '../../entity';
 
 type EntityId = string;
 
-export interface ClientEntitySynchronizerEvents<E extends AnyPlayerEntity> {
-  synchronized(entityMap: Map<EntityId, DeepReadonly<E>>): void;
+interface Entity<State> {
+  id: EntityId;
+  state: State;
 }
 
-/**
- * Contains the information needed to construct a `ClientEntitySynchronizer`.
- */
-export interface ClientEntitySynchronizerArgs<E extends AnyPlayerEntity> {
-  /** A connection to the game server. */
-  serverConnection: ClientEntityMessageBuffer<E>;
-  /** How often the server will be sending out the world state. */
-  serverUpdateRateInHz: number;
-  /** A strategy to create local representations of new entities sent by the server. */
-  newEntityHandler: EntityFactory<E>;
-  /** A strategy to obtain inputs from the user that can be applied to entities in the game. */
-  inputCollectionStrategy: InputCollectionStrategy<PickInput<E>>;
+export interface LocalPlayerSyncStrategy<Input, State> {
+  inputSource: (entities: Array<Entity<State>>) => Array<EntityBoundInput<Input>>;
+  inputApplicator: InputApplicator<Input, State>;
 }
 
-/**
- * Collects user inputs.
- * Translates inputs into intents specific to objects.
- * Sends intents to GameEngine on pre-tick, which will be applied on tick.
- */
-export class ClientEntitySynchronizer<E extends AnyPlayerEntity> extends
- TypedEventEmitter<ClientEntitySynchronizerEvents<E>> {
+type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
-  /**
-   * Gets the number of inputs that this client has yet to receive an acknowledgement
-   * for from the server.
-   */
-  public get numberOfPendingInputs() {
+interface ClientEntitySyncerArgsBase {
+  serverUpdateRateHz: number;
+}
+
+export interface ClientEntitySyncerArgs<State> extends ClientEntitySyncerArgsBase {
+  connection: RecipientMessageBuffer<StateMessage<State>>;
+}
+
+export class ClientEntitySyncer<State extends NumericObject> {
+
+  public static withoutLocalPlayerSupport<State extends NumericObject>(args: ClientEntitySyncerArgs<State>) {
+    return new ClientEntitySyncer<State>(args);
+  }
+
+  public static withLocalPlayerSupport<State extends NumericObject, Input>(args: PlayerClientEntitySyncerArgs<Input, State>) {
+    return new PlayerClientEntitySyncer(args);
+  }
+
+  private readonly stateMessageSource: RecipientMessageBuffer<StateMessage<State>>;
+  private readonly interpolator: MultiEntityStateInterpolator<State>;
+
+  private constructor(args: ClientEntitySyncerArgs<State>) {
+    this.stateMessageSource = args.connection;
+    this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
+  }
+
+  public synchronize(): Array<Entity<State>> {
+    const stateMessages = this.stateMessageSource.receive();
+    return this.interpolator.interpolate(stateMessages.map((sm) => sm.entity));
+  }
+}
+
+export interface PlayerClientEntitySyncerArgs<Input, State> extends ClientEntitySyncerArgsBase {
+  connection: PlayerClientSyncerConnectionToServer<Input, State>;
+  localPlayerSyncStrategy: LocalPlayerSyncStrategy<Input, State>;
+}
+
+interface SortedStateMessages<State> {
+  otherEntities: Array<StateMessage<State>>;
+  localEntities: Array<StateMessageWithSyncInfo<State>>;
+}
+
+type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
+
+export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
+
+  private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
+
+  private readonly interpolator: MultiEntityStateInterpolator<State>;
+  private readonly playerSyncStrategy: LocalPlayerSyncStrategy<Input, State>;
+
+  private currentInputSequenceNumber = 0;
+  private pendingInputs: Array<SequencedEntityBoundInput<Input>> = [];
+
+  public constructor(args: PlayerClientEntitySyncerArgs<Input, State>) {
+    this.connection = args.connection;
+    this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
+    this.playerSyncStrategy = args.localPlayerSyncStrategy;
+  }
+
+  public getNumberOfPendingInputs(): number {
     return this.pendingInputs.length;
   }
-  /** Contains game state and can accept inputs. */
-  private readonly entities: EntityCollection<E>;
 
-  /** Provides state messages. */
-  private readonly server: ClientEntityMessageBuffer<E>;
-  /** Constructs representations of new entities given a state object. */
-  private readonly entityFactory: EntityFactory<E>;
-  /** Collects user inputs. */
-  private readonly inputCollectionStrategy: InputCollectionStrategy<PickInput<E>>;
-  /**
-   * The number assigned to the next set of inputs that will be sent out by this
-   * game client. Used for server reconciliation.
-   */
-  private currentInputSequenceNumber = 0;
-  /**
-   * Inputs with sequence numbers later than that of the last server message received.
-   * These inputs will be reapplied when the client receives a new authoritative state
-   * sent by the server.
-   */
-  private pendingInputs: Array<InputMessage<PickInput<E>>> = [];
+  public synchronize(): Array<Entity<State>> {
+    const { otherEntities, localEntities } = this.sortStateMessages(this.connection.receive());
 
-  /** The time of the most recent input collection. */
-  private lastInputCollectionTimestamp: number | undefined;
+    const updatedStatesOfNonLocalEntities = this.synchronizeNonLocalEntities(otherEntities);
+    const updatedStatesOfLocalEntities = this.synchronizeLocalPlayerEntities(localEntities);
 
-  /**
-   * IDs of entities that are meant to be controlled by this client's player.
-   */
-  private readonly playerEntityIds: EntityId[] = [];
-
-  private updateInterval?: IntervalRunner;
-
-  /**
-   * Creates an instance of game client.
-   */
-  constructor(args: ClientEntitySynchronizerArgs<E>) {
-    super();
-
-    this.entities = new EntityCollection();
-
-    this.server = args.serverConnection;
-    this.entityFactory = new CheckedNewEntityHandler(args.newEntityHandler);
-    this.inputCollectionStrategy = args.inputCollectionStrategy;
+    return [...updatedStatesOfNonLocalEntities, ...updatedStatesOfLocalEntities];
   }
 
-  /**
-   * Determines whether has received communication from the game server.
-   * @returns `true` if connected, `false` otherwise.
-   */
-  public isConnected(): boolean {
-    return this.entities.asArray().length > 0;
-  }
+  private sortStateMessages(messages: Array<StateMessage<State>>): SortedStateMessages<State> {
+    const otherEntities: Array<StateMessage<State>> = [];
+    const localEntities: Array<StateMessageWithSyncInfo<State>> = [];
 
-  public start(updateRateHz: number) {
-    this.stop();
-    this.updateInterval = new IntervalRunner(() => this.update(), Interval.fromHz(updateRateHz));
-    this.updateInterval.start();
-  }
-
-  public stop() {
-    if (this.updateInterval != null && this.updateInterval.isRunning()) {
-      this.updateInterval.stop();
+    for (const message of messages) {
+      const bufferToWhichThisMessageBelongs = message.entityBelongsToRecipientClient ? localEntities : otherEntities;
+      bufferToWhichThisMessageBelongs.push(message);
     }
-  }
 
-  /**
-   * Updates the state of the game, based on the game itself, messages regarding
-   * the state of the world sent by the server, and inputs from the user.
-   */
-  private update() {
-    this.processServerMessages();
-
-    if (!this.isConnected()) { return; }
-
-    this.processInputs();
-
-    this.emit('synchronized', this.entities.asIdKeyedMap() as Map<EntityId, DeepReadonly<E>>);
-  }
-
-  /**
-   * Process all new messages sent by the server.
-   * Add new entities, update our player-controlled entities to have the state sent by the server, then reapply
-   * pending inputs that have yet to be acknowledged by the server.
-   */
-  // tslint:disable-next-line: member-ordering
-  private readonly processServerMessages = (() => {
-
-    const isFirstTimeSeeingEntity = (entityId: string) => !this.entities.asArray().some((ge) => ge.id === entityId);
-
-    const handleNewEntity = (stateMessage: StateMessage<PickState<E>>) => {
-
-      const entityBelongsToThisClient = stateMessage.entity.belongsToRecipientClient;
-      if (entityBelongsToThisClient != null && entityBelongsToThisClient) {
-        this.playerEntityIds.push(stateMessage.entity.id);
-      }
-      const entity = this.entityFactory.fromStateMessage(stateMessage);
-      this.entities.add(entity);
+    return {
+      otherEntities,
+      localEntities,
     };
-
-    return () => {
-      for (const stateMessage of this.server) {
-        const stateMessageEntityId = stateMessage.entity.id;
-
-        if (isFirstTimeSeeingEntity(stateMessageEntityId)) {
-          handleNewEntity(stateMessage);
-        }
-
-        const entity = this.entities.get(stateMessageEntityId);
-        if (entity == null) {
-          throw Error(singleLineify`
-            Received state message with entity ID '${stateMessageEntityId}',
-            but no entity with that ID exists on this client.
-          `);
-        }
-
-        if (this.entityBelongsToLocalPlayer(stateMessage.entity.id)) {
-          entity.state = stateMessage.entity.state; // Received authoritative position for our entity.
-
-          this.reconcileLocalStateWithServerState(stateMessage);
-        } else {
-          entity.synchronizeToServer(stateMessage);
-        }
-      }
-    };
-
-  })();
-
-  /**
-   * Determines if an entity is to be controlled by this client.
-   * @param entityId The ID of the entity.
-   */
-  private entityBelongsToLocalPlayer(entityId: string) {
-    return this.playerEntityIds.includes(entityId);
   }
 
-  /**
-   * Perform server reconciliation. When the client receives an update about its entities
-   * from the server, apply them, and then reapply all local pending inputs (have timestamps
-   * later than the timestamp sent by the server).
-   */
-  private reconcileLocalStateWithServerState(stateMessage: StateMessage<PickState<E>>) {
+  private synchronizeNonLocalEntities(stateMessages: Array<StateMessage<State>>): Array<Entity<State>> {
+    const asEntities: Array<Entity<State>> = stateMessages.map((sm: StateMessage<State>) => ({
+      id: sm.entity.id,
+      state: sm.entity.state,
+    }));
 
-    this.pendingInputs = this.pendingInputs.filter((input: InputMessage<PickInput<E>>) => {
-      return input.inputSequenceNumber > stateMessage.lastProcessedInputSequenceNumber;
-    });
-    this.pendingInputs.forEach((inputMessage: InputMessage<PickInput<E>>) => {
-      const entity = this.entities.get(inputMessage.entityId);
-      if (entity == null) {
-        throw Error('Did not find entity corresponding to a pending input.');
-      }
-      entity.applyInput(inputMessage.input);
+    return this.interpolator.interpolate(asEntities);
+  }
+
+  private synchronizeLocalPlayerEntities(stateMessages: Array<StateMessageWithSyncInfo<State>>): Array<Entity<State>> {
+    const latestStateMessages = this.pickLatestMessagesIndexedByEntityId(stateMessages);
+    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessages.values()].map((sm) => sm.entity));
+    const inputsToApply: Array<SequencedEntityBoundInput<Input>> = [...this.determinePendingInputs(latestStateMessages), ...newInputs];
+
+    const entitiesAfterSync: Map<EntityId, Entity<State>> =
+      new Map([...latestStateMessages.entries()].map(([entityId, message]) => [entityId, message.entity]));
+
+    for (const sebInput of inputsToApply) {
+      const targetEntityMessage = entitiesAfterSync.get(sebInput.entityId);
+      if (targetEntityMessage == null) continue;
+      const state = targetEntityMessage.state;
+      const stateAfterInput = this.playerSyncStrategy.inputApplicator(state, sebInput.input);
+      entitiesAfterSync.set(targetEntityMessage.id, ({ id: targetEntityMessage.id, state: stateAfterInput }));
+    }
+
+    this.pendingInputs = inputsToApply;
+    this.connection.send(newInputs);
+
+    return [...entitiesAfterSync.values()];
+  }
+
+  private determinePendingInputs(latestStateMessages: Map<EntityId, StateMessageWithSyncInfo<State>>) {
+    return this.pendingInputs.filter((sebInput: SequencedEntityBoundInput<Input>) => {
+      const latestStateMessageForEntity = latestStateMessages.get(sebInput.entityId);
+      if (latestStateMessageForEntity == null)
+        return false;
+      return latestStateMessageForEntity.lastProcessedInputSequenceNumber < sebInput.inputSequenceNumber;
     });
   }
 
-  /**
-   * Collects inputs from player (or AI), stamps them with a timestamp and sequence number,
-   * sends them to the server, and applies them locally.
-   */
-  private processInputs(): void {
+  private pickLatestMessagesIndexedByEntityId<M extends StateMessage<State>>(stateMessages: M[]): Map<EntityId, M> {
+    const grouped = groupByEntityId(stateMessages, (sm) => sm.entity.id);
+    const latest = grouped.map((messages) => findLatestMessage(messages));
 
-    const now = new Date().getTime();
+    return new Map(latest.map((message: M) => [message.entity.id, message]));
+  }
 
-    const getInputs = (): Array<EntityBoundInput<PickInput<E>>> => {
-
-      const lastInputCollectionTime = this.lastInputCollectionTimestamp != null
-        ? this.lastInputCollectionTimestamp : now;
-
-      const timeSinceLastInputCollection = now - lastInputCollectionTime;
-
-      this.lastInputCollectionTimestamp = now;
-
-      return this.inputCollectionStrategy.getInputs(timeSinceLastInputCollection);
-    };
-
-    const entityBoundInputs = getInputs();
-
-    entityBoundInputs.forEach((input) => {
-
-      const inputMessage: InputMessage<PickInput<E>> = {
-        entityId: input.entityId,
-        input: input.input,
-        inputSequenceNumber: this.currentInputSequenceNumber,
+  private collectInputs(forEntities: Array<Entity<State>>): Array<InputMessage<Input>> {
+    const inputs = this.playerSyncStrategy.inputSource(forEntities);
+    const asMessages: Array<InputMessage<Input>> = inputs.map((ebs) => {
+      return {
         messageKind: EntityMessageKind.Input,
+        entityId: ebs.entityId,
+        input: ebs.input,
+        inputSequenceNumber: this.currentInputSequenceNumber,
       };
-
-      this.server.send(inputMessage);
-
-      const playerEntity = this.entities.get(input.entityId);
-
-      if (playerEntity == undefined) { throw Error(`Received input for unknown entity ${input.entityId}.`); }
-
-      playerEntity.applyInput(input.input); // Client-side prediction.
-
-      this.pendingInputs.push(inputMessage); // Save for later reconciliation.
     });
 
-    if (entityBoundInputs.length > 0) {
-      this.currentInputSequenceNumber = this.currentInputSequenceNumber + 1;
-    }
+    this.currentInputSequenceNumber += 1;
+
+    return asMessages;
   }
+}
+
+function groupByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): T[][] {
+  return Array.from(indexByEntityId(collection, entityIdPicker).values());
+}
+
+function indexByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): Map<EntityId, T[]> {
+  const map = new DefaultMap<EntityId, T[]>(() => []);
+  for (const item of collection) {
+    map.get(entityIdPicker(item)).push(item);
+  }
+  return map;
 }
