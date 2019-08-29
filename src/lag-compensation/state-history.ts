@@ -1,5 +1,4 @@
-import { AnyPlayerEntity, PickInput, PickState } from '../entity';
-import { binarySearch } from '../util/binsearch';
+import { binarySearch, binarySearchClosestMatch } from '../util/binsearch';
 import LRU from 'lru-cache';
 import { singleLineify } from '../util';
 
@@ -10,23 +9,22 @@ class Index {
   }
 }
 
-export class Timestamp {
+class Timestamp {
   public constructor(public readonly value: number) { }
   public toString(): string {
     return String(this.value);
   }
 }
 
-export interface EntitySyncState<E extends AnyPlayerEntity> {
-  entity: E;
-  inputsToBeApplied: Array<PickInput<E>>;
-  stateBeforeInputApplied: PickState<E>;
+export interface EntitySyncState<Input, State> {
+  inputsToBeApplied: Input[];
+  stateBeforeInputApplied: State;
   locked: boolean;
 }
 
 export interface Timestamped<T> {
   value: T;
-  timestamp: Timestamp;
+  timestamp: number;
 }
 
 const enum SearchOutcome {
@@ -58,10 +56,15 @@ interface NotFoundGetStateResult {
   value?: undefined;
 }
 
+const enum SearchType {
+  Exact,
+  ClosestBefore,
+}
+
 export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
 
 /**
- * Collection for storing the history of an `ServerEntitySynchronizer`.
+ * Collection for storing the history of an `ServerEntitySyncer`.
  * Before reading or writing to the history, states older than a given
  * time limit will be deleted.
  */
@@ -96,13 +99,23 @@ export class StateHistory<State> {
    * @param timestamp The timestamp of the state to rewrite, which should be obtained by one of this object's methods.
    * @param state The value to write to this timestamp, overwritng the previous value.
    */
-  public rewrite(timestamp: Timestamp, state: State) {
-    const index = this.indexOfStateAtUnsafe(timestamp);
+  public rewrite(timestamp: number, state: State) {
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     this.states[index] = {
       timestamp,
       value: state,
     };
+  }
+
+  public first(): Timestamped<State> {
+    this.checkEmptyUnsafe();
+    return this.states[0];
+  }
+
+  public last(): Timestamped<State> {
+    this.checkEmptyUnsafe();
+    return this.states[this.states.length - 1];
   }
 
   /**
@@ -113,47 +126,66 @@ export class StateHistory<State> {
    * timestamp of the latest recorded state).
    * @throws Error if the provided timestamp doesn't exist in this history.
    */
-  public getNextState(timestamp: Timestamp): Timestamped<State> | undefined {
+  public next(timestamp: number): Timestamped<State> | undefined {
 
-    const index = this.indexOfStateAtUnsafe(timestamp);
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     if (index === this.states.length - 1) return undefined;
 
     return this.states[index + 1];
   }
 
-  public getPreviousState(timestamp: Timestamp): Timestamped<State> | undefined {
-    const index = this.indexOfStateAtUnsafe(timestamp);
+  public previous(timestamp: number): Timestamped<State> | undefined {
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     if (index === 0) return undefined;
     return this.states[index - 1];
   }
 
-  public getStatesAfter(timestamp: Timestamp): ReadonlyArray<Readonly<Timestamped<State>>> {
-    const index = this.indexOfStateAtUnsafe(timestamp);
+  public mostRecentTo(timestamp: number): Timestamped<State> {
+    this.checkEmptyUnsafe();
+
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp), SearchType.ClosestBefore);
+
+    return this.states[index];
+  }
+
+  public slice(start?: number, end?: number) {
+    const startIndex = start != null ? this.indexOfStateAtUnsafe(new Timestamp(start)) : 0;
+    const endIndex = end != null ? this.indexOfStateAtUnsafe(new Timestamp(end)) : this.states.length;
+
+    return this.states.slice(startIndex, endIndex);
+  }
+
+  public after(timestamp: number): ReadonlyArray<Readonly<Timestamped<State>>> {
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     return this.states.slice(index + 1);
   }
 
-  public getStatesBefore(timestamp: Timestamp): ReadonlyArray<Readonly<Timestamped<State>>> {
-    const index = this.indexOfStateAtUnsafe(timestamp);
+  public before(timestamp: number): ReadonlyArray<Readonly<Timestamped<State>>> {
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     return this.states.slice(0, index);
   }
 
   public record(state: State) {
-    const timestamp = new Timestamp(new Date().getTime());
+    const now = new Date().getTime();
 
     this.purgeStatesOlderThanRecordLength();
 
-    if (this.states.length > 0 && this.states[this.states.length - 1].timestamp.value > timestamp.value) {
+    if (this.states.length > 0 && this.states[this.states.length - 1].timestamp > now) {
       throw new Error('Cannot record a state at a timestamp prior to the last one recorded.');
     }
 
     const timestampedState = {
       value: state,
-      timestamp,
+      timestamp: now,
     };
+
+    if (this.states.length > 0 && this.last().timestamp === now) {
+      this.states.pop();
+    }
 
     this.states.push(timestampedState);
   }
@@ -163,7 +195,7 @@ export class StateHistory<State> {
 
     const now = new Date().getTime();
     let elementsRemoved = 0;
-    while (this.states.length > 0 && this.states[0].timestamp.value < now - this.recordLengthMs) {
+    while (this.states.length > 0 && this.states[0].timestamp < now - this.recordLengthMs) {
       this.states.shift();
       elementsRemoved += 1;
     }
@@ -173,7 +205,7 @@ export class StateHistory<State> {
     });
   }
 
-  private indexOfStateAtSafe(timestamp: Timestamp): SearchResult {
+  private indexOfStateAtSafe(timestamp: Timestamp, searchType: SearchType): SearchResult {
     const indexInCache = this.searchCache(timestamp);
 
     if (indexInCache != null) return {
@@ -181,18 +213,21 @@ export class StateHistory<State> {
       index: new Index(indexInCache),
     };
 
-    const earliestRecordedTimestamp = this.states[0].timestamp.value;
+    const earliestRecordedTimestamp = this.states[0].timestamp;
     if (timestamp.value < earliestRecordedTimestamp) {
       return { outcome: SearchOutcome.TooOldToStillExist };
     }
 
-    const latestRecordTimestamp = this.states[this.states.length - 1].timestamp.value;
+    const latestRecordTimestamp = this.states[this.states.length - 1].timestamp;
     if (timestamp.value > latestRecordTimestamp) {
       return { outcome: SearchOutcome.TooNewToExist };
     }
 
-    const comparator = (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp.value - o2.value;
-    const index = binarySearch(this.states, timestamp, comparator);
+    const comparator = (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp - o2.value;
+    const index = searchType === SearchType.Exact ? binarySearch(this.states, timestamp, comparator) : (() => {
+      const closestMatch = binarySearchClosestMatch(this.states, timestamp, comparator);
+      return closestMatch.value.timestamp === timestamp.value ? closestMatch.index : closestMatch.index - 1;
+    })();
 
     if (index == null) {
       return { outcome: SearchOutcome.NeverCouldHaveExisted };
@@ -204,12 +239,12 @@ export class StateHistory<State> {
     };
   }
 
-  private indexOfStateAtUnsafe(timestamp: Timestamp): number {
-    const result = this.indexOfStateAtSafe(timestamp);
+  private indexOfStateAtUnsafe(timestamp: Timestamp, searchType: SearchType = SearchType.Exact): number {
+    const result = this.indexOfStateAtSafe(timestamp, searchType);
 
     switch (result.outcome) {
       case SearchOutcome.NeverCouldHaveExisted:
-        throw new Error('This history does not contain a state at the provided timestamp.');
+        throw new Error(StateHistoryErrorMessage.readingFromEmptyHistory);
       case SearchOutcome.TooNewToExist:
         throw new Error('Timestamp to search for is later than that of the last recorded state.');
       case SearchOutcome.TooOldToStillExist:
@@ -224,7 +259,21 @@ export class StateHistory<State> {
 
   private searchCache(timestamp: Timestamp): number | undefined {
     const index = this.indexCache.values().findIndex((i: Index) =>
-      this.states[i.value].timestamp.value === timestamp.value);
+      this.states[i.value].timestamp === timestamp.value);
     return index === -1 ? undefined : index;
   }
+
+  private checkEmptyUnsafe(): void {
+    if (this.states.length === 0) {
+      throw Error(StateHistoryErrorMessage.readingFromEmptyHistory);
+    }
+  }
+}
+
+/** @internal */
+export namespace StateHistoryErrorMessage {
+  export const readingFromEmptyHistory = `Cannot read from history that has never been written to.`;
+  export const requestedTimestampPredatesHistory = (earliestRecordedTimestamp: number, requestedTimestamp: number) =>
+    `The requested timestamp (t=${requestedTimestamp}) predates the earliest recorded point in history (t=${earliestRecordedTimestamp}).`;
+  export const noEntryAtRequestedTime = `Attempted to read/overwrite the entry at an exact timestamp, but no such entry exists.`;
 }

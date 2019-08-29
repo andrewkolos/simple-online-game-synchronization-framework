@@ -11,8 +11,8 @@ interface Match<T> {
 export type Comparator<A, T> = (o1: A, o2: T) => number;
 
 export namespace Comparator {
-  export const NUMBER = makeComparator("number");
-  export const STRING = makeComparator("string");
+  export const NUMBER = makeComparator('number');
+  export const STRING = makeComparator('string');
 }
 
 export function binarySearch<A, T>(arr: A[], target: T, comparator: Comparator<A, T>): number | undefined {
@@ -80,10 +80,10 @@ function halfwayIndex(min: number, max: number) {
   return Math.floor(min + (max - min) / 2);
 }
 
-function makeComparator(type: "string"): (o1: string, o2: string) => number;
-function makeComparator(type: "number"): (o1: number, o2: number) => number;
-function makeComparator(type: "string" | "number") {
-  if (type === "string") {
+function makeComparator(type: 'string'): (o1: string, o2: string) => number;
+function makeComparator(type: 'number'): (o1: number, o2: number) => number;
+function makeComparator(type: 'string' | 'number') {
+  if (type === 'string') {
     return (o1: string, o2: string) => {
       for (let i = 0; i < o1.length; i++) {
         const c = o1.charCodeAt(i) - o2.charCodeAt(i);

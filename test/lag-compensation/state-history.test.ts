@@ -1,5 +1,6 @@
-import { StateHistory, Timestamp, Timestamped } from 'src/';
-import MockDate from "mockdate";
+import MockDate from 'mockdate';
+import { StateHistory, Timestamped } from '../../src/lag-compensation/state-history';
+import { advanceTime } from './advanceTime';
 
 describe(nameof(StateHistory), () => {
 
@@ -7,7 +8,7 @@ describe(nameof(StateHistory), () => {
     MockDate.reset();
   });
 
-  it("discards states older than the specified record length", () => {
+  it('discards states older than the specified record length', () => {
     const history = new StateHistory<number>(10);
 
     history.record(1);
@@ -20,7 +21,7 @@ describe(nameof(StateHistory), () => {
     MockDate.reset();
   });
 
-  it("can retrieve all states older than a specified time", () => {
+  it('can retrieve all states older than a specified time', () => {
     const history = new StateHistory<number>(100);
 
     insertAt(history, 1);
@@ -28,43 +29,82 @@ describe(nameof(StateHistory), () => {
     insertAt(history, 3, 10);
     insertAt(history, 4, 10);
 
-    const threeAndFour: Timestamped<number>[] = [
+    const threeAndFour: Array<Timestamped<number>> = [
       {
         value: 3,
-        timestamp: new Timestamp(new Date().getTime() - 10),
+        timestamp: new Date().getTime() - 10,
       },
       {
         value: 4,
-        timestamp: new Timestamp(new Date().getTime() - 0),
+        timestamp: new Date().getTime() - 0,
       }
     ]
 
-    expect(history.getStatesAfter(new Timestamp(timestampOf2))).toEqual(threeAndFour);
+    expect(history.after(timestampOf2)).toEqual(threeAndFour);
   });
 
-  it("can retrieve all states newer than a specified time", () => {
+  it('can retrieve all states newer than a specified time', () => {
     const history = new StateHistory<number>(100);
-    
+
     insertAt(history, 1);
     insertAt(history, 2, 10);
     const timestampOf3 = insertAt(history, 3, 10);
     insertAt(history, 4, 10);
 
-    const oneAndTwo: Timestamped<number>[] = [
+    const oneAndTwo: Array<Timestamped<number>> = [
       {
         value: 1,
-        timestamp: new Timestamp(new Date().getTime() - 30),
+        timestamp: new Date().getTime() - 30,
       },
       {
         value: 2,
-        timestamp: new Timestamp(new Date().getTime() - 20),
+        timestamp: new Date().getTime() - 20,
       }
     ]
 
-    expect(history.getStatesBefore(new Timestamp(timestampOf3))).toEqual(oneAndTwo);
-  })
-});
+    expect(history.before(timestampOf3)).toEqual(oneAndTwo);
+  });
 
+  it('can retrieve all states within a time range', () => {
+    const history = new StateHistory<number>(100);
+
+    for (let i = 1; i <= 5; i++) {
+      history.record(i);
+      if (i < 5) advanceTime(10);
+    }
+
+    const now = new Date().getTime();
+
+    const twoThroughFour: Array<Timestamped<number>> = [
+      {
+        value: 2,
+        timestamp: now - 30,
+      },
+      {
+        value: 3,
+        timestamp: now - 20,
+      },
+      {
+        value: 4,
+        timestamp: now - 10,
+      },
+    ];
+
+    expect(history.slice(now - 30, now)).toEqual(twoThroughFour);
+  });
+
+  it('a recording will overwrite an existing one that has the same timestamp', () => {
+    const history = new StateHistory<number>(100);
+
+    history.record(1);
+    history.record(2);
+
+    expect(history.getStates()).toEqual([{
+      value: 2,
+      timestamp: new Date().getTime(),
+    }]);
+  });
+});
 
 function insertAt<T>(history: StateHistory<T>, item: T, fastForwardMs: number = 0): number {
   const time = new Date().getTime() + fastForwardMs;

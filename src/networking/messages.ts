@@ -1,6 +1,7 @@
 export const enum EntityMessageKind {
   Input = 'entityInput',
   State = 'entityState',
+  LagCompRequest = 'lagCompRequest',
 }
 
 export interface BufferMessage {

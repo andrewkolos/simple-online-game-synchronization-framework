@@ -1,4 +1,5 @@
-import { binarySearchClosestMatch, Comparator } from 'src/util/binsearch';
+import { binarySearchClosestMatch} from '../../src/util/binsearch';
+import { Comparator } from '../../src/util/binsearch';
 
 describe(nameof(binarySearchClosestMatch), () => {
   it(`([1, 2, 3, 4], 2.4, Comparator.NUMBER)`, () => {
@@ -8,7 +9,7 @@ describe(nameof(binarySearchClosestMatch), () => {
   it(`([1, 2, 3, 4], 4, Comparator.NUMBER))`, () => {
     expect(binarySearchClosestMatch([1, 2, 3, 4], 4, Comparator.NUMBER)).toEqual({ index: 3, value: 4 });
   });
-  
+
   it(`([1, 2, 3, 4], 3.3, Comparator.NUMBER))`, () => {
     expect(binarySearchClosestMatch([1, 2, 3, 4], 3.3, Comparator.NUMBER)).toEqual({ index: 2, value: 3 });
   });
@@ -18,7 +19,7 @@ describe(nameof(binarySearchClosestMatch), () => {
   });
 
   it(`["a", "b", "c"], "b", Comparator.STRING))`, () => {
-    expect(binarySearchClosestMatch(["a", "b", "c"], "b", Comparator.STRING)).toEqual({ index: 1, value: "b"});
+    expect(binarySearchClosestMatch(["a", "b", "c"], "b", Comparator.STRING)).toEqual({ index: 1, value: "b" });
   });
 
   it(`["a", "b", "c"], "d", Comparator.STRING))`, () => {
