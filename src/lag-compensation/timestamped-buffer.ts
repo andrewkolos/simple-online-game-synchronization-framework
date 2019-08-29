@@ -68,7 +68,7 @@ export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
  * Before reading or writing to the history, states older than a given
  * time limit will be deleted.
  */
-export class StateHistory<State> {
+export class TimestampedBuffer<State> {
 
   private states: Array<Timestamped<State>> = [];
 

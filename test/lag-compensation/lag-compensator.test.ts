@@ -1,5 +1,5 @@
 import { LagCompensator, ClientRequestValidator, RequestApplicator, RequestTimestampExtractor, LagCompensatorResponse } from '../../src/lag-compensation';
-import { cloneDumbObject, StateHistory, simpleResimulator } from '../../src/';
+import { cloneDumbObject, TimestampedBuffer, simpleResimulator } from '../../src/';
 import { advanceTime } from './advanceTime';
 
 interface GameState {
@@ -12,12 +12,12 @@ interface LagCompRequest {
 }
 
 class LagCompensatorRoot {
-  private history: StateHistory<GameState>;
+  private history: TimestampedBuffer<GameState>;
   private calculator: LagCompensator<GameState, LagCompRequest>;
 
   private compedTimestamped: Set<number> = new Set();
 
-  public constructor(history: StateHistory<GameState>) {
+  public constructor(history: TimestampedBuffer<GameState>) {
 
     this.history = history;
 
@@ -93,9 +93,9 @@ class CounterGame {
   }
 }
 
-function getHistoryObservedGame(): { game: CounterGame, history: StateHistory<GameState> } {
+function getHistoryObservedGame(): { game: CounterGame, history: TimestampedBuffer<GameState> } {
   const game = new CounterGame();
-  const history = new StateHistory<GameState>(Number.MAX_SAFE_INTEGER);
+  const history = new TimestampedBuffer<GameState>(Number.MAX_SAFE_INTEGER);
 
   history.record(cloneDumbObject(game.state)); // Record initial state.
 

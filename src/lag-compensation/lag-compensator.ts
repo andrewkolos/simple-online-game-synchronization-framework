@@ -1,4 +1,4 @@
-import { StateHistory, Timestamped } from './state-history';
+import { TimestampedBuffer, Timestamped } from './timestamped-buffer';
 
 export interface ResimContext<GameState> {
   oldPreviousState: GameState;
@@ -46,7 +46,7 @@ export class LagCompensator<GameState, ClientRequest> {
     this.timestampExtractor = args.timestampExtractor;
   }
 
-  public processRequest(serverHistory: StateHistory<GameState>, request: ClientRequest): LagCompensatorResponse {
+  public processRequest(serverHistory: TimestampedBuffer<GameState>, request: ClientRequest): LagCompensatorResponse {
 
     const stateHistory = Array.from(serverHistory.slice(this.timestampExtractor(request)));
 

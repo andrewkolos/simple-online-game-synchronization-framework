@@ -1,15 +1,15 @@
 import MockDate from 'mockdate';
-import { StateHistory, Timestamped } from '../../src/lag-compensation/state-history';
+import { TimestampedBuffer, Timestamped } from '../../src/lag-compensation/timestamped-buffer';
 import { advanceTime } from './advanceTime';
 
-describe(nameof(StateHistory), () => {
+describe(nameof(TimestampedBuffer), () => {
 
   afterEach(() => {
     MockDate.reset();
   });
 
   it('discards states older than the specified record length', () => {
-    const history = new StateHistory<number>(10);
+    const history = new TimestampedBuffer<number>(10);
 
     history.record(1);
 
@@ -22,7 +22,7 @@ describe(nameof(StateHistory), () => {
   });
 
   it('can retrieve all states older than a specified time', () => {
-    const history = new StateHistory<number>(100);
+    const history = new TimestampedBuffer<number>(100);
 
     insertAt(history, 1);
     const timestampOf2 = insertAt(history, 2, 10);
@@ -44,7 +44,7 @@ describe(nameof(StateHistory), () => {
   });
 
   it('can retrieve all states newer than a specified time', () => {
-    const history = new StateHistory<number>(100);
+    const history = new TimestampedBuffer<number>(100);
 
     insertAt(history, 1);
     insertAt(history, 2, 10);
@@ -66,7 +66,7 @@ describe(nameof(StateHistory), () => {
   });
 
   it('can retrieve all states within a time range', () => {
-    const history = new StateHistory<number>(100);
+    const history = new TimestampedBuffer<number>(100);
 
     for (let i = 1; i <= 5; i++) {
       history.record(i);
@@ -94,7 +94,7 @@ describe(nameof(StateHistory), () => {
   });
 
   it('a recording will overwrite an existing one that has the same timestamp', () => {
-    const history = new StateHistory<number>(100);
+    const history = new TimestampedBuffer<number>(100);
 
     history.record(1);
     history.record(2);
@@ -106,7 +106,7 @@ describe(nameof(StateHistory), () => {
   });
 });
 
-function insertAt<T>(history: StateHistory<T>, item: T, fastForwardMs: number = 0): number {
+function insertAt<T>(history: TimestampedBuffer<T>, item: T, fastForwardMs: number = 0): number {
   const time = new Date().getTime() + fastForwardMs;
   MockDate.set(time);
   history.record(item);
