@@ -35,7 +35,7 @@ export class EntityCollection<State> {
    * @param id The ID of the entity to search for.
    * @returns The entity with the matching ID, if it exists.
    */
-  public getEntityState(id: EntityId): State | undefined {
+  public getState(id: EntityId): State | undefined {
     return this.entities.get(id);
   }
 
