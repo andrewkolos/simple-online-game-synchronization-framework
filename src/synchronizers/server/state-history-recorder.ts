@@ -12,7 +12,7 @@ export class StateHistoryRecorder<Input, State> {
 
   private readonly history = new TimestampedBuffer<ServerState<Input, State>>(this.recordLengthMs);
 
-  public constructor(private readonly serverEntitySyncer: ServerEntitySyncer<Input, State>,
+  public constructor(serverEntitySyncer: ServerEntitySyncer<Input, State>,
     public readonly recordLengthMs: number) {
     serverEntitySyncer.on('synchronized', (entities: Array<Entity<State>>, inputsApplied: Array<EntityBoundInput<Input>>) => {
       this.history.record({
