@@ -2,7 +2,7 @@ import { GameLoop } from '../../src/game-loop';
 import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
 import { DemoPlayer, DemoPlayerInput, DemoPlayerState, demoPlayerInputApplicator } from './demo-player';
 import { createDemoServerSyncer } from './demo-server';
-import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes } from './keyboard-demo-input-collector';
+import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes as KeyboardDemoInputCollectorKeycodes } from './keyboard-demo-input-collector';
 import { PlayerClientEntitySyncer, ServerEntitySyncerRunner, ClientEntitySyncerRunner } from '../../src/synchronizers';
 
 // Helper code for running the demo.
@@ -46,7 +46,7 @@ function renderWorldOntoCanvas(canvas: HTMLCanvasElement, entities: DemoPlayer[]
   });
 }
 
-function writePositions(entities: DemoPlayer[] | ReadonlyArray<DemoPlayer>, el: HTMLElement) {
+function writePositions(entities: DemoPlayer[], el: HTMLElement) {
   const message = entities.map((entity: DemoPlayer) => {
     return `${entity.id}: ${entity.state.position.toFixed(3)}`;
   }).join(' ');
@@ -68,7 +68,7 @@ function handleMessageSent() {
   misc.innerHTML = message;
 }
 
-function createClient(playerEntityId: string, keyMappings: KeyboardDemoinputCollectorKeycodes, serverUpdateRateHz: number) {
+function createClient(playerEntityId: string, keyMappings: KeyboardDemoInputCollectorKeycodes, serverUpdateRateHz: number) {
 
   const connection = network.getNewConnectionToServer(100);
   const inputCollector = createKeyboardDemoInputCollector(playerEntityId, keyMappings);
