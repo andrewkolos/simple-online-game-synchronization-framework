@@ -30,11 +30,14 @@ describe(nameof(ServerEntitySyncer), () => {
     const expected = [
       {
         id: 'a',
-        state: 1,
+        state: {
+          foo: 1,
+        },
       },
     ];
     expect(entities).toEqual(expected);
-    entities[0].state.foo += 1;
-    expect(entities).toEqual(expected);
+    const entities2 = syncer.synchronize();
+    expected[0].state.foo += 1;
+    expect(entities2).toEqual(expected);
   });
 });

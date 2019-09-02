@@ -1,6 +1,7 @@
 import { LagCompensator, ClientRequestValidator, RequestApplicator, RequestTimestampExtractor, LagCompensatorResponse } from '../../src/lag-compensation';
-import { cloneDumbObject, TimestampedBuffer, simpleResimulator } from '../../src/';
+import { TimestampedBuffer, simpleResimulator } from '../../src/';
 import { advanceTime } from './advanceTime';
+import { cloneDumbObject } from '../../src/util/dumb-objects';
 
 interface GameState {
   p1: number;

@@ -1,6 +1,6 @@
 import { binarySearch, binarySearchClosestMatch } from '../util/binsearch';
-import LRU from 'lru-cache';
 import { singleLineify } from '../util/singleLineify';
+import { LruCache } from '../util/lru-cache';
 
 class Index {
   public constructor(public readonly value: number) { }
@@ -74,9 +74,7 @@ export class TimestampedBuffer<State> {
 
   private recordLengthMs: number;
 
-  private indexCache = new LRU<Timestamp, Index>({
-    max: 10,
-  });
+  private indexCache = new LruCache<Timestamp, Index>(10);
 
   /**
    * Creates a new `StateHistory`.
@@ -258,9 +256,8 @@ export class TimestampedBuffer<State> {
   }
 
   private searchCache(timestamp: Timestamp): number | undefined {
-    const index = this.indexCache.values().findIndex((i: Index) =>
-      this.states[i.value].timestamp === timestamp.value);
-    return index === -1 ? undefined : index;
+    const index = this.indexCache.get(timestamp);
+    return index == null ? index : index.value;
   }
 
   private checkEmptyUnsafe(): void {

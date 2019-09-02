@@ -3,7 +3,7 @@ import { singleLineify } from './singleLineify';
 export class MovingAverage {
   private _value = 0;
   private count = 0;
-  constructor(private numberOfSamplesToAverageOver: number) {
+  public constructor(private numberOfSamplesToAverageOver: number) {
     if (numberOfSamplesToAverageOver < 1) {
       throw RangeError(singleLineify`
         Number of samples to average over must be at least 1. Received ${String(numberOfSamplesToAverageOver)}.
