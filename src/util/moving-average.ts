@@ -1,4 +1,4 @@
-import { singleLineify } from "src/util";
+import { singleLineify } from './singleLineify';
 
 export class MovingAverage {
   private _value = 0;

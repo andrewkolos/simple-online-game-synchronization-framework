@@ -10,64 +10,25 @@ export type DeepReadonlyObject<T> = {
   readonly [P in keyof T]: DeepReadonly<T[P]>;
 };
 
+/**
+ * Generates an interface type from another type. Can be useful for exporting the type
+ * of a class, but not it's constructor.
+ */
 export type Interface<T> = { [P in keyof T]: T[P] };
 
 export type ValueOf<T> = T[keyof T];
-
-export function compareDumbObjects<T>(o1: T, o2: T) {
-  isDumbObjectUnsafe(o1);
-  return JSON.stringify(o1) === JSON.stringify(o2);
-}
-
-function isDumbObject(o: Object): boolean {
-  return Object.values(o).every((value: any) => {
-    const t = typeof value;
-
-    return t !== 'object' && t !== 'function';
-  });
-}
-
-function isDumbObjectUnsafe(o: Object): void | never {
-  if (!isDumbObject(o)) {
-    throw Error('Object cannot contain non-value types.');
-  }
-}
-
-export function cloneDumbObject<T>(o: T): T {
-  if (o == null) return o;
-  isDumbObjectUnsafe(o);
-  return JSON.parse(JSON.stringify(o));
-}
-
-/**
- * Removes new lines and indentation from a multi-line template string.
- * @param strings The string parts of a template string.
- * @param values The value (${}) parts of a template string.
- * @returns The template string with all whitespace removed.
- */
-export function singleLineify(strings: TemplateStringsArray, ...values: string[]) {
-  // Interweave the strings with the
-  // substitution vars first.
-  let output = '';
-  for (let i = 0; i < values.length; i += 1) {
-    output += strings[i] + values[i];
-  }
-  output += strings[values.length];
-
-  // Split on newlines.
-  const lines = output.split(/(?:\r\n|\n|\r)/);
-
-  // Rip out the leading whitespace.
-  return lines.map((line) => {
-    return line.replace(/^\s+/gm, '');
-  }).join(' ').trim();
-}
 
 export function fromMapGetOrDefault<K, V>(map: Map<K, V>, key: K, defaultV: V) {
   const value = map.get(key);
   return value == null ? defaultV : value;
 }
 
+/**
+ * Takes a value and it returns it as a single-value array if is not already an
+ * array. Otherwise, if the value is already an array, gives it back unchanged.
+ * @param item The value to turn into an array, if not already one.
+ * @returns The value wrapped in a single-item array or itself it was already an array.
+ */
 export function arrayify<T>(item: T | T[]): T[] {
   return Array.isArray(item) ? item : [item];
 }
