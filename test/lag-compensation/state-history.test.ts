@@ -96,13 +96,13 @@ describe(nameof(TimestampedBuffer), () => {
   it('a recording will overwrite an existing one that has the same timestamp', () => {
     const history = new TimestampedBuffer<number>(100);
 
+    const now = new Date().getTime();
     history.record(1);
+    MockDate.set(now);
     history.record(2);
 
-    expect(history.getStates()).toEqual([{
-      value: 2,
-      timestamp: new Date().getTime(),
-    }]);
+    expect(history.getStates()[0].value).toEqual(2);
+    expect(history.getStates()[0].timestamp).toEqual(now);
   });
 });
 
