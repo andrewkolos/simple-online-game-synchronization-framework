@@ -1,6 +1,6 @@
-import { Interpolator, Entity } from '../../entity';
+import { Interval } from 'interval-task-runner';
+import { Entity, Interpolator } from '../../entity';
 import { interpolateStatesLinearly, NumericObject } from '../../interpolate-linearly';
-import { Interval } from '../../util/interval-runner';
 import { DefaultMap } from '../../util/default-map';
 
 type EntityId = string;

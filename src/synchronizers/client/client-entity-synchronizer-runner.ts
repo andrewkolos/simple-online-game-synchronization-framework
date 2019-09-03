@@ -1,8 +1,8 @@
-import { PlayerClientEntitySyncer } from './client-entity-synchronizer';
-import { NumericObject } from '../../interpolate-linearly';
-import { IntervalRunner, Interval } from '../../util/interval-runner';
-import { TypedEventEmitter } from '../../util/event-emitter';
+import { Interval, IntervalTaskRunner } from 'interval-task-runner';
 import { Entity } from '../../entity';
+import { NumericObject } from '../../interpolate-linearly';
+import { TypedEventEmitter } from '../../util/event-emitter';
+import { PlayerClientEntitySyncer } from './client-entity-synchronizer';
 
 interface ClientEvents<State> {
   synchronized(entities: Array<Entity<State>>, pendingInputCount: number): void;
@@ -10,13 +10,13 @@ interface ClientEvents<State> {
 
 export class ClientEntitySyncerRunner<State extends NumericObject, Input> extends TypedEventEmitter<ClientEvents<State>> {
 
-  private updateInterval?: IntervalRunner;
+  private updateInterval?: IntervalTaskRunner;
 
   public constructor(public readonly synchronizer: PlayerClientEntitySyncer<State, Input>) { super(); }
 
   public start(updateRateHz: number) {
     this.stop();
-    this.updateInterval = new IntervalRunner(() => this.update(), Interval.fromHz(updateRateHz));
+    this.updateInterval = new IntervalTaskRunner(() => this.update(), Interval.fromHz(updateRateHz));
     this.updateInterval.start();
   }
 

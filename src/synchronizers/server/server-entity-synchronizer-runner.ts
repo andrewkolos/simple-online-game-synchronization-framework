@@ -1,7 +1,7 @@
-import { NumericObject } from '../../interpolate-linearly';
-import { IntervalRunner, Interval } from '../../util/interval-runner';
-import { TypedEventEmitter } from '../../util/event-emitter';
+import { Interval, IntervalTaskRunner } from 'interval-task-runner';
 import { Entity } from '../../entity';
+import { NumericObject } from '../../interpolate-linearly';
+import { TypedEventEmitter } from '../../util/event-emitter';
 import { ServerEntitySyncer } from './server-entity-synchronizer';
 
 interface ServerEvents<State> {
@@ -10,13 +10,13 @@ interface ServerEvents<State> {
 
 export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends TypedEventEmitter<ServerEvents<State>> {
 
-  private updateInterval?: IntervalRunner;
+  private updateInterval?: IntervalTaskRunner;
 
   public constructor(public readonly synchronizer: ServerEntitySyncer<Input, State>) { super(); }
 
   public start(updateRateHz: number) {
     this.stop();
-    this.updateInterval = new IntervalRunner(() => this.update(), Interval.fromHz(updateRateHz));
+    this.updateInterval = new IntervalTaskRunner(() => this.update(), Interval.fromHz(updateRateHz));
     this.updateInterval.start();
   }
 

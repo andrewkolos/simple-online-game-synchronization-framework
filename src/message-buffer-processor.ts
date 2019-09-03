@@ -1,5 +1,5 @@
+import { Interval, IntervalTaskRunner } from 'interval-task-runner';
 import { RecipientMessageBuffer } from './networking';
-import { Interval, IntervalRunner } from './util/interval-runner';
 
 /**
  * Periodically retrieves messages from a supplied `RecipientMessageBuffer`, and performs an operation with that message
@@ -8,18 +8,18 @@ import { Interval, IntervalRunner } from './util/interval-runner';
  */
 export abstract class MessageBufferProcessor<Message> {
 
-  private readonly intervalRunner: IntervalRunner;
+  private readonly IntervalTaskRunner: IntervalTaskRunner;
 
   public constructor(private readonly messageBuffer: RecipientMessageBuffer<Message>, processingRateHz: number) {
-    this.intervalRunner = new IntervalRunner(() => this.processMessages(), Interval.fromHz(processingRateHz));
+    this.IntervalTaskRunner = new IntervalTaskRunner(() => this.processMessages(), Interval.fromHz(processingRateHz));
   }
 
   public start() {
-    this.intervalRunner.start();
+    this.IntervalTaskRunner.start();
   }
 
   public stop() {
-    this.intervalRunner.stop();
+    this.IntervalTaskRunner.stop();
   }
 
   protected abstract processMessage(message: Message): void;
