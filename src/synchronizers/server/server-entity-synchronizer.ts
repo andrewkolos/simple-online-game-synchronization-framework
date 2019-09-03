@@ -1,6 +1,6 @@
 import { TypedEventEmitter } from '../../util/event-emitter';
 import { EntityCollection } from '../entity-collection';
-import { singleLineify } from "../../util/singleLineify";
+import { singleLineify } from '../../util/singleLineify';
 import { InputMessage, TwoWayMessageBuffer, StateMessage, EntityMessageKind } from '../../networking';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityBoundInput } from '../client';

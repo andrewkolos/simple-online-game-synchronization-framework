@@ -5,7 +5,7 @@ import { createDemoServerSyncer } from './demo-server';
 import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes as KeyboardDemoInputCollectorKeycodes } from './keyboard-demo-input-collector';
 import { PlayerClientEntitySyncer, ServerEntitySyncerRunner, ClientEntitySyncerRunner } from '../../src/synchronizers';
 
-// Helper code for running the demo.
+// Helper code for running the demo. ///
 
 function displayGame(entities: DemoPlayer[], displayElement: HTMLElement, numberOfPendingInputs: number) {
   const displayElementId = displayElement.id;
@@ -85,7 +85,7 @@ function createClient(playerEntityId: string, keyMappings: KeyboardDemoInputColl
   return client;
 }
 
-// Start up clients, server, connect them, and start them.
+// Start up clients, server, connect them, and start them. ///
 
 const serverGameUpdateRate = 60;
 const serverSyncUpdateRate = 60;

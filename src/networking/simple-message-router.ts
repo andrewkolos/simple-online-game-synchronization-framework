@@ -12,7 +12,7 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
 
   private readonly collections: Map<keyof TypeMap, Array<PickReceiveType<TypeMap>>> = new Map();
 
-  public constructor(private readonly categorizer: MessageCategorizer<TypeMap>,
+  public constructor(private readonly messageCategorizer: MessageCategorizer<TypeMap>,
     private readonly buffer: TwoWayMessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {
   }
 
@@ -38,7 +38,7 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
 
   private receiveAndOrganizeAllMessages(): void {
     for (const message of this.buffer) {
-      const category = this.categorizer.assignMessageCategory(message);
+      const category = this.messageCategorizer(message);
       const collection = this.collections.has(category) ? this.collections.get(category)! : [];
       collection.push(message);
       this.collections.set(category, collection);
@@ -47,6 +47,4 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
 
 }
 
-export interface MessageCategorizer<TypeMap extends RouterTypeMap> {
-  assignMessageCategory(message: PickReceiveType<TypeMap>): keyof TypeMap;
-}
+export type MessageCategorizer<TypeMap extends RouterTypeMap> = (message: PickReceiveType<TypeMap>) => keyof TypeMap;
