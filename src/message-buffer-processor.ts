@@ -6,27 +6,38 @@ import { RecipientMessageBuffer } from './networking';
  * (e.g. mutating the state of a game).
  * @template Message The type of the message that will be received by the `RecipientMessageBuffer`.
  */
-export abstract class MessageBufferProcessor<Message> {
+export class MessageBufferProcessor<Message> {
 
-  private readonly IntervalTaskRunner: IntervalTaskRunner;
+  private readonly taskRunner: IntervalTaskRunner;
 
-  public constructor(private readonly messageBuffer: RecipientMessageBuffer<Message>, processingRateHz: number) {
-    this.IntervalTaskRunner = new IntervalTaskRunner(() => this.processMessages(), Interval.fromHz(processingRateHz));
+  /**
+   * Creates a MessageBufferProcessor.
+   * @param processFn What to do with each message retrieved.
+   * @param messageBuffer The buffer to retrieve the messages from.
+   * @param processingRateHz How often this processor should retrieve messages and process them.
+   */
+  public constructor(private readonly processFn: (message: Message) => void,
+    private readonly messageBuffer: RecipientMessageBuffer<Message>, processingRateHz: number) {
+    this.taskRunner = new IntervalTaskRunner(() => this.processMessages(), Interval.fromHz(processingRateHz));
   }
 
+  /**
+   * Starts this processor.
+   */
   public start() {
-    this.IntervalTaskRunner.start();
+    this.taskRunner.start();
   }
 
+  /**
+   * Stops this processor.
+   */
   public stop() {
-    this.IntervalTaskRunner.stop();
+    this.taskRunner.stop();
   }
-
-  protected abstract processMessage(message: Message): void;
 
   private processMessages() {
     for (const message of this.messageBuffer) {
-      this.processMessage(message);
+      this.processFn(message);
     }
   }
 }
