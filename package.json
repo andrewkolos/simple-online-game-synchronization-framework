@@ -55,6 +55,6 @@
     "mheap": "^1.1.0",
     "priority-deque": "^1.0.3",
     "queue-typescript": "^1.0.1",
-    "strict-event-emitter-types": "^2.0.0"
+    "typed-event-emitter": "^2.0.0"
   }
 }

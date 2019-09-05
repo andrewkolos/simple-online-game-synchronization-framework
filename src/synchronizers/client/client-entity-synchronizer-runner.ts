@@ -1,14 +1,14 @@
 import { Interval, IntervalTaskRunner } from 'interval-task-runner';
+import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
-import { TypedEventEmitter } from '../../util/event-emitter';
 import { PlayerClientEntitySyncer } from './client-entity-synchronizer';
 
-interface ClientEvents<State> {
-  synchronized(entities: Array<Entity<State>>, pendingInputCount: number): void;
-}
+type OnSynchronizedHandler<State> = (entities: Array<Entity<State>>, pendingInputCount: number) => void;
 
-export class ClientEntitySyncerRunner<State extends NumericObject, Input> extends TypedEventEmitter<ClientEvents<State>> {
+export class ClientEntitySyncerRunner<State extends NumericObject, Input> extends EventEmitter {
+
+  public readonly onSynchronized = this.registerEvent<OnSynchronizedHandler<State>>();
 
   private updateInterval?: IntervalTaskRunner;
 
@@ -27,6 +27,6 @@ export class ClientEntitySyncerRunner<State extends NumericObject, Input> extend
   }
 
   private update() {
-    this.emit('synchronized', this.synchronizer.synchronize(), this.synchronizer.getNumberOfPendingInputs());
+    this.emit(this.onSynchronized, this.synchronizer.synchronize(), this.synchronizer.getNumberOfPendingInputs());
   }
 }

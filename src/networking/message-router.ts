@@ -50,9 +50,9 @@ export type PickReceiveTypeGivenKey<T extends RouterTypeMap, K extends keyof T> 
  */
 export interface MessageRouter<T extends RouterTypeMap> {
   /**
-   * Generates a new `TwoWayMessageBuffer` which can only receive/send messages of (likely) more specific types, determined
+   * Generates a new `MessageBuffer` which can only receive/send messages of (likely) more specific types, determined
    * by the argued `bufferType`, which is a key of the router's type mapping.
-   * @param bufferType The key of the type mapping that describes what types of messages the new `TwoWayMessageBuffer` will be
+   * @param bufferType The key of the type mapping that describes what types of messages the new `MessageBuffer` will be
    *                   able to receive/send.
    */
   getFilteredMessageBuffer<K extends keyof T>(bufferType: K): T[K] extends SendTypeMapping ?

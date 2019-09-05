@@ -1,14 +1,12 @@
 import { Interval, IntervalTaskRunner } from 'interval-task-runner';
+import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
-import { TypedEventEmitter } from '../../util/event-emitter';
 import { ServerEntitySyncer } from './server-entity-synchronizer';
 
-interface ServerEvents<State> {
-  synchronized(entities: ReadonlyArray<Entity<State>>): void;
-}
+export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends EventEmitter {
 
-export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends TypedEventEmitter<ServerEvents<State>> {
+  public readonly onSynchronized = this.registerEvent<(entities: ReadonlyArray<Entity<State>>) => void>();
 
   private updateInterval?: IntervalTaskRunner;
 
@@ -27,6 +25,6 @@ export class ServerEntitySyncerRunner<Input, State extends NumericObject> extend
   }
 
   private update() {
-    this.emit('synchronized', this.synchronizer.synchronize());
+    this.emit(this.onSynchronized, this.synchronizer.synchronize());
   }
 }

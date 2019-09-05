@@ -1,17 +1,15 @@
 import { TwoWayMessageBuffer } from './message-buffer';
-import { TypedEventEmitter } from '../util/event-emitter';
 import { arrayify } from '../util';
-
-interface InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType> {
-  serverSentMessages(messages: ServerSendType[]): void;
-  clientSentMessages(messages: ClientSendType[]): void;
-}
+import { EventEmitter } from 'typed-event-emitter';
 
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
  */
 export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
-  extends TypedEventEmitter<InMemoryClientServerNetworkEvents<ClientSendType, ServerSendType>> {
+  extends EventEmitter {
+
+  public readonly onClientSentMessages = this.registerEvent<(messages: ClientSendType[]) => void>();
+  public readonly onServerSentMessages = this.registerEvent<(messages: ServerSendType[]) => void>();
 
   private readonly clientSentMessageQueues: ClientSendType[][][] = [];
   private readonly serverSentMessageQueues: ServerSendType[][][] = [];
@@ -38,7 +36,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
         }
         inputMessageQueue.push(asArray);
         this.clientSentMessageReadyTimes.set(asArray, new Date().getTime() + lagMs);
-        this.emit('clientSentMessages', asArray);
+        this.emit(this.onClientSentMessages, asArray);
       },
       receive: () => {
         if (stateMessageQueue.length > 0) {
@@ -75,7 +73,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
 
         this.serverSentMessageSendTimes.set(asArray, new Date().getTime());
         increment(this.serverSentMessageReferenceCounts, asArray);
-        this.emit('serverSentMessages', asArray);
+        this.emit(this.onServerSentMessages, asArray);
       },
       receive: () => {
         if (imQueue.length > 0) {

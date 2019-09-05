@@ -1,9 +1,9 @@
 import { GameLoop } from '../../src/game-loop';
-import { InMemoryClientServerNetwork, StateMessage, InputMessage } from '../../src/networking';
-import { DemoPlayer, DemoPlayerInput, DemoPlayerState, demoPlayerInputApplicator } from './demo-player';
+import { InMemoryClientServerNetwork, InputMessage, StateMessage } from '../../src/networking';
+import { ClientEntitySyncerRunner, PlayerClientEntitySyncer, ServerEntitySyncerRunner } from '../../src/synchronizers';
+import { DemoPlayer, DemoPlayerInput, demoPlayerInputApplicator, DemoPlayerState } from './demo-player';
 import { createDemoServerSyncer } from './demo-server';
 import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes as KeyboardDemoInputCollectorKeycodes } from './keyboard-demo-input-collector';
-import { PlayerClientEntitySyncer, ServerEntitySyncerRunner, ClientEntitySyncerRunner } from '../../src/synchronizers';
 
 // Helper code for running the demo. ///
 
@@ -108,7 +108,7 @@ const client2Id = serverSyncer.connectClient(network.getNewClientConnection());
 const client1Runner = new ClientEntitySyncerRunner(createClient(client1Id, { moveLeft: 65, moveRight: 68}, serverSyncUpdateRate));
 const client2Runner = new ClientEntitySyncerRunner(createClient(client2Id, { moveLeft: 37, moveRight: 39}, serverSyncUpdateRate));
 
-serverRunner.on('synchronized', (entities: DemoPlayer[]) => {
+serverRunner.onSynchronized((entities: DemoPlayer[]) => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
   renderWorldOntoCanvas(serverCanvas, entities);
 
@@ -121,16 +121,16 @@ serverRunner.on('synchronized', (entities: DemoPlayer[]) => {
   writePositions(entities, document.getElementById('server_positions') as HTMLDivElement);
 });
 
-client1Runner.on('synchronized', (entities: DemoPlayer[]) => {
+client1Runner.onSynchronized((entities: DemoPlayer[]) => {
   displayGame(entities, document.getElementById('client1') as HTMLElement, client1Runner.synchronizer.getNumberOfPendingInputs());
 });
 
-client2Runner.on('synchronized', (entities: DemoPlayer[]) => {
+client2Runner.onSynchronized((entities: DemoPlayer[]) => {
   displayGame(entities, document.getElementById('client2') as HTMLElement, client2Runner.synchronizer.getNumberOfPendingInputs());
 });
 
-network.on('serverSentMessages', handleMessageSent);
-network.on('clientSentMessages', handleMessageSent);
+network.onServerSentMessages(handleMessageSent);
+network.onClientSentMessages(handleMessageSent);
 
 serverRunner.start(serverSyncUpdateRate);
 client1Runner.start(clientUpdateRate);

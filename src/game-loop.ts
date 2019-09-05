@@ -1,4 +1,4 @@
-import { TypedEventEmitter } from './util/event-emitter';
+import { EventEmitter } from 'typed-event-emitter';
 
 export type TickHandler = (tickNumber: number) => void;
 
@@ -11,9 +11,16 @@ export interface GameLoopEvents {
  * Executes (game) logic at a constant rate using safe fixed time steps across
  * any hardware.
  */
-export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
+export class GameLoop extends EventEmitter {
 
-  public tickRateHz: number;
+  public readonly onPreStep = this.registerEvent<() => void>();
+  public readonly onPostStep = this.registerEvent<() => void>();
+
+  public get tickRateHz(): number {
+    return this._tickRateHz;
+  }
+
+  private _tickRateHz: number;
 
   /** How many ticks the timer has counted. */
   private tickCount: number = 0;
@@ -32,7 +39,7 @@ export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
   public start(stepRateHz: number) {
     this.stop();
     this.tickIntervalId = setInterval(() => this.tick(), 1 / stepRateHz * 1000) as any;
-    this.tickRateHz = stepRateHz;
+    this._tickRateHz = stepRateHz;
   }
 
   /**
@@ -54,9 +61,9 @@ export class GameLoop extends TypedEventEmitter<GameLoopEvents> {
   }
 
   private tick() {
-    this.emit('preStep');
+    this.emit(this.onPreStep);
     this.tickCount += 1;
     this.tickHandler(this.tickCount);
-    this.emit('postStep');
+    this.emit(this.onPostStep);
   }
 }

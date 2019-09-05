@@ -1,4 +1,6 @@
 import typescript from 'rollup-plugin-typescript2';
+import resolve from 'rollup-plugin-node-resolve';
+import commonjs from 'rollup-plugin-commonjs';
 
 import pkg from './package.json';
 
@@ -15,6 +17,10 @@ export default {
     }
   ],
   plugins: [
+    resolve({
+      extensions: ['.js', '.ts']
+    }),
+    commonjs(),
     typescript({
       sourceMap: true,
       declaration: true,

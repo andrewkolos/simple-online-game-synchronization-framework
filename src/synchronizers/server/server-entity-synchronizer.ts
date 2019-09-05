@@ -1,9 +1,9 @@
-import { TypedEventEmitter } from '../../util/event-emitter';
-import { EntityCollection } from '../entity-collection';
-import { singleLineify } from '../../util/singleLineify';
-import { InputMessage, TwoWayMessageBuffer, StateMessage, EntityMessageKind } from '../../networking';
+import { EventEmitter } from 'typed-event-emitter';
 import { Entity, InputApplicator } from '../../entity';
+import { EntityMessageKind, InputMessage, StateMessage, TwoWayMessageBuffer } from '../../networking';
+import { singleLineify } from '../../util/singleLineify';
 import { EntityBoundInput } from '../client';
+import { EntityCollection } from '../entity-collection';
 
 type ClientId = string;
 
@@ -12,11 +12,6 @@ type ConnectionToClient<Input, State> = TwoWayMessageBuffer<InputMessage<Input>,
 interface ClientInputs<Input, State> {
   client: ClientInfo<Input, State>;
   inputs: Array<InputMessage<Input>>;
-}
-
-export interface ServerEntitySynchronizerEvents<Input, State> {
-  beforeSynchronization(): void;
-  synchronized(entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityBoundInput<Input>>): void;
 }
 
 /**
@@ -49,11 +44,16 @@ export interface ServerEntitySyncherArgs<Input, State> {
   clientIdAssigner: () => string;
 }
 
+type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityBoundInput<Input>>) => void;
+
 /**
  * Creates and synchronizes game entities for clients.
  * @template E The type of entity/entities this synchronizer can work with.
  */
-export class ServerEntitySyncer<Input, State> extends TypedEventEmitter<ServerEntitySynchronizerEvents<Input, State>> {
+export class ServerEntitySyncer<Input, State> extends EventEmitter {
+
+  public readonly onPreSynchronization = this.registerEvent<() => void>();
+  public readonly onSynchronized = this.registerEvent<OnSynchronizedHandler<Input, State>>();
 
   private readonly inputValidator: InputValidator<Input, State>;
   private readonly inputApplicator: InputApplicator<Input, State>;
@@ -140,14 +140,14 @@ export class ServerEntitySyncer<Input, State> extends TypedEventEmitter<ServerEn
    * the world is completely determined by player inputs.
    */
   public synchronize(entityStates?: Array<Entity<State>>): ReadonlyArray<Entity<State>> {
-    this.emit('beforeSynchronization');
+    this.emit(this.onPreSynchronization);
 
     if (entityStates != null) this.setEntityState(...entityStates);
     const inputs = this.retrieveValidInputs();
     this.applyInputs(inputs);
     this.sendStates();
 
-    this.emit('synchronized', this._entities.asArray(), inputs.map((ci) => ci.inputs).flat());
+    this.emit(this.onSynchronized, this._entities.asArray(), inputs.map((ci) => ci.inputs).flat());
     return this._entities.asArray();
   }
 
@@ -191,7 +191,7 @@ export class ServerEntitySyncer<Input, State> extends TypedEventEmitter<ServerEn
   private applyInputs(inputsByClient: Array<ClientInputs<Input, State>>): void {
     for (const { client, inputs } of inputsByClient) {
       for (const input of inputs) {
-        const {entityId} = input;
+        const { entityId } = input;
         const state = this._entities.getState(entityId);
         if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
         this._entities.set({ id: entityId, state: this.inputApplicator(state, input.input) });

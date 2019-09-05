@@ -1,5 +1,5 @@
 import { TwoWayMessageBuffer } from './message-buffer';
-import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, PickSendTypeGivenKey, RouterTypeMap } from './message-router';
+import { PickReceiveType, PickReceiveTypeGivenKey, PickSendType, RouterTypeMap } from './message-router';
 
 /**
  * A simple implementation of `MessageRouter`. Any filtered message buffer generated from the router will
@@ -16,19 +16,18 @@ export class SimpleMessageRouter<TypeMap extends RouterTypeMap> {
     private readonly buffer: TwoWayMessageBuffer<PickReceiveType<TypeMap>, PickSendType<TypeMap>>) {
   }
 
-  public getFilteredTwoWayMessageBuffer<K extends keyof TypeMap>(bufferType: K)
-    : TwoWayMessageBuffer<PickReceiveTypeGivenKey<TypeMap, K>, PickSendTypeGivenKey<TypeMap, K>> {
+  public getFilteredTwoWayMessageBuffer<K extends keyof TypeMap>(bufferType: K) {
 
     const receive = () => {
       this.receiveAndOrganizeAllMessages();
 
-      const collection = this.collections.get(bufferType);
+      const collection = this.collections.get(bufferType) as Array<PickReceiveTypeGivenKey<TypeMap, K>>;
 
       return collection == null ? [] : collection;
     };
 
     return {
-      send: (message: PickSendType<TypeMap>) => {
+      send: (message: PickSendType<TypeMap> | Array<PickSendType<TypeMap>>) => {
         this.buffer.send(message);
       },
       receive,
