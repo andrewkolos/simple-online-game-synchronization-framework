@@ -2,8 +2,8 @@ import { EventEmitter } from 'typed-event-emitter';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityMessageKind, InputMessage, StateMessage, TwoWayMessageBuffer } from '../../networking';
 import { singleLineify } from '../../util/singleLineify';
-import { EntityBoundInput } from '../client';
-import { EntityCollection } from '../entity-collection';
+import { EntityCollection } from '../../entity/entity-collection';
+import { EntityBoundInput } from '../../client';
 
 type ClientId = string;
 

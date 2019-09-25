@@ -1,4 +1,4 @@
-import { ServerEntitySyncer } from '../../src/synchronizers/server/server-entity-synchronizer';
+import { ServerEntitySyncer } from '../../src/server/entity-synchronizer/server-entity-synchronizer';
 import { DemoPlayer, DemoPlayerInput, DemoPlayerState, demoPlayerInputApplicator } from './demo-player';
 
 interface PlayerMovementInfo {

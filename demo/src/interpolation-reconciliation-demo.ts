@@ -1,9 +1,10 @@
 import { GameLoop } from '../../src/game-loop';
 import { InMemoryClientServerNetwork, InputMessage, StateMessage } from '../../src/networking';
-import { ClientEntitySyncerRunner, PlayerClientEntitySyncer, ServerEntitySyncerRunner } from '../../src/synchronizers';
 import { DemoPlayer, DemoPlayerInput, demoPlayerInputApplicator, DemoPlayerState } from './demo-player';
 import { createDemoServerSyncer } from './demo-server';
 import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes as KeyboardDemoInputCollectorKeycodes } from './keyboard-demo-input-collector';
+import { PlayerClientEntitySyncer, ClientEntitySyncerRunner } from '../../src/client';
+import { ServerEntitySyncerRunner } from '../../src/server';
 
 // Helper code for running the demo. ///
 
