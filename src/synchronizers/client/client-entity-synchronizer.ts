@@ -13,7 +13,7 @@ interface Entity<State> {
   state: State;
 }
 
-export interface LocalPlayerSyncStrategy<Input, State> {
+export interface LocalPlayerInputStrategy<Input, State> {
   inputSource: (entities: Array<Entity<State>>) => Array<EntityBoundInput<Input>>;
   inputApplicator: InputApplicator<Input, State>;
 }
@@ -54,7 +54,7 @@ export class ClientEntitySyncer<State extends NumericObject> {
 
 export interface PlayerClientEntitySyncerArgs<Input, State> extends ClientEntitySyncerArgsBase {
   connection: PlayerClientSyncerConnectionToServer<Input, State>;
-  localPlayerSyncStrategy: LocalPlayerSyncStrategy<Input, State>;
+  localPlayerInputStrategy: LocalPlayerInputStrategy<Input, State>;
 }
 
 interface SortedStateMessages<State> {
@@ -69,7 +69,7 @@ export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
   private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
 
   private readonly interpolator: MultiEntityStateInterpolator<State>;
-  private readonly playerSyncStrategy: LocalPlayerSyncStrategy<Input, State>;
+  private readonly playerSyncStrategy: LocalPlayerInputStrategy<Input, State>;
 
   private currentInputSequenceNumber = 0;
   private pendingInputs: Array<SequencedEntityBoundInput<Input>> = [];
@@ -77,7 +77,7 @@ export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
   public constructor(args: PlayerClientEntitySyncerArgs<Input, State>) {
     this.connection = args.connection;
     this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
-    this.playerSyncStrategy = args.localPlayerSyncStrategy;
+    this.playerSyncStrategy = args.localPlayerInputStrategy;
   }
 
   public getNumberOfPendingInputs(): number {

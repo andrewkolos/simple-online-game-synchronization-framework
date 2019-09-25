@@ -75,7 +75,7 @@ function createClient(playerEntityId: string, keyMappings: KeyboardDemoInputColl
 
   const client = new PlayerClientEntitySyncer({
     connection,
-    localPlayerSyncStrategy: {
+    localPlayerInputStrategy: {
       inputApplicator: demoPlayerInputApplicator,
       inputSource: inputCollector,
     },
