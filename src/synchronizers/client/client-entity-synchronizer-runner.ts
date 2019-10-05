@@ -2,7 +2,7 @@ import { Interval, IntervalTaskRunner } from 'interval-task-runner';
 import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
-import { PlayerClientEntitySyncer } from './client-entity-synchronizer';
+import { PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
 
 type OnSynchronizedHandler<State> = (entities: Array<Entity<State>>, pendingInputCount: number) => void;
 
