@@ -5,11 +5,11 @@ export const enum EntityMessageKind {
 }
 
 export interface BufferMessage {
-  messageKind: string;
+  kind: string;
 }
 
 export interface InputMessage<T> extends BufferMessage {
-  messageKind: EntityMessageKind.Input;
+  kind: EntityMessageKind.Input;
   input: T;
   inputSequenceNumber: number;
   entityId: string;
@@ -19,7 +19,7 @@ export type StateMessage<T> = StateMessageWithoutSyncInfo<T> | StateMessageWithS
 
 type StateMessageWithoutSyncInfo<T> = BufferMessage & {
   /** Identifies this buffer message object as an entity state message. */
-  messageKind: EntityMessageKind.State;
+  kind: EntityMessageKind.State;
   /** Information regarding the entity. */
   entity: {
     /** The ID of the entity this state message is meant to be used to update. */
@@ -43,11 +43,11 @@ export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T>  & {
 export function isEntityInputMessage(message: any): message is InputMessage<unknown> {
   const asInputMessage = message as Partial<InputMessage<never>>;
 
-  return asInputMessage.messageKind != null && asInputMessage.messageKind === EntityMessageKind.Input;
+  return asInputMessage.kind != null && asInputMessage.kind === EntityMessageKind.Input;
 }
 
 export function isEntityStateMessage(message: any): message is StateMessage<unknown> {
   const asInputMessage = message as Partial<StateMessage<never>>;
 
-  return asInputMessage.messageKind != null && asInputMessage.messageKind === EntityMessageKind.State;
+  return asInputMessage.kind != null && asInputMessage.kind === EntityMessageKind.State;
 }

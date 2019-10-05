@@ -211,7 +211,7 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
         const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
 
         const networkedStateMessageBase: StateMessage<State> = {
-          messageKind: EntityMessageKind.State,
+          kind: EntityMessageKind.State,
           entity: {
             id: entity.id,
             state: entity.state,

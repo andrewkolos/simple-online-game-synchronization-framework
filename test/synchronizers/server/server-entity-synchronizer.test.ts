@@ -16,7 +16,7 @@ describe(nameof(ServerEntitySyncer), () => {
         entityId: 'a',
         input: 1,
         inputSequenceNumber: seqNumber++,
-        messageKind: EntityMessageKind.Input,
+        kind: EntityMessageKind.Input,
       }],
       [Symbol.iterator]() {
         return this.receive().values();
