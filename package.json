@@ -50,6 +50,7 @@
     "@types/ts-nameof": "^3.2.0",
     "core-js": "^3.2.1",
     "eventemitter3": "^4.0.0",
+    "exponential-backoff": "^2.1.1",
     "interval-task-runner": "^1.0.6",
     "keyboardjs": "^2.5.1",
     "mheap": "^1.1.0",
