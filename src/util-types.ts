@@ -4,6 +4,8 @@ export type DeepReadonly<T> =
   T extends object ? DeepReadonlyObject<T> :
   T;
 
+export type ArrayOrSingle<T> = T | T[];
+
 export interface DeepReadonlyArray<T> extends ReadonlyArray<DeepReadonly<T>> { }
 
 export type DeepReadonlyObject<T> = {
