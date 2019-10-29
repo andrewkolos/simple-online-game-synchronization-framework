@@ -1,11 +1,12 @@
-import { StateMessage, RecipientMessageBuffer, TwoWayMessageBuffer, InputMessage } from '../../networking';
+import { StateMessage } from '../../networking';
 import { EntityBoundInput } from './entity-bound-input';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { InputApplicator } from '../../entity';
 import { PlayerClientEntitySyncerArgs, PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
+import { RecipientMessageBuffer } from '../../networking/message-buffer';
 
-export type EntityId = string;
+type EntityId = string;
 
 export interface Entity<State> {
   id: EntityId;
@@ -16,8 +17,6 @@ export interface LocalPlayerInputStrategy<Input, State> {
   inputSource: (entities: Array<Entity<State>>) => Array<EntityBoundInput<Input>>;
   inputApplicator: InputApplicator<Input, State>;
 }
-
-export type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
 export interface ClientEntitySyncerArgsBase {
   serverUpdateRateHz: number;

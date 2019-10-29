@@ -3,7 +3,12 @@ import { DefaultMap } from '../../util/default-map';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { findLatestMessage } from '../../util/findLatestMessage';
-import { ClientEntitySyncerArgsBase, PlayerClientSyncerConnectionToServer, LocalPlayerInputStrategy, Entity, EntityId } from './client-entity-synchronizer';
+import { ClientEntitySyncerArgsBase, LocalPlayerInputStrategy, Entity } from './client-entity-synchronizer';
+import { TwoWayMessageBuffer } from '../../networking/message-buffer';
+
+type EntityId = string;
+
+export type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
 export interface PlayerClientEntitySyncerArgs<Input, State> extends ClientEntitySyncerArgsBase {
   connection: PlayerClientSyncerConnectionToServer<Input, State>;
@@ -15,7 +20,7 @@ interface SortedStateMessages<State> {
   localEntities: Array<StateMessageWithSyncInfo<State>>;
 }
 
-type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'kind'>;
+type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
 
 export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
 

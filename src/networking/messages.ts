@@ -33,12 +33,19 @@ type StateMessageWithoutSyncInfo<T> = BufferMessage & {
   sentAt: number;
 };
 
-export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T>  & {
+export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T> & {
   /** Indicates that the entity is to be controlled by the client receiving this state message. */
   entityBelongsToRecipientClient: true;
   /** The sequence number of the input message last processed on the server before sending this message. */
   lastProcessedInputSequenceNumber: number;
 };
+
+export const handshakeMessageKind = 'handshake';
+
+export interface HandshakeInfo {
+  kind: typeof handshakeMessageKind;
+  entityUpdateRateHz: number;
+}
 
 export function isEntityInputMessage(message: any): message is InputMessage<unknown> {
   const asInputMessage = message as Partial<InputMessage<never>>;
