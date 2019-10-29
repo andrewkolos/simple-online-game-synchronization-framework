@@ -1,6 +1,6 @@
 import { TwoWayMessageBuffer } from './message-buffer';
-import { arrayify } from '../util';
 import { EventEmitter } from 'typed-event-emitter';
+import { arrayify } from '../util-types';
 
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.

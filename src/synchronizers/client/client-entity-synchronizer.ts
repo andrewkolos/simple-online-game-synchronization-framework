@@ -1,10 +1,10 @@
-import { StateMessage } from '../../networking';
 import { EntityBoundInput } from './entity-bound-input';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { InputApplicator } from '../../entity';
 import { PlayerClientEntitySyncerArgs, PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
 import { RecipientMessageBuffer } from '../../networking/message-buffer';
+import { StateMessage } from '../../networking';
 
 type EntityId = string;
 
