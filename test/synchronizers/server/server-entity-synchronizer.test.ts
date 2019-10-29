@@ -1,4 +1,4 @@
-import { ServerEntitySyncer, EntityMessageKind } from '../../../src';
+import { EntityMessageKind, ServerEntitySyncer } from '../../../src';
 
 describe(nameof(ServerEntitySyncer), () => {
   it('synchronized event should give deep copies of entity states', () => {

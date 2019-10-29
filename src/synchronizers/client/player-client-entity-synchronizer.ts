@@ -3,8 +3,9 @@ import { DefaultMap } from '../../util/default-map';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { findLatestMessage } from '../../util/findLatestMessage';
-import { ClientEntitySyncerArgsBase, LocalPlayerInputStrategy, Entity } from './client-entity-synchronizer';
+import { ClientEntitySyncerArgsBase, LocalPlayerInputStrategy } from './client-entity-synchronizer';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
+import { Entity } from '../../entity';
 
 type EntityId = string;
 

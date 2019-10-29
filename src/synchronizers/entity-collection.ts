@@ -1,6 +1,6 @@
 import { Entity } from '../entity';
 
-export type EntityId = string;
+type EntityId = string;
 
 /**
  * Contains entities, allowing retrieval by entity ID.
