@@ -52,7 +52,7 @@ export namespace RecipientMessageBuffer {
     const receive = buffer.receive;
 
     buffer.receive = () => {
-      throw Error('Attempted to receive from a message buffer that has been split. Use the buffers created by the split instead.');
+      throw Error(RecipientMessageBuffer.ATTEMPTED_TO_RECEIVE_ON_SPLIT_ERROR_MESSAGE);
     };
 
     const record: { [P in keyof T]: Array<T[P]> } = Object.keys(categorizer.availableCategories)
@@ -65,18 +65,26 @@ export namespace RecipientMessageBuffer {
       const currentReceive = () => {
         const messages = receive();
         messages.forEach((message: PickMessageType<T>) => {
-          record[current].push(message);
+          record[categorizer.assigner(message)].push(message);
         });
         const currentMessages = record[current];
         record[current] = [];
         return currentMessages;
       };
 
-      acc[current].receive = currentReceive;
+      acc[current] = {
+        receive: currentReceive,
+        [Symbol.iterator]() {
+          return this.receive().values();
+        },
+      };
 
       return acc;
     }, {} as Split<T>);
 
     return splitBuffers;
   }
+
+  /** @internal */
+  export const ATTEMPTED_TO_RECEIVE_ON_SPLIT_ERROR_MESSAGE = 'Attempted to receive from a message buffer that has been split. Use the buffers created by the split instead.';
 }
