@@ -45,7 +45,7 @@ export namespace RecipientMessageBuffer {
     return (buffer as Partial<TwoWayMessageBuffer<R, S>>).send != null;
   }
 
-  export function split<T extends MessageTypeMap<M>, M>(buffer: RecipientMessageBuffer<PickMessageType<T>>,
+  export function split<T extends MessageTypeMap<unknown>>(buffer: RecipientMessageBuffer<PickMessageType<T>>,
     categorizer: MessageCategorizer<T>): Split<T> {
 
     // tslint:disable-next-line: no-unbound-method
@@ -84,6 +84,8 @@ export namespace RecipientMessageBuffer {
 
     return splitBuffers;
   }
+
+  export type PickReceiveType<T extends RecipientMessageBuffer<unknown>> = T extends RecipientMessageBuffer<infer R> ? R : unknown;
 
   /** @internal */
   export const ATTEMPTED_TO_RECEIVE_ON_SPLIT_ERROR_MESSAGE = 'Attempted to receive from a message buffer that has been split. Use the buffers created by the split instead.';

@@ -33,12 +33,6 @@ export interface ServerEntitySyncherArgs<Input, State> {
    */
   inputApplicator: InputApplicator<Input, State>;
   /**
-   * Called when a new client connects to the server. Can be used, for example,
-   * to create a player entity for the new client and add it to the game.
-   * @param newClientId The id assigned to the new client.
-   */
-  connectionHandler: (newClientId: string) => void;
-  /**
    * Determines the ID a new client should be assigned.
    * @returns The ID to be assigned to the new client.
    */
@@ -58,7 +52,6 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
 
   private readonly inputValidator: InputValidator<Input, State>;
   private readonly inputApplicator: InputApplicator<Input, State>;
-  private readonly connectionHandler: (newClientId: string) => void;
   private readonly clientIdAssigner: () => string;
 
   private readonly _entities: EntityCollection<State>;
@@ -66,7 +59,9 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
 
   constructor(args: ServerEntitySyncherArgs<Input, State>) {
     super();
-    Object.assign(this, args);
+    this.inputApplicator = args.inputApplicator;
+    this.inputValidator = args.inputValidator;
+    this.clientIdAssigner = args.clientIdAssigner;
     this.clients = new Map();
     this._entities = new EntityCollection();
   }
@@ -87,8 +82,6 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     };
 
     this.clients.set(newClientId, client);
-
-    this.connectionHandler(newClientId);
 
     return newClientId;
   }
