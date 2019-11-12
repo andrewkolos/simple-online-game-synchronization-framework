@@ -1,14 +1,50 @@
-import { InMemoryClientServerNetwork, InputMessage, StateMessage } from '../../src/networking';
+import { InMemoryClientServerNetwork, InputMessage, StateMessage, TwoWayMessageBuffer } from '../../src/networking';
 import { ClientEntitySyncerRunner, PlayerClientEntitySyncer } from '../../src/synchronizers';
 import { DemoPlayer, DemoPlayerInput, demoPlayerInputApplicator, DemoPlayerState } from './demo-player';
 import { createKeyboardDemoInputCollector, KeyboardDemoinputCollectorKeycodes as KeyboardDemoInputCollectorKeycodes } from './keyboard-demo-input-collector';
 import { DemoSyncServer } from './demo-sync-server';
 
-// Helper code for running the demo. ///
+function createClient(keyMappings: KeyboardDemoInputCollectorKeycodes, connection: TwoWayMessageBuffer<StateMessage<DemoPlayerState>, InputMessage<DemoPlayerInput>>, serverUpdateRateHz: number) {
+
+  const inputCollector = createKeyboardDemoInputCollector(keyMappings);
+
+  const client = new PlayerClientEntitySyncer({
+    connection,
+    localPlayerInputStrategy: {
+      inputApplicator: demoPlayerInputApplicator,
+      inputSource: inputCollector,
+    },
+    serverUpdateRateHz,
+  });
+
+  return client;
+}
+
+// Start up clients and server, connect them, and start them. ///
+
+const serverSyncUpdateRate = 60;
+const clientUpdateRate = 60;
+
+const demoServer = new DemoSyncServer();
+const network = new InMemoryClientServerNetwork<InputMessage<DemoPlayerInput>, StateMessage<DemoPlayerState>>();
+
+const client1Id = demoServer.addClient(network.getNewClientConnection());
+const client2Id = demoServer.addClient(network.getNewClientConnection());
+
+const client1Runner = new ClientEntitySyncerRunner(createClient({ moveLeft: 65, moveRight: 68 }, network.getNewConnectionToServer(100), serverSyncUpdateRate));
+const client2Runner = new ClientEntitySyncerRunner(createClient({ moveLeft: 37, moveRight: 39 }, network.getNewConnectionToServer(100), serverSyncUpdateRate));
+
+demoServer.start(serverSyncUpdateRate);
+client1Runner.start(clientUpdateRate);
+client2Runner.start(clientUpdateRate);
+
+// Rendering/UI //
+
+// Rendering functions //
 
 function displayGame(entities: DemoPlayer[], displayElement: HTMLElement, numberOfPendingInputs: number) {
   const displayElementId = displayElement.id;
-
+ 
   const canvasElement = document.getElementById(`${displayElementId}_canvas`) as HTMLCanvasElement;
   const positionsElement = document.getElementById(`${displayElementId}_positions`) as HTMLElement;
   const lastAckElement = document.getElementById(`${displayElementId}_status`) as HTMLElement;
@@ -67,36 +103,7 @@ function handleMessageSent() {
   misc.innerHTML = message;
 }
 
-function createClient(playerEntityId: string, keyMappings: KeyboardDemoInputCollectorKeycodes, serverUpdateRateHz: number) {
-
-  const connection = network.getNewConnectionToServer(100);
-  const inputCollector = createKeyboardDemoInputCollector(playerEntityId, keyMappings);
-
-  const client = new PlayerClientEntitySyncer({
-    connection,
-    localPlayerInputStrategy: {
-      inputApplicator: demoPlayerInputApplicator,
-      inputSource: inputCollector,
-    },
-    serverUpdateRateHz,
-  });
-
-  return client;
-}
-
-// Start up clients and server; then, connect them. ///
-
-const serverSyncUpdateRate = 60;
-const clientUpdateRate = 60;
-
-const demoServer = new DemoSyncServer();
-const network = new InMemoryClientServerNetwork<InputMessage<DemoPlayerInput>, StateMessage<DemoPlayerState>>();
-
-const client1Id = demoServer.addClient(network.getNewClientConnection());
-const client2Id = demoServer.addClient(network.getNewClientConnection());
-
-const client1Runner = new ClientEntitySyncerRunner(createClient(client1Id, { moveLeft: 65, moveRight: 68}, serverSyncUpdateRate));
-const client2Runner = new ClientEntitySyncerRunner(createClient(client2Id, { moveLeft: 37, moveRight: 39}, serverSyncUpdateRate));
+// Hook up rendering //
 
 demoServer.onSynchronized((entities: DemoPlayer[]) => {
   const serverCanvas = document.getElementById('server_canvas') as HTMLCanvasElement;
@@ -121,7 +128,3 @@ client2Runner.onSynchronized((entities: DemoPlayer[]) => {
 
 network.onServerSentMessages(handleMessageSent);
 network.onClientSentMessages(handleMessageSent);
-
-demoServer.start(serverSyncUpdateRate);
-client1Runner.start(clientUpdateRate);
-client2Runner.start(clientUpdateRate);

@@ -3,11 +3,23 @@ import { DefaultMap } from '../../util/default-map';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { findLatestMessage } from '../../util/findLatestMessage';
-import { ClientEntitySyncerArgsBase, LocalPlayerInputStrategy } from './client-entity-synchronizer';
+import { ClientEntitySyncerArgsBase } from './client-entity-synchronizer';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
-import { Entity } from '../../entity';
+import { Entity, InputApplicator } from '../../entity';
+import { EntityTargetedInput } from './entity-targeted-input';
 
 type EntityId = string;
+
+export interface EntityInfo<State> {
+  id: EntityId;
+  state: State;
+  local: boolean;
+}
+
+export interface LocalPlayerInputStrategy<Input, State> {
+  inputSource: (entities: Array<EntityInfo<State>>) => Array<EntityTargetedInput<Input>>;
+  inputApplicator: InputApplicator<Input, State>;
+}
 
 export type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
@@ -71,7 +83,10 @@ export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
 
   private synchronizeLocalPlayerEntities(stateMessages: Array<StateMessageWithSyncInfo<State>>): Array<Entity<State>> {
     const latestStateMessages = this.pickLatestMessagesIndexedByEntityId(stateMessages);
-    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessages.values()].map((sm) => sm.entity));
+    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessages.values()].map((sm) => ({
+      ...sm.entity,
+      local: sm.entityBelongsToRecipientClient,
+    })));
     const inputsToApply: Array<SequencedEntityBoundInput<Input>> = [...this.determinePendingInputs(latestStateMessages), ...newInputs];
 
     const entitiesAfterSync: Map<EntityId, Entity<State>> =
@@ -106,7 +121,7 @@ export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
     return new Map(latest.map((message: M) => [message.entity.id, message]));
   }
 
-  private collectInputs(forEntities: Array<Entity<State>>): Array<InputMessage<Input>> {
+  private collectInputs(forEntities: Array<EntityInfo<State>>): Array<InputMessage<Input>> {
     const inputs = this.playerSyncStrategy.inputSource(forEntities);
     const asMessages: Array<InputMessage<Input>> = inputs.map((ebs) => {
       return {

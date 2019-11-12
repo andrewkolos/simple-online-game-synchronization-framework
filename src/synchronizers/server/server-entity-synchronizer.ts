@@ -2,7 +2,7 @@ import { EventEmitter } from 'typed-event-emitter';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
 import { singleLineify } from '../../util/singleLineify';
-import { EntityBoundInput } from '../client';
+import { EntityTargetedInput } from '../client';
 import { EntityCollection } from '../entity-collection';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 
@@ -39,7 +39,7 @@ export interface ServerEntitySyncherArgs<Input, State> {
   clientIdAssigner: () => string;
 }
 
-type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityBoundInput<Input>>) => void;
+type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
 
 /**
  * Creates and synchronizes game entities for clients.
