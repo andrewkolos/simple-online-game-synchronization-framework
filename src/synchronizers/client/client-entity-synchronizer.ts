@@ -1,9 +1,9 @@
-import { MultiEntityStateInterpolator } from './state-interpolator';
-import { NumericObject } from '../../interpolate-linearly';
 import { Entity } from '../../entity';
-import { PlayerClientEntitySyncerArgs, PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
-import { RecipientMessageBuffer } from '../../networking/message-buffer';
+import { NumericObject } from '../../interpolate-linearly';
 import { StateMessage } from '../../networking';
+import { RecipientMessageBuffer } from '../../networking/message-buffer';
+import { PlayerClientEntitySyncer, PlayerClientEntitySyncerArgs } from './player-client-entity-synchronizer';
+import { MultiEntityStateInterpolator } from './state-interpolator';
 
 export interface ClientEntitySyncerArgsBase {
   serverUpdateRateHz: number;

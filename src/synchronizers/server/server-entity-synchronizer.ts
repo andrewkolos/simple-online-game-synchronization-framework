@@ -39,6 +39,11 @@ export interface ServerEntitySyncherArgs<Input, State> {
   clientIdAssigner: () => string;
 }
 
+export interface ClientInformation {
+  id: string;
+  lastAcknowledgedInputSeqNumber: number;
+}
+
 type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
 
 /**
@@ -110,17 +115,13 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     }
   }
 
-  /**
-   * Given a client (identified by its ID), gets the last input sent by the client
-   * that this server processed.
-   * @param clientId The client's ID.
-   * @returns The last input sent by the client that this server processed.
-   */
-  public getLastProcessedInputForClient(clientId: string) {
-
+  public getClientInformation(): ReadonlyMap<ClientId, ClientInfo<Input, State>>;
+  public getClientInformation(clientId: string): ClientInfo<Input, State>;
+  public getClientInformation(clientId?: string) {
+    if (clientId == null) return this.clients as ReadonlyMap<ClientId, ClientInfo<Input, State>>;
     const client = this.clients.get(clientId);
     if (client != null) {
-      return client.seqNumberOfLastProcessedInput;
+      return client;
     } else {
       throw Error(`Did not find client with an ID of ${clientId}`);
     }

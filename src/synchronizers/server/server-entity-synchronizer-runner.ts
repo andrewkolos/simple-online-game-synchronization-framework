@@ -2,7 +2,9 @@ import { Interval, IntervalTaskRunner } from 'interval-task-runner';
 import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
-import { ServerEntitySyncer } from './server-entity-synchronizer';
+import { ServerEntitySyncer, ClientInfo } from './server-entity-synchronizer';
+
+type ClientId = string;
 
 export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends EventEmitter {
 
@@ -10,7 +12,7 @@ export class ServerEntitySyncerRunner<Input, State extends NumericObject> extend
 
   private updateInterval?: IntervalTaskRunner;
 
-  public constructor(public readonly synchronizer: ServerEntitySyncer<Input, State>) { super(); }
+  public constructor(private readonly synchronizer: ServerEntitySyncer<Input, State>) { super(); }
 
   public start(updateRateHz: number) {
     this.stop();
@@ -22,6 +24,12 @@ export class ServerEntitySyncerRunner<Input, State extends NumericObject> extend
     if (this.updateInterval != null && this.updateInterval.isRunning()) {
       this.updateInterval.stop();
     }
+  }
+
+  public getClientInformation(): ReadonlyMap<ClientId, ClientInfo<Input, State>>;
+  public getClientInformation(clientId: string): ClientInfo<Input, State>;
+  public getClientInformation(clientId?: string) {
+    return clientId == null ? this.synchronizer.getClientInformation() : this.synchronizer.getClientInformation(clientId);
   }
 
   private update() {

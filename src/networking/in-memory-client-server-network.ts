@@ -10,6 +10,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
 
   public readonly onClientSentMessages = this.registerEvent<(messages: ClientSendType[]) => void>();
   public readonly onServerSentMessages = this.registerEvent<(messages: ServerSendType[]) => void>();
+  public readonly onMessageSent = this.registerEvent<() => void>();
 
   private readonly clientSentMessageQueues: ClientSendType[][][] = [];
   private readonly serverSentMessageQueues: ServerSendType[][][] = [];
@@ -95,11 +96,11 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
     };
   }
 
-  public getInputMessageQueueLengths(): number[] {
+  public getClientSentMessageQueueLengths(): number[] {
     return this.clientSentMessageQueues.map((q) => q.length);
   }
 
-  public getStateMessageQueueLengths(): number[] {
+  public getServerSentMessageQueueLengths(): number[] {
     return this.serverSentMessageQueues.map((q) => q.length);
   }
 }
