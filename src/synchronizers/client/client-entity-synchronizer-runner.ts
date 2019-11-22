@@ -6,13 +6,13 @@ import { PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
 
 type OnSynchronizedHandler<State> = (entities: Array<Entity<State>>, pendingInputCount: number) => void;
 
-export class ClientEntitySyncerRunner<State extends NumericObject, Input> extends EventEmitter {
+export class ClientEntitySyncerRunner<Input, State extends NumericObject> extends EventEmitter {
 
   public readonly onSynchronized = this.registerEvent<OnSynchronizedHandler<State>>();
 
   private updateInterval?: IntervalTaskRunner;
 
-  public constructor(public readonly synchronizer: PlayerClientEntitySyncer<State, Input>) { super(); }
+  public constructor(public readonly synchronizer: PlayerClientEntitySyncer<Input, State>) { super(); }
 
   public start(updateRateHz: number) {
     this.stop();
