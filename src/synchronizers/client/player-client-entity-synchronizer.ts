@@ -35,7 +35,7 @@ interface SortedStateMessages<State> {
 
 type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
 
-export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
+export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
 
   private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
   private readonly interpolator: MultiEntityStateInterpolator<State>;
