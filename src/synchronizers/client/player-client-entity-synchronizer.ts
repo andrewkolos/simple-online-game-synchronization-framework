@@ -7,6 +7,7 @@ import { ClientEntitySyncerArgsBase } from './client-entity-synchronizer';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityTargetedInput } from './entity-targeted-input';
+import { makePlayerClientEntitySyncerFromHandshaking, WithHandshake } from './handshaking-factory-functions';
 
 type EntityId = string;
 
@@ -35,7 +36,11 @@ interface SortedStateMessages<State> {
 
 type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
 
-export class PlayerClientEntitySyncer<State extends NumericObject, Input> {
+export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
+
+  public static fromHandshaking<Input, State extends NumericObject>(args: WithHandshake<PlayerClientEntitySyncerArgs<Input, State>>) {
+    return makePlayerClientEntitySyncerFromHandshaking(args);
+  }
 
   private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
   private readonly interpolator: MultiEntityStateInterpolator<State>;

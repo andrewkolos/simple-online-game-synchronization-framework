@@ -9,7 +9,7 @@ import { PlayerClientEntitySyncerArgs, PlayerClientEntitySyncer } from './player
 
 type StateMessageAndHandshakeRecipBuffer<EntityState> = RecipientMessageBuffer<StateMessage<EntityState> | HandshakeInfo>;
 
-type WithHandshake<T extends PlayerClientEntitySyncerArgs<unknown, unknown> | ClientEntitySyncerArgs<unknown>> =
+export type WithHandshake<T extends PlayerClientEntitySyncerArgs<unknown, unknown> | ClientEntitySyncerArgs<unknown>> =
   Exclude<T,
     'serverEntityUpdateRateHz' | 'connection'> & {
       connection: RecipientMessageBuffer<StateMessage<PickEntityStateFromArgs<T>> | HandshakeInfo>;
@@ -17,7 +17,7 @@ type WithHandshake<T extends PlayerClientEntitySyncerArgs<unknown, unknown> | Cl
     };
 
 type PickEntityStateFromArgs<T> = T extends ClientEntitySyncerArgs<infer EntityState> ? EntityState :
-                                  T extends PlayerClientEntitySyncerArgs<infer EntityState, unknown> ? EntityState : never;
+                                  T extends PlayerClientEntitySyncerArgs<unknown, infer EntityState> ? EntityState : never;
 
 type MessageTypeMap<EntityState> = {
   [handshakeMessageKind]: HandshakeInfo,
@@ -53,15 +53,15 @@ export async function makeClientEntitySyncerFromHandshaking<EntityState extends 
   return ClientEntitySyncer.withoutLocalPlayerSupport(syncerArgs);
 }
 
-export async function makePlayerClientEntitySyncerFromHandshaking<EntityInput extends NumericObject,
-  EntityState extends NumericObject>(args: WithHandshake<PlayerClientEntitySyncerArgs<EntityState, EntityInput>>):
+export async function makePlayerClientEntitySyncerFromHandshaking<EntityInput,
+  EntityState extends NumericObject>(args: WithHandshake<PlayerClientEntitySyncerArgs<EntityInput, EntityState>>):
   Promise<PlayerClientEntitySyncer<EntityInput, EntityState>> {
 
   const { handshakeBuffer, entityStateBuffer } = splitConnection(args.connection);
 
   const handshake = await receiveHandshake(handshakeBuffer, args.handshakeTimeoutMs);
 
-  const syncerArgs: PlayerClientEntitySyncerArgs<EntityState, EntityInput> = Object.assign(Object.assign({}, args), {
+  const syncerArgs: PlayerClientEntitySyncerArgs<EntityInput, EntityState> = Object.assign(Object.assign({}, args), {
     serverEntityUpdateRateHz: handshake.entityUpdateRateHz,
     connection: entityStateBuffer,
   });

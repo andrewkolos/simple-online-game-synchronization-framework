@@ -19,7 +19,7 @@ export class ClientEntitySyncer<State extends NumericObject> {
     return new ClientEntitySyncer<State>(args);
   }
 
-  public static withLocalPlayerSupport<State extends NumericObject, Input>(args: PlayerClientEntitySyncerArgs<Input, State>) {
+  public static withLocalPlayerSupport<Input, State extends NumericObject>(args: PlayerClientEntitySyncerArgs<Input, State>) {
     return new PlayerClientEntitySyncer(args);
   }
 
