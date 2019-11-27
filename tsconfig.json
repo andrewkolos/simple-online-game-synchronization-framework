@@ -21,10 +21,12 @@
     "lib": [
       "dom",
       "esnext"
-    ]
+    ],
+    "outDir": "./dist"
   },
   "exclude": [
     "./demo/**",
-    "./dist/**"
-  ]
+    "./dist/**",
+    "./test/**"
+  ],
 }

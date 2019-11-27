@@ -1,11 +1,11 @@
 import { Entity } from '../../entity';
-import { TimestampedBuffer } from '../../lag-compensation';
 import { ServerEntitySyncer } from './server-entity-synchronizer';
-import { EntityBoundInput } from '../client';
+import { TimestampedBuffer } from '../../networking';
+import { EntityTargetedInput } from '../client';
 
 interface ServerState<Input, State> {
   entities: Array<Entity<State>>;
-  inputsApplied: Array<EntityBoundInput<Input>>;
+  inputsApplied: Array<EntityTargetedInput<Input>>;
 }
 
 export class StateHistoryRecorder<Input, State> {
@@ -14,7 +14,7 @@ export class StateHistoryRecorder<Input, State> {
 
   public constructor(serverEntitySyncer: ServerEntitySyncer<Input, State>,
     public readonly recordLengthMs: number) {
-    serverEntitySyncer.on('synchronized', (entities: Array<Entity<State>>, inputsApplied: Array<EntityBoundInput<Input>>) => {
+    serverEntitySyncer.onSynchronized((entities: Array<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => {
       this.history.record({
         entities,
         inputsApplied,
