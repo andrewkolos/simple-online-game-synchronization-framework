@@ -1,32 +1,41 @@
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
-import { StateMessage } from '../../networking';
+import { StateMessage, HandshakeData } from '../../networking';
 import { RecipientMessageBuffer } from '../../networking/message-buffer';
-import { PlayerClientEntitySyncer, PlayerClientEntitySyncerArgs } from './player-client-entity-synchronizer';
 import { MultiEntityStateInterpolator } from './state-interpolator';
+import { makeClientEntitySyncerFromHandshaking } from './handshaking-factory-functions';
 
-export interface ClientEntitySyncerArgsBase {
+export interface ClientEntitySyncerArgs<State> {
+  connection: RecipientMessageBuffer<StateMessage<State> | HandshakeData>;
+  handshakeTimeoutMs?: number;
+}
+
+export interface ClientEntitySyncerArgsWithServerInfo<State extends NumericObject> {
+  connection: RecipientMessageBuffer<StateMessage<State>>;
   serverUpdateRateHz: number;
 }
 
-export interface ClientEntitySyncerArgs<State> extends ClientEntitySyncerArgsBase {
-  connection: RecipientMessageBuffer<StateMessage<State>>;
+export interface ClientEntitySyncerPreHandshake<State extends NumericObject> {
+  handshake(): Promise<ClientEntitySyncer<State>>;
 }
 
 export class ClientEntitySyncer<State extends NumericObject> {
 
-  public static withoutLocalPlayerSupport<State extends NumericObject>(args: ClientEntitySyncerArgs<State>) {
-    return new ClientEntitySyncer<State>(args);
+  public static create<State extends NumericObject>(args: ClientEntitySyncerArgs<State>):
+    ClientEntitySyncerPreHandshake<State> {
+    return {
+      handshake: async () => makeClientEntitySyncerFromHandshaking(args),
+    };
   }
 
-  public static withLocalPlayerSupport<Input, State extends NumericObject>(args: PlayerClientEntitySyncerArgs<Input, State>) {
-    return new PlayerClientEntitySyncer(args);
+  public static createWithServerInfo<State extends NumericObject>(args: ClientEntitySyncerArgsWithServerInfo<State>) {
+    return new ClientEntitySyncer(args);
   }
 
   private readonly stateMessageSource: RecipientMessageBuffer<StateMessage<State>>;
   private readonly interpolator: MultiEntityStateInterpolator<State>;
 
-  private constructor(args: ClientEntitySyncerArgs<State>) {
+  private constructor(args: ClientEntitySyncerArgsWithServerInfo<State>) {
     this.stateMessageSource = args.connection;
     this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
   }

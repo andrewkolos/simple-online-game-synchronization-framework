@@ -1,26 +1,16 @@
-import { ClientEntitySyncerArgs, ClientEntitySyncer } from './client-entity-synchronizer';
+import { ClientEntitySyncerArgs, ClientEntitySyncer, ClientEntitySyncerArgsWithServerInfo } from './client-entity-synchronizer';
 import { RecipientMessageBuffer } from '../../networking/message-buffer';
-import { StateMessage, HandshakeInfo, EntityMessageKind } from '../../networking';
+import { StateMessage, HandshakeData, EntityMessageKind, InputMessage } from '../../networking';
 import { MessageCategorizer, MessageCategoryAssigner } from '../../networking/message-categorizer';
 import { handshakeMessageKind } from '../../handshaking/message-types';
 import { receiveHandshake } from '../../handshaking/receive-handshake';
 import { NumericObject } from '../../interpolate-linearly';
-import { PlayerClientEntitySyncerArgs, PlayerClientEntitySyncer } from './player-client-entity-synchronizer';
+import { PlayerClientEntitySyncer, PlayerClientEntitySyncerArgs, PlayerClientEntitySyncerArgsWithServerInfo } from './player-client-entity-synchronizer';
 
-type StateMessageAndHandshakeRecipBuffer<EntityState> = RecipientMessageBuffer<StateMessage<EntityState> | HandshakeInfo>;
-
-export type WithHandshake<T extends PlayerClientEntitySyncerArgs<unknown, unknown> | ClientEntitySyncerArgs<unknown>> =
-  Exclude<T,
-    'serverEntityUpdateRateHz' | 'connection'> & {
-      connection: RecipientMessageBuffer<StateMessage<PickEntityStateFromArgs<T>> | HandshakeInfo>;
-      handshakeTimeoutMs?: number;
-    };
-
-type PickEntityStateFromArgs<T> = T extends ClientEntitySyncerArgs<infer EntityState> ? EntityState :
-                                  T extends PlayerClientEntitySyncerArgs<unknown, infer EntityState> ? EntityState : never;
+type StateMessageAndHandshakeRecipBuffer<EntityState> = RecipientMessageBuffer<StateMessage<EntityState> | HandshakeData>;
 
 type MessageTypeMap<EntityState> = {
-  [handshakeMessageKind]: HandshakeInfo,
+  [handshakeMessageKind]: HandshakeData,
   [EntityMessageKind.State]: StateMessage<EntityState>,
 };
 
@@ -39,33 +29,38 @@ function splitConnection<EntityState extends NumericObject>(connection: StateMes
 }
 
 export async function makeClientEntitySyncerFromHandshaking<EntityState extends NumericObject>(args:
-  WithHandshake<ClientEntitySyncerArgs<EntityState>>): Promise<ClientEntitySyncer<EntityState>> {
+  ClientEntitySyncerArgs<EntityState>): Promise<ClientEntitySyncer<EntityState>> {
 
   const { handshakeBuffer, entityStateBuffer } = splitConnection(args.connection);
 
   const handshake = await receiveHandshake(handshakeBuffer, args.handshakeTimeoutMs);
 
-  const syncerArgs: ClientEntitySyncerArgs<EntityState> = Object.assign(Object.assign({}, args), {
-    serverEntityUpdateRateHz: handshake.entityUpdateRateHz,
+  const syncerArgs: ClientEntitySyncerArgsWithServerInfo<EntityState> = {
     connection: entityStateBuffer,
-  });
+    serverUpdateRateHz: handshake.entityUpdateRateHz,
+  };
 
-  return ClientEntitySyncer.withoutLocalPlayerSupport(syncerArgs);
+  return ClientEntitySyncer.createWithServerInfo(syncerArgs);
 }
 
 export async function makePlayerClientEntitySyncerFromHandshaking<EntityInput,
-  EntityState extends NumericObject>(args: WithHandshake<PlayerClientEntitySyncerArgs<EntityInput, EntityState>>):
+  EntityState extends NumericObject>(args: PlayerClientEntitySyncerArgs<EntityInput, EntityState>):
   Promise<PlayerClientEntitySyncer<EntityInput, EntityState>> {
 
   const { handshakeBuffer, entityStateBuffer } = splitConnection(args.connection);
 
   const handshake = await receiveHandshake(handshakeBuffer, args.handshakeTimeoutMs);
 
-  const syncerArgs: PlayerClientEntitySyncerArgs<EntityInput, EntityState> = Object.assign(Object.assign({}, args), {
-    serverEntityUpdateRateHz: handshake.entityUpdateRateHz,
-    connection: entityStateBuffer,
-  });
+  const syncerArgs: PlayerClientEntitySyncerArgsWithServerInfo<EntityInput, EntityState> = {
+    connection: {
+      receive() { return entityStateBuffer.receive(); },
+      [Symbol.iterator]: entityStateBuffer[Symbol.iterator],
+      send: (messages: InputMessage<EntityInput> | Array<InputMessage<EntityInput>>) => args.connection.send(messages),
+    },
+    serverUpdateRateHz: handshake.entityUpdateRateHz,
+    localPlayerInputStrategy: args.localPlayerInputStrategy,
+  }
 
-  return ClientEntitySyncer.withLocalPlayerSupport(syncerArgs);
+  return PlayerClientEntitySyncer.createWithServerInfo(syncerArgs);
 
 }

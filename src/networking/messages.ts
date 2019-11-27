@@ -42,7 +42,7 @@ export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T> & {
 
 export const handshakeMessageKind = 'handshake';
 
-export interface HandshakeInfo {
+export interface HandshakeData {
   kind: typeof handshakeMessageKind;
   entityUpdateRateHz: number;
 }

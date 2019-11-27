@@ -1,13 +1,12 @@
-import { StateMessage, InputMessage, StateMessageWithSyncInfo, EntityMessageKind } from '../../networking';
+import { StateMessage, InputMessage, StateMessageWithSyncInfo, EntityMessageKind, HandshakeData } from '../../networking';
 import { DefaultMap } from '../../util/default-map';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
 import { findLatestMessage } from '../../util/findLatestMessage';
-import { ClientEntitySyncerArgsBase } from './client-entity-synchronizer';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityTargetedInput } from './entity-targeted-input';
-import { makePlayerClientEntitySyncerFromHandshaking, WithHandshake } from './handshaking-factory-functions';
+import { makePlayerClientEntitySyncerFromHandshaking } from './handshaking-factory-functions';
 
 type EntityId = string;
 
@@ -24,9 +23,16 @@ export interface LocalPlayerInputStrategy<Input, State> {
 
 export type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
-export interface PlayerClientEntitySyncerArgs<Input, State> extends ClientEntitySyncerArgsBase {
+export interface PlayerClientEntitySyncerArgs<Input, State> {
+  connection: TwoWayMessageBuffer<StateMessage<State> | HandshakeData, InputMessage<Input>>;
+  localPlayerInputStrategy: LocalPlayerInputStrategy<Input, State>;
+  handshakeTimeoutMs?: number;
+}
+
+export interface PlayerClientEntitySyncerArgsWithServerInfo<Input, State> {
   connection: PlayerClientSyncerConnectionToServer<Input, State>;
   localPlayerInputStrategy: LocalPlayerInputStrategy<Input, State>;
+  serverUpdateRateHz: number;
 }
 
 interface SortedStateMessages<State> {
@@ -36,10 +42,22 @@ interface SortedStateMessages<State> {
 
 type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
 
+export interface PlayerClientEntitySyncerPreHandshake<Input, State extends NumericObject> {
+  handshake(): Promise<PlayerClientEntitySyncer<Input, State>>;
+}
+
 export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
 
-  public static fromHandshaking<Input, State extends NumericObject>(args: WithHandshake<PlayerClientEntitySyncerArgs<Input, State>>) {
-    return makePlayerClientEntitySyncerFromHandshaking(args);
+  public static create<Input, State extends NumericObject>(args: PlayerClientEntitySyncerArgs<Input, State>):
+    PlayerClientEntitySyncerPreHandshake<Input, State> {
+
+    return {
+      handshake: async () => makePlayerClientEntitySyncerFromHandshaking(args),
+    };
+  }
+
+  public static createWithServerInfo<Input, State extends NumericObject>(args: PlayerClientEntitySyncerArgsWithServerInfo<Input, State>) {
+    return new PlayerClientEntitySyncer(args);
   }
 
   private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
@@ -48,7 +66,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   private currentInputSequenceNumber = 0;
   private pendingInputs: Array<SequencedEntityBoundInput<Input>> = [];
 
-  public constructor(args: PlayerClientEntitySyncerArgs<Input, State>) {
+  private constructor(args: PlayerClientEntitySyncerArgsWithServerInfo<Input, State>) {
     this.connection = args.connection;
     this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
     this.playerSyncStrategy = args.localPlayerInputStrategy;
