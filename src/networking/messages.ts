@@ -40,13 +40,6 @@ export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T> & {
   lastProcessedInputSequenceNumber: number;
 };
 
-export const handshakeMessageKind = 'handshake';
-
-export interface HandshakeData {
-  kind: typeof handshakeMessageKind;
-  entityUpdateRateHz: number;
-}
-
 export function isEntityInputMessage(message: any): message is InputMessage<unknown> {
   const asInputMessage = message as Partial<InputMessage<never>>;
 
