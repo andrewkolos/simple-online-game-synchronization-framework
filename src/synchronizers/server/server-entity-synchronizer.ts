@@ -130,14 +130,10 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
   /**
    * Process all inputs received from clients, updating entities, and then send
    * the states of all entities to all clients.
-   * @param entityStates Overrides this synchronizer's current representation
-   * of certain entities. This parameter should be used unless the state of
-   * the world is completely determined by player inputs.
    */
-  public synchronize(entityStates?: Array<Entity<State>>): ReadonlyArray<Entity<State>> {
+  public synchronize(): ReadonlyArray<Entity<State>> {
     this.emit(this.onPreSynchronization);
 
-    if (entityStates != null) this.setEntityState(...entityStates);
     const inputs = this.retrieveValidInputs();
     this.applyInputs(inputs);
     this.sendStates();
@@ -146,16 +142,20 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     return this._entities.asArray();
   }
 
-  private setEntityState(...entities: Array<Entity<State>>) {
-    for (const entity of entities) {
-      const localState = this._entities.getState(entity.id);
-      if (localState == null) {
-        throw Error(singleLineify`
-          Unknown entity ${entity.id}. The entity must be added to this synchronizer before
+  /**
+   * Overwrites the state of an entity.
+   * @param id The ID of the entity.
+   * @param state The properties of the entity's state to overwrite and their values.
+   */
+  public setEntityState(id: string, state: Partial<State>) {
+    const localState = this._entities.getState(id);
+    if (localState == null) {
+      throw Error(singleLineify`
+          Unknown entity ${id}. The entity must be added to this synchronizer before
           manually changing its state.
         `);
-      }
     }
+    Object.assign(localState, state);
   }
 
   private retrieveValidInputs(): Array<ClientInputs<Input, State>> {
