@@ -21,7 +21,7 @@ interface ClientInputs<Input, State> {
  * @param input The input that is meant to be applied to the entity.
  * @returns `true` if the input is acceptable and may be applied to the entity, `false` otherwise.
  */
-type InputValidator<Input, State> = (entity: Entity<State>, input: Input) => boolean;
+export type InputValidator<Input, State> = (entity: Entity<State>, input: Input) => boolean;
 
 export interface ServerEntitySyncherArgs<Input, State> {
   /**
@@ -176,6 +176,7 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
         if (state != undefined && this.inputValidator({ id: input.entityId, state }, input.input)) {
           validInputs.push(input);
         }
+        client.seqNumberOfLastProcessedInput = input.inputSequenceNumber;
       }
       inputsByClient.push({ client, inputs: validInputs });
     }
@@ -184,13 +185,12 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
   }
 
   private applyInputs(inputsByClient: Array<ClientInputs<Input, State>>): void {
-    for (const { client, inputs } of inputsByClient) {
+    for (const { inputs } of inputsByClient) {
       for (const input of inputs) {
         const { entityId } = input;
         const state = this._entities.getState(entityId);
         if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
         this._entities.set({ id: entityId, state: this.inputApplicator(state, input.input) });
-        client.seqNumberOfLastProcessedInput = input.inputSequenceNumber;
       }
     }
   }

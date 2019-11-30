@@ -76,7 +76,7 @@ class SingleEntityStateInterpolator<State> {
   public interpolate(...newStatesFromServer: State[]): State {
 
     this.pushNewStatesOntoBuffer(newStatesFromServer);
-    this.dropUneededOldStatesFromBuffer();
+    this.dropUnneededOldStatesFromBuffer();
 
     const buffer = this.stateBuffer;
     const renderTimestamp = new Date().getTime() - Interval.fromHz(this.serverUpdateRateHz).ms;
@@ -97,7 +97,7 @@ class SingleEntityStateInterpolator<State> {
     this.stateBuffer.push(...timestamped);
   }
 
-  private dropUneededOldStatesFromBuffer() {
+  private dropUnneededOldStatesFromBuffer() {
     const buffer = this.stateBuffer;
     const now = new Date().getTime();
     const renderTimestamp = now - Interval.fromHz(this.serverUpdateRateHz).ms;

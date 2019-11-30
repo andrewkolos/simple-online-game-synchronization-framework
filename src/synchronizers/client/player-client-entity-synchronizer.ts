@@ -6,6 +6,7 @@ import { findLatestMessage } from '../../util/findLatestMessage';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityTargetedInput } from './entity-targeted-input';
+import { InputValidator } from '../server';
 
 type EntityId = string;
 
@@ -17,6 +18,7 @@ export interface EntityInfo<State> {
 
 export interface LocalPlayerInputStrategy<Input, State> {
   inputSource: (entities: Array<EntityInfo<State>>) => Array<EntityTargetedInput<Input>>;
+  inputValidator: InputValidator<Input, State>;
   inputApplicator: InputApplicator<Input, State>;
 }
 
@@ -94,7 +96,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
 
     for (const sebInput of inputsToApply) {
       const targetEntityMessage = entitiesAfterSync.get(sebInput.entityId);
-      if (targetEntityMessage == null)
+      if (targetEntityMessage == null || !this.playerSyncStrategy.inputValidator(targetEntityMessage, sebInput.input))
         continue;
       const state = targetEntityMessage.state;
       const stateAfterInput = this.playerSyncStrategy.inputApplicator(state, sebInput.input);
@@ -109,7 +111,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   private determinePendingInputs(latestStateMessages: Map<EntityId, StateMessageWithSyncInfo<State>>) {
     return this.pendingInputs.filter((sebInput: SequencedEntityBoundInput<Input>) => {
       const latestStateMessageForEntity = latestStateMessages.get(sebInput.entityId);
-      if (latestStateMessageForEntity == null)
+      if (latestStateMessageForEntity == null || !this.playerSyncStrategy.inputValidator(latestStateMessageForEntity.entity, sebInput.input))
         return false;
       return latestStateMessageForEntity.lastProcessedInputSequenceNumber < sebInput.inputSequenceNumber;
     });
