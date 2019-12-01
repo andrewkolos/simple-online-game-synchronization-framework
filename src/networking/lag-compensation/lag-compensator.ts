@@ -4,13 +4,16 @@ export interface LcRequest {
   timestamp: number;
 }
 
-export interface ResimContext<GameState> {
+export interface ResimArgs<GameState> {
+  /** The state before the current state to be recomputed, as it was before the request. */
   oldPreviousState: GameState;
+  /** The state before the current state to be recomputed, newly computed after the request. */
   newPreviousState: GameState;
+  /** The current state, to be resimulated. */
   oldCurrentState: GameState;
 }
 
-export type Resimulator<G> = (context: ResimContext<G>) => G;
+export type Resimulator<G> = (context: ResimArgs<G>) => G;
 
 export type RequestApplicator<State, Request> = (state: State, request: Request) => State;
 

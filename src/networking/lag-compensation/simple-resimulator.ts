@@ -1,8 +1,8 @@
-import { ResimContext } from './lag-compensator';
+import { ResimArgs } from './lag-compensator';
 
-export const simpleResimulator = <T>(context: ResimContext<T>): T => {
+export const simpleResimulator = <T>(context: ResimArgs<T>): T => {
 
-  const _context = context as AllPropsAny<ResimContext<any>>;
+  const _context = context as AllPropsAny<ResimArgs<any>>;
   if (typeof _context.oldCurrentState === 'number') {
     const value = _context.oldCurrentState + _context.newPreviousState - _context.oldPreviousState;
     return value as unknown as T;
