@@ -22,17 +22,6 @@ export interface LagCompensatorCalculatorArgs<GameState, ClientRequest extends L
   requestValidator: ClientRequestValidator<ClientRequest>;
 }
 
-interface LagCompensatorCalculatorPositiveResponse {
-  requestAccepted: true;
-}
-
-interface LagCompensatorCalculatorNegativeResponse {
-  requestAccepted: false;
-}
-
-export type LagCompensatorResponse =
-  LagCompensatorCalculatorPositiveResponse | LagCompensatorCalculatorNegativeResponse;
-
 export class LagCompensator<GameState, ClientRequest extends LcRequest> {
 
   private resimmer: Resimulator<GameState>;
@@ -45,26 +34,31 @@ export class LagCompensator<GameState, ClientRequest extends LcRequest> {
     this.requestValidator = args.requestValidator;
   }
 
-  public processRequest(serverHistory: TimestampedBuffer<GameState>, request: ClientRequest): LagCompensatorResponse {
+  /**
+   * Process a lag compensation request sent by a client.
+   * @param serverHistory The history of the state of the game. Used to determine the state of the game at the time of request
+   * and to resimulate the game to the present if the request is accepted.
+   * @param request The request sent by the client.
+   * @returns Whether or not the request was accepted.
+   */
+  public processRequest(serverHistory: TimestampedBuffer<GameState>, request: ClientRequest): boolean {
 
     const stateHistory = Array.from(serverHistory.slice(request.timestamp));
 
     if (stateHistory.length === 0) {
-      return { requestAccepted: false };
+      return false;
     }
 
     const gameStateAtRequestedTime = stateHistory[0];
 
-    if (!this.requestValidator(request)) return { requestAccepted: false };
+    if (!this.requestValidator(request)) return false;
 
     const stateAfterCompensation = this.requestApplicator(gameStateAtRequestedTime.value, request);
 
     const resimulatedStates = this.resimulate(stateHistory, stateAfterCompensation);
     resimulatedStates.forEach((state: Timestamped<GameState>) => serverHistory.rewrite(state.timestamp, state.value));
 
-    return {
-      requestAccepted: true,
-    };
+    return true;
   }
 
   private resimulate(history: Array<Timestamped<GameState>>, firstStateAfterCompensation: GameState): Array<Timestamped<GameState>> {

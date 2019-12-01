@@ -4,7 +4,6 @@ describe(nameof(ServerEntitySyncer), () => {
   it('synchronized event should give deep copies of entity states', () => {
     const syncer = new ServerEntitySyncer<number, { foo: number }>({
       clientIdAssigner: (() => { let i = 0; return () => String(i++); })(),
-      connectionHandler: () => { },
       inputApplicator: (currentState: { foo: number }, input: number) => ({ foo: currentState.foo + input }),
       inputValidator: () => true,
     });

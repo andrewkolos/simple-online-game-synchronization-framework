@@ -1,4 +1,4 @@
-import { binarySearch, binarySearchClosestMatch } from '../..//util/binsearch';
+import { binarySearchClosestMatch } from '../..//util/binsearch';
 import { singleLineify } from '../../util/singleLineify';
 import { LruCache } from '../../util/lru-cache';
 
@@ -54,11 +54,6 @@ interface FoundGetStateResult<T> {
 interface NotFoundGetStateResult {
   outcome: SearchOutcome.TooNewToExist | SearchOutcome.TooOldToStillExist;
   value?: undefined;
-}
-
-const enum SearchType {
-  Exact,
-  ClosestBefore,
 }
 
 export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
@@ -143,7 +138,7 @@ export class TimestampedBuffer<State> {
   public mostRecentTo(timestamp: number): Timestamped<State> {
     this.checkEmptyUnsafe();
 
-    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp), SearchType.ClosestBefore);
+    const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     return this.states[index];
   }
@@ -203,7 +198,7 @@ export class TimestampedBuffer<State> {
     });
   }
 
-  private indexOfStateAtSafe(timestamp: Timestamp, searchType: SearchType): SearchResult {
+  private indexOfStateAtSafe(timestamp: Timestamp): SearchResult {
     const indexInCache = this.searchCache(timestamp);
 
     if (indexInCache != null) return {
@@ -222,10 +217,8 @@ export class TimestampedBuffer<State> {
     }
 
     const comparator = (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp - o2.value;
-    const index = searchType === SearchType.Exact ? binarySearch(this.states, timestamp, comparator) : (() => {
-      const closestMatch = binarySearchClosestMatch(this.states, timestamp, comparator);
-      return closestMatch.value.timestamp === timestamp.value ? closestMatch.index : closestMatch.index - 1;
-    })();
+    const closestMatch = binarySearchClosestMatch(this.states, timestamp, comparator);
+    const index = closestMatch.value.timestamp === timestamp.value ? closestMatch.index : closestMatch.index - 1;
 
     if (index == null) {
       return { outcome: SearchOutcome.NeverCouldHaveExisted };
@@ -237,8 +230,8 @@ export class TimestampedBuffer<State> {
     };
   }
 
-  private indexOfStateAtUnsafe(timestamp: Timestamp, searchType: SearchType = SearchType.Exact): number {
-    const result = this.indexOfStateAtSafe(timestamp, searchType);
+  private indexOfStateAtUnsafe(timestamp: Timestamp): number {
+    const result = this.indexOfStateAtSafe(timestamp);
 
     switch (result.outcome) {
       case SearchOutcome.NeverCouldHaveExisted:

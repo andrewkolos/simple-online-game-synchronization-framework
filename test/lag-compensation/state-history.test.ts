@@ -1,5 +1,5 @@
 import MockDate from 'mockdate';
-import { TimestampedBuffer, Timestamped } from '../../src/lag-compensation/timestamped-buffer';
+import { TimestampedBuffer, Timestamped } from '../../src/networking/lag-compensation';
 import { advanceTime } from './advanceTime';
 
 describe(nameof(TimestampedBuffer), () => {

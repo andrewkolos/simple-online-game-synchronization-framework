@@ -1,4 +1,4 @@
-import { LagCompensator, ClientRequestValidator, RequestApplicator, RequestTimestampExtractor, LagCompensatorResponse } from '../../src/lag-compensation';
+import { LagCompensator, ClientRequestValidator, RequestApplicator } from '../../src/networking/lag-compensation';
 import { TimestampedBuffer, simpleResimulator } from '../../src/';
 import { advanceTime } from './advanceTime';
 import { cloneDumbObject } from '../../src/util/dumb-objects';
@@ -40,19 +40,14 @@ class LagCompensatorRoot {
         return stateAfterComp;
       };
 
-    const timestampExtractor: RequestTimestampExtractor<LagCompRequest> = (request: LagCompRequest) => {
-      return history.mostRecentTo(request.timestamp).timestamp;
-    };
-
     this.calculator = new LagCompensator({
-      timestampExtractor,
       requestApplicator,
       requestValidator,
       resimmer: simpleResimulator,
     });
   }
 
-  public increaseP1ScoreAt(time: number): LagCompensatorResponse {
+  public increaseP1ScoreAt(time: number): boolean {
     return this.calculator.processRequest(this.history, {
       timestamp: time,
     });
