@@ -5,6 +5,7 @@ import { singleLineify } from '../../util/singleLineify';
 import { EntityTargetedInput } from '../client';
 import { EntityCollection } from '../entity-collection';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
+import { cloneDumbObject } from '../../util';
 
 type ClientId = string;
 
@@ -209,7 +210,7 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
           kind: EntityMessageKind.State,
           entity: {
             id: entity.id,
-            state: entity.state,
+            state: cloneDumbObject(entity.state),
           },
           sentAt: new Date().getTime(),
         };

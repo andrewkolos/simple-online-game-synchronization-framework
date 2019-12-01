@@ -111,7 +111,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   private determinePendingInputs(latestStateMessages: Map<EntityId, StateMessageWithSyncInfo<State>>) {
     return this.pendingInputs.filter((sebInput: SequencedEntityBoundInput<Input>) => {
       const latestStateMessageForEntity = latestStateMessages.get(sebInput.entityId);
-      if (latestStateMessageForEntity == null || !this.playerSyncStrategy.inputValidator(latestStateMessageForEntity.entity, sebInput.input))
+      if (latestStateMessageForEntity == null)
         return false;
       return latestStateMessageForEntity.lastProcessedInputSequenceNumber < sebInput.inputSequenceNumber;
     });
