@@ -1,5 +1,9 @@
 import { TimestampedBuffer, Timestamped } from './timestamped-buffer';
 
+export interface LcRequest {
+  timestamp: number;
+}
+
 export interface ResimContext<GameState> {
   oldPreviousState: GameState;
   newPreviousState: GameState;
@@ -12,13 +16,10 @@ export type RequestApplicator<State, Request> = (state: State, request: Request)
 
 export type ClientRequestValidator<Request> = (request: Request) => boolean;
 
-export type RequestTimestampExtractor<Request> = (request: Request) => number;
-
-export interface LagCompensatorCalculatorArgs<GameState, ClientRequest> {
+export interface LagCompensatorCalculatorArgs<GameState, ClientRequest extends LcRequest> {
   resimmer: Resimulator<GameState>;
   requestApplicator: RequestApplicator<GameState, ClientRequest>;
   requestValidator: ClientRequestValidator<ClientRequest>;
-  timestampExtractor: RequestTimestampExtractor<ClientRequest>;
 }
 
 interface LagCompensatorCalculatorPositiveResponse {
@@ -32,23 +33,21 @@ interface LagCompensatorCalculatorNegativeResponse {
 export type LagCompensatorResponse =
   LagCompensatorCalculatorPositiveResponse | LagCompensatorCalculatorNegativeResponse;
 
-export class LagCompensator<GameState, ClientRequest> {
+export class LagCompensator<GameState, ClientRequest extends LcRequest> {
 
   private resimmer: Resimulator<GameState>;
   private requestApplicator: RequestApplicator<GameState, ClientRequest>;
   private requestValidator: ClientRequestValidator<ClientRequest>;
-  private timestampExtractor: RequestTimestampExtractor<ClientRequest>;
 
   public constructor(args: LagCompensatorCalculatorArgs<GameState, ClientRequest>) {
     this.resimmer = args.resimmer;
     this.requestApplicator = args.requestApplicator;
     this.requestValidator = args.requestValidator;
-    this.timestampExtractor = args.timestampExtractor;
   }
 
   public processRequest(serverHistory: TimestampedBuffer<GameState>, request: ClientRequest): LagCompensatorResponse {
 
-    const stateHistory = Array.from(serverHistory.slice(this.timestampExtractor(request)));
+    const stateHistory = Array.from(serverHistory.slice(request.timestamp));
 
     if (stateHistory.length === 0) {
       return { requestAccepted: false };

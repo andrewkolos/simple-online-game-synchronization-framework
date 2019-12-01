@@ -14,9 +14,9 @@ export const simpleResimulator = <T>(context: ResimContext<T>): T => {
       newCurrentState[key] = simpleResimulator({
         oldPreviousState: _context.oldPreviousState[key],
         newPreviousState: _context.newPreviousState[key],
-        oldCurrentState: _context.oldCurrentState[key]
-      })
-    })
+        oldCurrentState: _context.oldCurrentState[key],
+      });
+    });
   }
 
   return newCurrentState;
