@@ -58,11 +58,6 @@ interface NotFoundGetStateResult {
 
 export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
 
-/**
- * Collection for storing the history of an `ServerEntitySyncer`.
- * Before reading or writing to the history, states older than a given
- * time limit will be deleted.
- */
 export class TimestampedBuffer<State> {
 
   private states: Array<Timestamped<State>> = [];
@@ -94,6 +89,10 @@ export class TimestampedBuffer<State> {
    */
   public rewrite(timestamp: number, state: State) {
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
+
+    if (this.states[index].timestamp !== timestamp) {
+      throw Error(`No state found with the exact timestamp of ${timestamp}.`);
+    }
 
     this.states[index] = {
       timestamp,
