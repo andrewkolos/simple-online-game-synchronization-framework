@@ -131,6 +131,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
         entityId: ebs.entityId,
         input: ebs.input,
         inputSequenceNumber: this.currentInputSequenceNumber,
+        timestamp: new Date().getTime(),
       };
     });
     this.currentInputSequenceNumber += 1;

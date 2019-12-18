@@ -13,6 +13,7 @@ export interface InputMessage<T> extends BufferMessage {
   input: T;
   inputSequenceNumber: number;
   entityId: string;
+  timestamp: number;
 }
 
 export type StateMessage<T> = StateMessageWithoutSyncInfo<T> | StateMessageWithSyncInfo<T>;
