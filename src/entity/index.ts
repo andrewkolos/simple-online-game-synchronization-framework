@@ -1,3 +1,3 @@
-export * from "./entity";
-export * from "./input-applicator";
-export * from "./interpolator";
+export * from './entity';
+export * from '../synchronizers/server/input-processing-strategy';
+export * from './interpolator';

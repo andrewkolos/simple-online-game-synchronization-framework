@@ -1,4 +1,4 @@
-import { binarySearchClosestMatch } from '../..//util/binsearch';
+import { binarySearchClosestMatch } from '../../util/binsearch';
 import { singleLineify } from '../../util/singleLineify';
 import { LruCache } from '../../util/lru-cache';
 
@@ -58,9 +58,9 @@ interface NotFoundGetStateResult {
 
 export type GetStateResult<T> = FoundGetStateResult<T> | NotFoundGetStateResult;
 
-export class TimestampedBuffer<State> {
+export class ChronologicalBuffer<T> {
 
-  private states: Array<Timestamped<State>> = [];
+  private states: Array<Timestamped<T>> = [];
 
   private recordLengthMs: number;
 
@@ -77,8 +77,8 @@ export class TimestampedBuffer<State> {
   /**
    * Gets the states recorded in this history, including their timestamps.
    */
-  public getStates(): ReadonlyArray<Readonly<Timestamped<State>>> {
-    this.purgeStatesOlderThanRecordLength();
+  public getStates(): ReadonlyArray<Readonly<Timestamped<T>>> {
+    this.purgerRecordingsOlderThanRecordLength();
     return this.states;
   }
 
@@ -87,7 +87,7 @@ export class TimestampedBuffer<State> {
    * @param timestamp The timestamp of the state to rewrite, which should be obtained by one of this object's methods.
    * @param state The value to write to this timestamp, overwritng the previous value.
    */
-  public rewrite(timestamp: number, state: State) {
+  public rewrite(timestamp: number, state: T) {
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     if (this.states[index].timestamp !== timestamp) {
@@ -100,12 +100,18 @@ export class TimestampedBuffer<State> {
     };
   }
 
-  public first(): Timestamped<State> {
+  /**
+   * Returns the recording with the earliest timestamp.
+   */
+  public first(): Timestamped<T> {
     this.checkEmptyUnsafe();
     return this.states[0];
   }
 
-  public last(): Timestamped<State> {
+  /**
+   * Returns the recording with the latest timestamp.
+   */
+  public last(): Timestamped<T> {
     this.checkEmptyUnsafe();
     return this.states[this.states.length - 1];
   }
@@ -118,7 +124,7 @@ export class TimestampedBuffer<State> {
    * timestamp of the latest recorded state).
    * @throws Error if the provided timestamp doesn't exist in this history.
    */
-  public next(timestamp: number): Timestamped<State> | undefined {
+  public next(timestamp: number): Timestamped<T> | undefined {
 
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
@@ -127,14 +133,23 @@ export class TimestampedBuffer<State> {
     return this.states[index + 1];
   }
 
-  public previous(timestamp: number): Timestamped<State> | undefined {
+  /**
+   * Returns the record previous to one at the given timestamp or, if it does not exist,
+   * the latest one that preceeds it.
+   * @param timestamp The timestamp.
+   */
+  public previous(timestamp: number): Timestamped<T> | undefined {
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     if (index === 0) return undefined;
     return this.states[index - 1];
   }
 
-  public mostRecentTo(timestamp: number): Timestamped<State> {
+  /**
+   * Returns the record with the timestamp closest to and less than/equal to the argued timestamp.
+   * @param timestamp The timestamp.
+   */
+  public mostRecentTo(timestamp: number): Timestamped<T> {
     this.checkEmptyUnsafe();
 
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
@@ -142,36 +157,57 @@ export class TimestampedBuffer<State> {
     return this.states[index];
   }
 
-  public slice(start?: number, end?: number) {
-    const startIndex = start != null ? this.indexOfStateAtUnsafe(new Timestamp(start)) : 0;
-    const endIndex = end != null ? this.indexOfStateAtUnsafe(new Timestamp(end)) : this.states.length;
+  /**
+   * Returns a section of this buffer.
+   * @param [start] The timestamp marking the start of the section, includes the nearest preceeding recording
+   *  if none with the exact timestmap is found.
+   * @param [end] The timestamp marking the end of the section, stopping at the nearest preceeding recording
+   *  if none with the exact timestamp is found.
+   */
+  public slice(start: number = 0, end: number = this.states.length) {
+    const startIndex = this.indexOfStateAtUnsafe(new Timestamp(start));
+    const endIndex = this.indexOfStateAtUnsafe(new Timestamp(end));
 
     return this.states.slice(startIndex, endIndex);
   }
 
-  public after(timestamp: number): ReadonlyArray<Readonly<Timestamped<State>>> {
+  /**
+   * Gets all recordings that have a timestamp later/greater than a given timestamp.
+   * @param timestamp The timestamp.
+   * @returns All recordings with a timestamp greater than the given timestamp.
+   */
+  public after(timestamp: number): ReadonlyArray<Readonly<Timestamped<T>>> {
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     return this.states.slice(index + 1);
   }
 
-  public before(timestamp: number): ReadonlyArray<Readonly<Timestamped<State>>> {
+  /**
+   * Gets all recordings that have a timestamp earlier/lesser than a given timestamp.
+   * @param timestamp The timstamp.
+   * @returns All recordings with a timestamp lesser than the given timestamp.
+   */
+  public before(timestamp: number): ReadonlyArray<Readonly<Timestamped<T>>> {
     const index = this.indexOfStateAtUnsafe(new Timestamp(timestamp));
 
     return this.states.slice(0, index);
   }
 
-  public record(state: State) {
+  /**
+   * Creates and stores a new recordings, with a timestamp of now.
+   * @param item The item to record.
+   */
+  public record(item: T) {
     const now = new Date().getTime();
 
-    this.purgeStatesOlderThanRecordLength();
+    this.purgerRecordingsOlderThanRecordLength();
 
     if (this.states.length > 0 && this.states[this.states.length - 1].timestamp > now) {
       throw new Error('Cannot record a state at a timestamp prior to the last one recorded.');
     }
 
     const timestampedState = {
-      value: state,
+      value: item,
       timestamp: now,
     };
 
@@ -182,7 +218,10 @@ export class TimestampedBuffer<State> {
     this.states.push(timestampedState);
   }
 
-  private purgeStatesOlderThanRecordLength() {
+  /**
+   * Purges states older than the configured record length.
+   */
+  private purgerRecordingsOlderThanRecordLength() {
     if (this.states.length === 0) return;
 
     const now = new Date().getTime();
@@ -215,13 +254,10 @@ export class TimestampedBuffer<State> {
       return { outcome: SearchOutcome.TooNewToExist };
     }
 
-    const comparator = (o1: Timestamped<State>, o2: Timestamp) => o1.timestamp - o2.value;
+    const comparator = (o1: Timestamped<T>, o2: Timestamp) => o1.timestamp - o2.value;
     const closestMatch = binarySearchClosestMatch(this.states, timestamp, comparator);
-    const index = closestMatch.value.timestamp === timestamp.value ? closestMatch.index : closestMatch.index - 1;
 
-    if (index == null) {
-      return { outcome: SearchOutcome.NeverCouldHaveExisted };
-    }
+    const index = closestMatch.value.timestamp <= timestamp.value ? closestMatch.index : closestMatch.index - 1;
 
     return {
       outcome: SearchOutcome.Found,
