@@ -20,11 +20,6 @@ export type Interface<T> = { [P in keyof T]: T[P] };
 
 export type ValueOf<T> = T[keyof T];
 
-export function fromMapGetOrDefault<K, V>(map: Map<K, V>, key: K, defaultV: V) {
-  const value = map.get(key);
-  return value == null ? defaultV : value;
-}
-
 /**
  * Takes a value and it returns it as a single-value array if is not already an
  * array. Otherwise, if the value is already an array, gives it back unchanged.
