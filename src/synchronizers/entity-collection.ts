@@ -1,4 +1,5 @@
 import { Entity } from '../entity';
+import { cloneDumbObject } from '../util';
 
 type EntityId = string;
 
@@ -44,7 +45,7 @@ export class EntityCollection<State> {
    * @returns The entities in this collection.
    */
   public asArray(): Array<Entity<State>> {
-    return [...this.entities].map(([id, state]) => ({id, state}));
+    return [...this.entities].map(([id, state]) => ({ id, state: cloneDumbObject(state) }));
   }
 
   /**
@@ -52,6 +53,12 @@ export class EntityCollection<State> {
    * @returns The entities in this collection.
    */
   public asIdKeyedMap(): Map<EntityId, State> {
-    return new Map(this.entities);
+    return new Map([...this.entities.entries()].map((entry: [EntityId, State]) => [entry[0], cloneDumbObject(entry[1])]));
+  }
+
+  public clone(): EntityCollection<State> {
+    return new EntityCollection<State>(this.asArray());
   }
 }
+
+export type ReadonlyEntityCollection<EntityState> = Exclude<EntityCollection<Readonly<EntityState>>, 'set'>;
