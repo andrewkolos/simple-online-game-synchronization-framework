@@ -22,7 +22,7 @@ export interface LocalPlayerInputStrategy<Input, State> {
   inputApplicator: InputApplicator<Input, State>;
 }
 
-export type PlayerClientSyncerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
+export type PlayerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
 export interface PlayerClientEntitySyncerArgs<Input, State> {
   connection: TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
@@ -39,7 +39,7 @@ type SequencedEntityBoundInput<I> = Omit<InputMessage<I>, 'messageKind'>;
 
 export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
 
-  private readonly connection: PlayerClientSyncerConnectionToServer<Input, State>;
+  private readonly connection: PlayerConnectionToServer<Input, State>;
   private readonly interpolator: MultiEntityStateInterpolator<State>;
   private readonly playerSyncStrategy: LocalPlayerInputStrategy<Input, State>;
   private currentInputSequenceNumber = 0;
