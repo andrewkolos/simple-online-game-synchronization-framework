@@ -1,11 +1,12 @@
 import { EventEmitter } from 'typed-event-emitter';
-import { Entity, InputApplicator } from '../../entity';
-import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
+import { Entity } from '../../entity';
+import { InputMessage, StateMessage, EntityMessageKind } from '../../networking';
 import { singleLineify } from '../../util/singleLineify';
 import { EntityTargetedInput } from '../client';
 import { EntityCollection } from '../entity-collection';
-import { TwoWayMessageBuffer } from '../../networking/message-buffer';
+import { TwoWayMessageBuffer } from '../../networking/message-buffers/two-way-message-buffer';
 import { cloneDumbObject } from '../../util';
+import { InputApplicator, InputValidator } from './input-processing';
 
 type ClientId = string;
 
@@ -16,15 +17,7 @@ interface ClientInputs<Input, State> {
   inputs: Array<InputMessage<Input>>;
 }
 
-/**
- * Validates inputs sent by the clients.
- * @param entity The entity that a client is attempting to apply the input to.
- * @param input The input that is meant to be applied to the entity.
- * @returns `true` if the input is acceptable and may be applied to the entity, `false` otherwise.
- */
-export type InputValidator<Input, State> = (entity: Entity<State>, input: Input) => boolean;
-
-export interface ServerEntitySyncherArgs<Input, State> {
+export interface ServerEntitySyncerArgs<Input, State> {
   /**
    * Validates inputs, preventing them from being applied if they are invalid/fraudulent.
    */
@@ -45,7 +38,8 @@ export interface ClientInformation {
   lastAcknowledgedInputSeqNumber: number;
 }
 
-type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
+type OnSynchronizedHandler<Input, State> =
+  (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
 
 /**
  * Creates and synchronizes game entities for clients.
@@ -63,7 +57,7 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
   private readonly _entities: EntityCollection<State>;
   private readonly clients: Map<string, ClientInfo<Input, State>>;
 
-  constructor(args: ServerEntitySyncherArgs<Input, State>) {
+  constructor(args: ServerEntitySyncerArgs<Input, State>) {
     super();
     this.inputApplicator = args.inputApplicator;
     this.inputValidator = args.inputValidator;

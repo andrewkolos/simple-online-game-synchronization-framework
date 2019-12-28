@@ -1,12 +1,12 @@
-import { StateMessage, InputMessage, StateMessageWithSyncInfo, EntityMessageKind } from '../../networking';
-import { DefaultMap } from '../../util/default-map';
+import { StateMessage, InputMessage, EntityMessageKind, StateMessageWithSyncInfo } from '../../networking';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 import { NumericObject } from '../../interpolate-linearly';
-import { findLatestMessage } from '../../util/findLatestMessage';
-import { TwoWayMessageBuffer } from '../../networking/message-buffer';
-import { Entity, InputApplicator } from '../../entity';
+import { TwoWayMessageBuffer } from '../../networking/message-buffers/two-way-message-buffer';
+import { Entity } from '../../entity';
 import { EntityTargetedInput } from './entity-targeted-input';
 import { InputValidator } from '../server';
+import { InputApplicator } from '../server/input-processing';
+import { pickLatestMessages } from './pick-latest-messages';
 
 type EntityId = string;
 
@@ -25,7 +25,7 @@ export interface LocalPlayerInputStrategy<Input, State> {
 export type PlayerConnectionToServer<Input, State> = TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
 
 export interface PlayerClientEntitySyncerArgs<Input, State> {
-  connection: TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
+  connection: PlayerConnectionToServer<Input, State>;
   localPlayerInputStrategy: LocalPlayerInputStrategy<Input, State>;
   serverUpdateRateHz: number;
 }
@@ -56,7 +56,9 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   }
 
   public synchronize(): Array<Entity<State>> {
-    const { otherEntities, localEntities } = this.sortStateMessages(this.connection.receive());
+    const stateMessages = this.connection.receive();
+
+    const { otherEntities, localEntities } = this.sortStateMessages(stateMessages);
     const updatedStatesOfNonLocalEntities = this.synchronizeNonLocalEntities(otherEntities);
     const updatedStatesOfLocalEntities = this.synchronizeLocalPlayerEntities(localEntities);
     return [...updatedStatesOfNonLocalEntities, ...updatedStatesOfLocalEntities];
@@ -84,15 +86,18 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   }
 
   private synchronizeLocalPlayerEntities(stateMessages: Array<StateMessageWithSyncInfo<State>>): Array<Entity<State>> {
-    const latestStateMessages = this.pickLatestMessagesIndexedByEntityId(stateMessages);
-    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessages.values()].map((sm) => ({
+    const latestStateMessagesById = new Map(pickLatestMessages(stateMessages).map((message) => [message.entity.id, message]));
+
+    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessagesById.values()].map((sm) => ({
       ...sm.entity,
-      local: sm.entityBelongsToRecipientClient,
+      local: sm.entityBelongsToRecipientClient || true,
     })));
-    const inputsToApply: Array<SequencedEntityBoundInput<Input>> = [...this.determinePendingInputs(latestStateMessages), ...newInputs];
+
+    const inputsToApply: Array<SequencedEntityBoundInput<Input>> =
+      [...this.determinePendingInputs(latestStateMessagesById), ...newInputs];
 
     const entitiesAfterSync: Map<EntityId, Entity<State>> =
-      new Map([...latestStateMessages.entries()].map(([entityId, message]) => [entityId, message.entity]));
+      new Map([...latestStateMessagesById.entries()].map(([entityId, message]) => [entityId, message.entity]));
 
     for (const sebInput of inputsToApply) {
       const targetEntityMessage = entitiesAfterSync.get(sebInput.entityId);
@@ -117,12 +122,6 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     });
   }
 
-  private pickLatestMessagesIndexedByEntityId<M extends StateMessage<State>>(stateMessages: M[]): Map<EntityId, M> {
-    const grouped = groupByEntityId(stateMessages, (sm) => sm.entity.id);
-    const latest = grouped.map((messages) => findLatestMessage(messages));
-    return new Map(latest.map((message: M) => [message.entity.id, message]));
-  }
-
   private collectInputs(forEntities: Array<EntityInfo<State>>): Array<InputMessage<Input>> {
     const inputs = this.playerSyncStrategy.inputSource(forEntities);
     const asMessages: Array<InputMessage<Input>> = inputs.map((ebs) => {
@@ -137,16 +136,4 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     this.currentInputSequenceNumber += 1;
     return asMessages;
   }
-}
-
-function groupByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): T[][] {
-  return Array.from(indexByEntityId(collection, entityIdPicker).values());
-}
-
-function indexByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): Map<EntityId, T[]> {
-  const map = new DefaultMap<EntityId, T[]>(() => []);
-  for (const item of collection) {
-    map.get(entityIdPicker(item)).push(item);
-  }
-  return map;
 }

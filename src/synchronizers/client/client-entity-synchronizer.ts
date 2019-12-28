@@ -1,7 +1,7 @@
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
 import { StateMessage } from '../../networking';
-import { RecipientMessageBuffer } from '../../networking/message-buffer';
+import { RecipientMessageBuffer } from '../../networking/message-buffers';
 import { MultiEntityStateInterpolator } from './state-interpolator';
 
 export interface ClientEntitySyncerArgs<State> {

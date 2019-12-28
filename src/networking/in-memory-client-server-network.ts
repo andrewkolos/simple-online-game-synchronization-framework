@@ -1,6 +1,9 @@
-import { TwoWayMessageBuffer } from './message-buffer';
+import { TwoWayMessageBuffer } from './message-buffers/two-way-message-buffer';
 import { EventEmitter } from 'typed-event-emitter';
 import { arrayify } from '../util-types';
+import { StateMessage, InputMessage } from './messages';
+
+export type LocalServerInMemoryClientServerNetwork<Input, State> = InMemoryClientServerNetwork<InputMessage<Input>, StateMessage<State>>;
 
 /**
  * An in-memory network that can be used to connect client and server entity synchronizers.
