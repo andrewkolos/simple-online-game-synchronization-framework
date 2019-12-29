@@ -1,21 +1,16 @@
 import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
-import { InputMessage, StateMessage, EntityMessageKind } from '../../networking';
+import { InputMessage, StateMessage } from '../../networking';
 import { singleLineify } from '../../util/singleLineify';
 import { EntityTargetedInput } from '../client';
 import { EntityCollection } from '../entity-collection';
 import { TwoWayMessageBuffer } from '../../networking/message-buffers/two-way-message-buffer';
-import { cloneDumbObject } from '../../util';
 import { InputApplicator, InputValidator } from './input-processing';
+import { Client } from './client';
 
 type ClientId = string;
 
 type ConnectionToClient<Input, State> = TwoWayMessageBuffer<InputMessage<Input>, StateMessage<State>>;
-
-interface ClientInputs<Input, State> {
-  client: ClientInfo<Input, State>;
-  inputs: Array<InputMessage<Input>>;
-}
 
 export interface ServerEntitySyncerArgs<Input, State> {
   /**
@@ -33,13 +28,16 @@ export interface ServerEntitySyncerArgs<Input, State> {
   clientIdAssigner: () => string;
 }
 
-export interface ClientInformation {
-  id: string;
-  lastAcknowledgedInputSeqNumber: number;
+export interface OnServerSynchronzedEventClientInfo {
+  id: ClientId;
+  lastAckInputSeqNumber: number;
 }
 
-type OnSynchronizedHandler<Input, State> =
-  (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
+export interface OnServerSynchronizedEvent<Input, State> {
+  entities: Array<Readonly<Entity<State>>>;
+  inputsApplied: Array<EntityTargetedInput<Input>>;
+  clientInformation: OnServerSynchronzedEventClientInfo[];
+}
 
 /**
  * Creates and synchronizes game entities for clients.
@@ -48,14 +46,14 @@ type OnSynchronizedHandler<Input, State> =
 export class ServerEntitySyncer<Input, State> extends EventEmitter {
 
   public readonly onPreSynchronization = this.registerEvent<() => void>();
-  public readonly onSynchronized = this.registerEvent<OnSynchronizedHandler<Input, State>>();
+  public readonly onSynchronized = this.registerEvent<(e: OnServerSynchronizedEvent<Input, State>) => void>();
 
   private readonly inputValidator: InputValidator<Input, State>;
   private readonly inputApplicator: InputApplicator<Input, State>;
   private readonly clientIdAssigner: () => string;
 
   private readonly _entities: EntityCollection<State>;
-  private readonly clients: Map<string, ClientInfo<Input, State>>;
+  private readonly clients: Map<string, Client<Input, State>>;
 
   constructor(args: ServerEntitySyncerArgs<Input, State>) {
     super();
@@ -74,13 +72,11 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
   public connectClient(connection: ConnectionToClient<Input, State>): ClientId {
 
     const newClientId = this.clientIdAssigner();
-    const client: ClientInfo<Input, State> = {
+    const client = new Client({
       id: newClientId,
       connection,
-      seqNumberOfLastProcessedInput: 0,
-      ownedEntityIds: [],
-    };
-
+      inputValidator: this.inputValidator,
+    });
     this.clients.set(newClientId, client);
 
     return newClientId;
@@ -104,21 +100,9 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     const client = this.clients.get(playerClientId);
 
     if (client != null) {
-      client.ownedEntityIds.push(entity.id);
+      client.assignOwnershipOfEntity(entity.id);
     } else {
       throw Error(`Unknown client ${playerClientId} when adding new player entity.`);
-    }
-  }
-
-  public getClientInformation(): ReadonlyMap<ClientId, ClientInfo<Input, State>>;
-  public getClientInformation(clientId: string): ClientInfo<Input, State>;
-  public getClientInformation(clientId?: string) {
-    if (clientId == null) return this.clients as ReadonlyMap<ClientId, ClientInfo<Input, State>>;
-    const client = this.clients.get(clientId);
-    if (client != null) {
-      return client;
-    } else {
-      throw Error(`Did not find client with an ID of ${clientId}`);
     }
   }
 
@@ -133,7 +117,11 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     this.applyInputs(inputs);
     this.sendStates();
 
-    this.emit(this.onSynchronized, this._entities.asArray(), inputs.map((ci) => ci.inputs).flat());
+    this.emit(this.onSynchronized, {
+      entities: this._entities.asArray(),
+      inputsApplied: inputs.flat(),
+      clientInformation: [...this.clients.values()].map((c) => ({id: c.id, lastAckInputSeqNumber: c.seqNumberOfLastProcessedInput})),
+    });
     return this._entities.asArray();
   }
 
@@ -153,40 +141,22 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     Object.assign(localState, state);
   }
 
-  private retrieveValidInputs(): Array<ClientInputs<Input, State>> {
-    const inputsByClient: Array<ClientInputs<Input, State>> = [];
+  private retrieveValidInputs(): Array<InputMessage<Input>> {
+    const inputsByClient: Array<InputMessage<Input>> = [];
 
     for (const client of this.clients.values()) {
-      const messages = [...client.connection];
-      const validInputs: Array<InputMessage<Input>> = [];
-
-      for (const input of messages) {
-        const state = this._entities.getState(input.entityId);
-
-        // Client sent an input for an entity it does not own.
-        if (!client.ownedEntityIds.includes(input.entityId)) {
-          continue;
-        }
-
-        if (state != undefined && this.inputValidator({ id: input.entityId, state }, input.input)) {
-          validInputs.push(input);
-        }
-        client.seqNumberOfLastProcessedInput = input.inputSequenceNumber;
-      }
-      inputsByClient.push({ client, inputs: validInputs });
+      inputsByClient.push(...client.retrieveInputs(this._entities));
     }
 
     return inputsByClient;
   }
 
-  private applyInputs(inputsByClient: Array<ClientInputs<Input, State>>): void {
-    for (const { inputs } of inputsByClient) {
-      for (const input of inputs) {
-        const { entityId } = input;
-        const state = this._entities.getState(entityId);
-        if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
-        this._entities.set({ id: entityId, state: this.inputApplicator(state, input.input) });
-      }
+  private applyInputs(inputs: Array<InputMessage<Input>>): void {
+    for (const input of inputs) {
+      const { entityId } = input;
+      const state = this._entities.getState(entityId);
+      if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
+      this._entities.set({ id: entityId, state: this.inputApplicator(state, input.input) });
     }
   }
 
@@ -197,40 +167,10 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
     const clients = Array.from(this.clients.values());
     const entities = this._entities.asArray();
     for (const client of clients) {
-      const messages: Array<StateMessage<State>> = entities.map((entity: Entity<State>) => {
-        const entityBelongsToClient = client.ownedEntityIds.includes(entity.id);
-
-        const networkedStateMessageBase: StateMessage<State> = {
-          kind: EntityMessageKind.State,
-          entity: {
-            id: entity.id,
-            state: cloneDumbObject(entity.state),
-          },
-          sentAt: new Date().getTime(),
-        };
-
-        if (entityBelongsToClient) {
-          return {
-            ...networkedStateMessageBase,
-            entityBelongsToRecipientClient: true,
-            lastProcessedInputSequenceNumber: client.seqNumberOfLastProcessedInput,
-          };
-        } else {
-          return networkedStateMessageBase;
-        }
-      });
-      client.connection.send(messages);
+      client.sendStates(entities.map((e) => ({
+        entityId: e.id,
+        state: e.state,
+      })));
     }
   }
-}
-
-/**
- * Information the server stores about a client.
- * @template E The type of entity/entities.
- */
-export interface ClientInfo<Input, State> {
-  id: string;
-  connection: ConnectionToClient<Input, State>;
-  seqNumberOfLastProcessedInput: number;
-  ownedEntityIds: string[];
 }

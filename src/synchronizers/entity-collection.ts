@@ -36,6 +36,20 @@ export class EntityCollection<State> {
    * @param id The ID of the entity to search for.
    * @returns The entity with the matching ID, if it exists.
    */
+  public get(id: EntityId): Entity<State> | undefined {
+    const state = this.entities.get(id);
+    if (state == null) return undefined;
+    return {
+      id,
+      state,
+    };
+  }
+
+  /**
+   * Searches for an entity by ID, returning its state.
+   * @param id The ID of the entity to search for.
+   * @returns The state of the entity with the matching ID, if it exists.
+   */
   public getState(id: EntityId): State | undefined {
     return this.entities.get(id);
   }

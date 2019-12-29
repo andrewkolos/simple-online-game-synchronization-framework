@@ -18,7 +18,7 @@ export interface InputMessage<T> extends BufferMessage {
 
 export type StateMessage<T> = StateMessageWithoutSyncInfo<T> | StateMessageWithSyncInfo<T>;
 
-type StateMessageWithoutSyncInfo<T> = BufferMessage & {
+export type StateMessageWithoutSyncInfo<T> = BufferMessage & {
   /** Identifies this buffer message object as an entity state message. */
   kind: EntityMessageKind.State;
   /** Information regarding the entity. */
@@ -35,7 +35,6 @@ type StateMessageWithoutSyncInfo<T> = BufferMessage & {
 };
 
 export type StateMessageWithSyncInfo<T> = StateMessageWithoutSyncInfo<T> & {
-  /** Indicates that the entity is to be controlled by the client receiving this state message. */
   entityBelongsToRecipientClient: true;
   /** The sequence number of the input message last processed on the server before sending this message. */
   lastProcessedInputSequenceNumber: number;
