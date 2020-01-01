@@ -1,6 +1,6 @@
-import { binarySearchClosestMatch } from '../../util/binsearch';
-import { singleLineify } from '../../util/singleLineify';
-import { LruCache } from '../../util/lru-cache';
+import { binarySearchClosestMatch } from '../util/binsearch';
+import { singleLineify } from '../util/singleLineify';
+import { LruCache } from '../util/lru-cache';
 
 class Index {
   public constructor(public readonly value: number) { }

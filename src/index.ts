@@ -6,3 +6,4 @@ export * from './game-loop';
 export * from './interpolate-linearly';
 export * from './message-buffer-processor';
 export * from './util-types';
+export * from './lag-compensation';

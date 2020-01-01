@@ -1,5 +1,5 @@
-import { ServerEntitySyncer, EntityCollection, ServerSyncRecordCollection } from '../../synchronizers';
 import { ChronologicalBuffer } from './chronological-buffer';
+import { OnServerSynchronizedEvent, EntityCollection, ServerEntitySyncer } from '../synchronizers';
 
 export type LagCompRequestValidator<State, Request> =
   (request: Request, clientsPerceptionOfEntities: EntityCollection<State>) => boolean;
@@ -29,13 +29,13 @@ export class LagCompensator<Input, State, Request> {
     private readonly requestProcessingStrategy: LagCompRequestProcessingStrategy<State, Request>,
     private readonly serverHistoryMemoryMs: number = 250,
   ) {
-    server.onSynchronized((stateChanges) => {
-      this.serverHistory.record(stateChanges);
+    server.onSynchronized((e: OnServerSynchronizedEvent<Input, State>) => {
+      this.serverHistory.record()
     });
   }
 
   public processRequest(request: Request, client: LcRequestingClient, validRequestHandler?: ResimHandler<State>): boolean {
-    
+    throw new Error('not implemented');
   }
 
   private getClientPerceptionOfEntities(timestamp: number, client: LcRequestingClient) {
