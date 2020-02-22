@@ -152,69 +152,50 @@ I can think of two ways of approaching the problem:
 
 For the former option, I can't think of a way to ask the client programmer to stop predicting inputs themselves through code --it would have to be through the documentation, which isn't ideal. Plus, what if the programmer does not want all inputs to be predicted? Remember that by the time an input reaches the server, it may no longer be a valid input. Given this, imagine an input that results in a dramatic animation playing or causes the game UI to change substantially or suddenly, but the input is too late and turns out to be invalid/impotent on the server. Having the client revert all of that when it gets the news that the input didn't result in the expected outcome can be quite jarring (think about undoing/rolling back brutalities in Mortal Kombat or stage transitions in Injustice--that would be jarring).
 
-Looking at the latter option on the list and given what was just discussed, we should look at making client prediction an optional feature and try to make it highly discoverable to the client programmer. One could argue that in the last implementation, client prediction is already optional. In the case where input prediction is wanted only for certain inputs, the argument could examine the input and perform a no-op if prediction is not desired, but this seems a little smelly to me. We could also augment this and make the parameter optional completely. This solution still fails to address some shortcomings:
+Looking at the latter option on the list and given what was just discussed, we should look at making client prediction an optional feature and try to make it highly discoverable to the client programmer. One could argue that in the last implementation, client prediction is already optional. In the case where input prediction is wanted only for certain inputs, the argument could examine the input and perform a no-op if prediction is not desired, but this seems a little smelly to me. We could augment this by making the parameter optional completely. However, this would still fail to address some shortcomings:
 
-* Recall that this does not fix `sendInput` being not descriptive of what happens when an input is sent.
-* This pollutes the `ClientNetworker` constructor. We haven't gotten to adding server reconciliation or entity interpolation yet which may result in even more parameters.
+1. Recall that this does not fix `sendInput` being not descriptive of what happens when an input is sent.
+2. This pollutes the `ClientNetworker` constructor. We haven't gotten to adding server reconciliation or entity interpolation yet which may result in even more parameters.
+
+We could fix number by adding a new method, `sendInputWithPrediction`, that calls `sendInput` and then also applies the input locally, but then we couldn't make `localGameInputApplicationStrategy` an optional paramater, so we are back to problem of forcing the client to pass a no-op if they aren't interested in input-prediction at all. We could make a new class, `InputPredictingClientNetworker`, that extends `ClientNetworker`, adding the `localGameInputApplicationStrategy` parameter to the constructor and the `sendInputWithPrediction` method. The problem is, again, what happens when we add new features down the line. We need more subclasses. What happens when we want multiple features going at the same time? We have have a combinatorial explosion of classes, which is difficult to process for both the client programmer and the framework maintainer.
+
+I honestly can't think a solution that satisfies all dimensions of the problem completely. A trade-off has to be made. One way to make `ClientNetworker` more extensible without subclassing or decorating it is to provide a means to listen for outgoing inputs.
+
+```typescript
+class ClientNetworker {
+  // ...
+  private readonly inputSentListeners = [];
+  
+  public onInputSent(fn) {
+    this.inputSentListeners.push(fn);
+  }
+  
+  public sendInput(input: PlayerInput) {
+  	this.connectionToServer.send(input);
+    this.inputSentListeners.forEach((fn) => fn(input)); // new
+  }
+  // ...
+}
+```
+
+With this, the programmer can implement input prediction themselves by listening for sent inputs and applying it themselves. Let's create a built-in convenience function for them:
+
+```typescript
+function addInputPredictionToClient(clientNetworker, localGameInputApplicationStrategy) {
+  clientNetworker.onInputSent((input) => localGameInputApplicationStrategy(input));
+  return clientNetworker;
+}
+```
+
+This solution keeps `ClientNetworker` nearly as light as it was before. Plus, the new `onInputSent` method could prove useful for numerous other reasons outside of input prediction, so I'd say it earns its place. However, where this solution falls short is the visibility of input prediction. At the time of use of `ClientNetworker`, we only see the call to `sendInput`. The only way for a code reader to notice input prediction is by having seen the call to `addInputPredictionToClient` in advance. Honestly, I think the tradeoff is worth it.
 
 #### Server reconciliation
 
 To allow clients to perform server reconciliation, the client-side needs to know which of its sent inputs have been processed by the server whenever it receives an update from the server. To do this:
 
-1. the client needs to be able to apply inputs locally as soon as they are made.
 2. the client tags each input with a sequence number, which identifies each input as the *N*th input it has sent.
 3. the server tags each state message with the sequence number of the most recently processed input of the recipient client.
 
 Let's consider these one-at-a-time:
 
-##### *The client needs to be able to apply inputs locally as soon as they are made.*
-
-​	We could pass an `inputApplicationStrategy` and a `stateSource` to `Client`'s constructor, like we do with `Server`. When sending an input to the server, `Client` would then read the local game state and update it with the new input. This begs some questions, however:
-
-* Do we really want to bring the `Client` constructor up to three arguments?
-* What if the user doesn't want to use prediction/reconciliation? Would this ever happen?
-* Do we want to add another responsibility to the `Client` class? This would make it harder to test.
-
-Okay, let's see if we can come up with an approach that requires little-to-no modification of the `Client` class. We could offload the work to `connectionToServer`, and have a `createPredictingConnectionToServer` factory method that takes the `stateSource` and `inputApplicationStrategy` parameters. This would create a `Connection` that keeps track of input sequence numbers (sending them and receiving them) and applies local inputs as needed.  This keeps the `Client` class lightweight and simple, but it seems counter-intuitive to have a `Connection`, which is only meant to represent a means of sending messages to / receiving messages from somewhere, perform synchronization logic as well. This would work, but we probably should continue to look for better approaches.
-
-One thing that seemed okay with the previous approach was having `Connection` tag inputs with sequence numbers before sending them off, so let's keep that for now. We still need to handle applying inputs to the local instance of the game state whenever we send off inputs to the server. Okay, we could add a listener to `Client` that listens for 
-
-```typescript
-class Client {
-  // ...
-  public sendInput(input) {
-    this.connectionToServer.send(input);
-    this.inputSentListeners.forEach((listener) => listener(input));
-  }
-  
-  public onInputSent(listener) {
-    this.inputSentListeners.push(listener);
-  }
-  // ...
-}
-
-function addStateSourceToInputApplicationStrategy(stateSource, inputAppStrategy) {
-  return (input) => {
-    const gameState = this.stateSource.read();
-    const changesToGameState = this.inputApplicationStrategy(input, gameState);
-    this.stateSource.write(gameState);
-  };
-}
-
-function addPredictionToClient(client, inputApplicator) {
-  let pendingInputs = [];
-  
-  client.onInputSent((input) => {
-		applyInputToState(input);
-    pendingInputs.push(input);
-  });
-  
-  client.onStateChange((state) => {
-    pendingInputs = pendingInputs.filter((input) => input.sequenceNumber > state.lastProcessedSequenceNumber);
-   	pendingInputs.forEach((input) => {
-      applyInputToState(input);
-    });
-  });
-}
-```
-
+##### The client tags each input with a sequence number, which identifies each input as the *N*th input it has sent.
