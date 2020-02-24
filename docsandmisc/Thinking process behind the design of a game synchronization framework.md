@@ -41,7 +41,7 @@ class ClientNetworker<PlayerInput, GameState> {
 
     public constuctor(connectionToServer: ConnectionToServer<PlayerInput, GameState>) {
         this.connectionToServer = connectionToServer;
-        connectionToServer.onMessageReceived((gameState) => this.emitState(gameState));
+        connectionToServer.onMessageReceived((gameState) => this.emitStateChange(gameState));
     }
     
     public sendInput(input: PlayerInput) {
@@ -72,9 +72,9 @@ class ServerNetworker<PlayerInput, GameState> {
       });
     }
  
-    public broadcastState(state: GameState) {
+    public broadcastState(gameState: GameState) {
       this.clientConnections.forEach((connection) => {
-        connection.send(this.stateSource.read());
+        connection.send(gameState);
       });
     }
  
@@ -187,15 +187,220 @@ function addInputPredictionToClient(clientNetworker, localGameInputApplicationSt
 }
 ```
 
-This solution keeps `ClientNetworker` nearly as light as it was before. Plus, the new `onInputSent` method could prove useful for numerous other reasons outside of input prediction, so I'd say it earns its place. However, where this solution falls short is the visibility of input prediction. At the time of use of `ClientNetworker`, we only see the call to `sendInput`. The only way for a code reader to notice input prediction is by having seen the call to `addInputPredictionToClient` in advance. Honestly, I think the tradeoff is worth it.
+This solution keeps `ClientNetworker` nearly as light as it was before. Plus, the new `onInputSent` method could prove useful for numerous other reasons outside of input prediction, so I'd say it earns its place. However, where this solution falls short is the visibility of input prediction. At the time of use of `ClientNetworker`, we only see the call to `sendInput`. The only way for a code reader to notice input prediction is by having seen the call to `addInputPredictionToClient` in advance. Honestly, I think the tradeoff is worth it. We could always revisit the subclassing approach later.
 
 #### Server reconciliation
 
 To allow clients to perform server reconciliation, the client-side needs to know which of its sent inputs have been processed by the server whenever it receives an update from the server. To do this:
 
 2. the client tags each input with a sequence number, which identifies each input as the *N*th input it has sent.
-3. the server tags each state message with the sequence number of the most recently processed input of the recipient client.
+2. the server tags each state message with the sequence number of the most recently processed input of the recipient client.
+3. the client, upon receiving a game state message from the server and updating the local game state to match it, reapplies/predicts local inputs that have not been confirmed to have already reached the server. This is done by examining the latest sequence number that the server sent along with the game state.
 
 Let's consider these one-at-a-time:
 
 ##### The client tags each input with a sequence number, which identifies each input as the *N*th input it has sent.
+
+OK, seems simple enough.
+
+```typescript
+class ClientNetworker {
+  // ...
+  public constuctor(connectionToServer: ConnectionToServer<PlayerInput, GameState>) {
+    let sequenceNumberOfNextInput = 0;
+  	this.connectionToServer = {
+      send: (input) => {
+        input.sequenceNumber = sequenceNumberOfNextInput;
+        connectionToServer.send(input);
+        sequenceNumberOfNextInput += 1;
+      },
+      onMessageReceived: connectionToServer.onMessageReceived,
+    };
+    this.connectionToServer.onMessageReceived((gameState) => this.emitState(gameState));
+  }
+  // ...
+}
+```
+
+Problem: adding `sequenceNumber` pollutes `input`. One could argue that the chance of the programmer having their `input` already contain a `sequenceNumber` field is low and that we wouldn't be overwriting it, but I don't like that it is even possible. We could wrap the input in another object that contains the sequence number.
+
+```typescript
+{
+	/* ... */
+	send: (input) => {
+  	connectionToServer.send({
+    	input,
+   		sequenceNumber: sequenceNumberOfNextInput,
+  	});
+  	sequenceNumberOfNextInput += 1;
+	}
+	// ...
+}
+```
+
+I have a few concerns with this though:
+
+1. If the server is not aware that the client is attempting to perform server reconciliation, then the message won't make sense, and we'll have a runtime error on our hands. I think the server should be responsible for validating input structure anyway, so I think this isn't a real issue (but we'll need to remember that good later, because it's a good idea.)
+2. This code modifies what the connection sends. We have no guarantee that the connection supports sending data of our new type.
+3. This method makes server reconciliation a mandatory feature.
+
+As mentioned, 1 is fine, but we should fix 2 and 3. Rather than making this a responsibility of `ClientNetworker`, let's move this to the connection itself.
+
+```typescript
+function addServerReconciliationSupportToClientConnection(connectionToServer) {
+	let sequenceNumberOfNextInput = 0;
+  return {
+  	send: (input) => {
+      input.sequenceNumber = sequenceNumberOfNextInput;
+      nextInputSequenceNumber += 1;
+    	connectionToServer.send({
+        input,
+        sequenceNumber: sequenceNumberOfNextInput,
+      });
+		},
+		onMessageReceived: connectionToServer.onMessageReceived,
+  }
+}
+```
+
+Now, we have to have to support unwrapping the message on the server-side. This makes for a great segue to the next part of supporting server reconciliation on the server side.
+
+##### The server tags each state message with the sequence number of the most recently processed input of the recipient client.
+
+We need a way to save the sequence number of the last input we've seen, per client, so we need to know, when processing an input, which client sent it. Before we can get to that however, we need to implement unwrapping the messages from clients attempting server reconciliation. Since we've yet to extend things on the server end and it's been a while since server code has been examined, here it is again:
+
+```typescript
+class ServerNetworker<PlayerInput, GameState> {
+    private readonly clientConnections = [];
+  	private readonly inputListeners = [];
+  
+    public addClient(connectionToClient) {
+      this.clientConnections.push(connectionToClient);
+      connectionToClient.onMessageReceived((input) => {
+        this.inputListeners.forEach((listener) => listener(input));
+      });
+    }
+ 
+    public broadcastState(state: GameState) {
+      this.clientConnections.forEach((connection) => {
+        connection.send(this.stateSource.read());
+      });
+    }
+ 
+ 		public onInputReceived(fn) {
+      this.inputListeners.push(fn);
+    }
+}
+```
+
+Continuing with how we've been approaching implementation, let's make changes directly in `ServerNetworker`, making the server reconciliation a mandatory feature; and then attempt to hoist them out of the class.
+
+```typescript
+class ServerNetworker<PlayerInput, GameState> {
+    private readonly clientConnections = [];
+ 		// Maps connections to the sequence number of the latest processed input
+  	// from that connection. Using functions as keys to a map is a bit silly, but it
+  	// let's us focus on the problem we are currently trying to solve.
+  	private readonly lastProcessedInputSequenceNumbers = new Map();
+  	private readonly inputListeners = [];
+  
+    public addClient(connectionToClient) {
+      this.clientConnections.push(connectionToClient);
+      // rename input to inputMessage, since what's coming over the wire is now more than just the game input
+      connectionToClient.onMessageReceived((/*input*/ inputMessage) => {
+			 const sequenceNumber = inputMessage.sequenceNumber; // new
+        const input = inputMessage.input; // new 
+        this.lastProcessedInputSequenceNumbers.set(connectionToClient, sequenceNumber); // new
+        this.inputListeners.forEach((listener) => listener(input));
+      });
+    }
+ 
+    public broadcastState(gameState: GameState) {
+      this.clientConnections.forEach((connection) => {
+        // Replaces old call to connection.send
+        connection.send({
+          gameState,
+          lastProcessedInputSequenceNumber: this.lastProcessedInputSequenceNumbers.get(connection),
+        });
+      });
+    }
+ 
+ 		public onInputReceived(fn) {
+      this.inputListeners.push(fn);
+    }
+}
+```
+
+So, we have three changes.
+
+1. A simple data structure to remember the latest input we've seen per client, in the form of a `Map`.
+2. We unwrap the new input message type, saving the input sequence number and then calling input reception listeners with just the input.
+3. When broadcasting the game state to a client, we also provide the sequence number of the last processed input from that client.
+
+We will handle this in a manner similar to what we did on the client side via the verbosely-named `addServerReconciliationSupportToClientConnection` function.
+
+```typescript
+function addServerReconciliationSupportToServerConnection(connectionToClient) {
+  let lastProcessedInputSequenceNumber = 0;
+  const messageReceivedListeners = [];
+  
+  connectionToClient.onMessageReceived((inputMessage) => {
+    const input = inputMessage.input;
+    const inputSequenceNumber = inputMessage.inputSequenceNumber;
+    lastProcessedInputSequenceNumber = inputSequenceNumber;
+    this.messageReceivedListeners.foreach((fn) => fn(input));
+  });
+ 
+  return {
+    send: (gameState) => {
+    	connection.send({
+      	gameState,
+        lastProcessedInputSequenceNumber: this.lastProcessedInputSequenceNumbers.get(connection),
+      });
+		},
+		onMessageReceived: (fn) => {
+      this.messageReceivedListeners.push(fn);
+    }
+  };
+}
+```
+
+##### The client, upon receiving a game state message from the server and updating the local game state to match it, reapplies/predicts local inputs that have not been confirmed to have already reached the server. 
+
+Let's add this to `addServerReconciliationSupportToClientConnection`. Like we did with `addInputPredictionToClient`, we need a new parameter to use to help us apply inputs to the game.
+
+```typescript
+function addServerReconciliationSupportToClientConnection(connectionToServer, localGameInputApplicationStrategy) {
+	let sequenceNumberOfNextInput = 0;
+  let pendingInputMessages = [];
+  
+  connectionToServer.onMessageReceived((gameStateMessage) => {
+    const gameState = gameStateMessage.gameState;
+ 		const lastProcessedInputSequenceNumber = gameStateMessage.lastProcessedInputSequenceNumber;
+		pendingInputMessages = pendingInputMessages.filter((input) => input.sequenceNumber > lastProcessedInputSequenceNumber);
+    pendingInputMessages.forEach((pim) => localGameInputApplicationStrategy(pim.input));
+  });
+
+  return {
+  	send: (input) => {
+      input.sequenceNumber = sequenceNumberOfNextInput;
+      nextInputSequenceNumber += 1;
+      // Save this to a variable instead of passing as a literal to .send.
+      const inputMessage = {
+        input,
+        sequenceNumber: sequenceNumberOfNextInput,
+      };
+    	connectionToServer.send(inputMessage);
+      pendingInputMessages.push(input); // Save the input along with its sequence number.
+		},
+		onMessageReceived: connectionToServer.onMessageReceived,
+  }
+}
+```
+
+That should wrap up server reconciliation! Let's review our work by examining what the client programmer would write to add client prediction and server reconciliation support to their game networking strategy.
+
+```typescript
+
+```
+
