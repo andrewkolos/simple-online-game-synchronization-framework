@@ -191,7 +191,7 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
         const { entityId } = input;
         const state = this._entities.getState(entityId);
         if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
-        this._entities.set({ id: entityId, state: this.inputApplicator(state, input.input) });
+        this._entities.set({ id: entityId, state: this.inputApplicator({id: entityId, state}, input.input) });
       }
     }
   }

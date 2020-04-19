@@ -98,8 +98,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
       const targetEntityMessage = entitiesAfterSync.get(sebInput.entityId);
       if (targetEntityMessage == null || !this.playerSyncStrategy.inputValidator(targetEntityMessage, sebInput.input))
         continue;
-      const state = targetEntityMessage.state;
-      const stateAfterInput = this.playerSyncStrategy.inputApplicator(state, sebInput.input);
+      const stateAfterInput = this.playerSyncStrategy.inputApplicator(targetEntityMessage, sebInput.input);
       entitiesAfterSync.set(targetEntityMessage.id, ({ id: targetEntityMessage.id, state: stateAfterInput }));
     }
 
