@@ -27,6 +27,7 @@
   "exclude": [
     "./demo/**",
     "./dist/**",
-    "./test/**"
+    "./test/**",
+    "./docsandmisc/**"
   ],
 }
