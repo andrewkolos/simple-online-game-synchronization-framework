@@ -1,3 +1,5 @@
+**Under Construction**
+
 # The thinking process behind the design of a game synchronization framework
 
 The purpose of this project is to design a small TypeScript/JavaScript framework that can be used to add client/server networking support to existing games with minimal/no required change to existing code, focusing on smooth movement of other players and objects that they may control.
@@ -24,8 +26,8 @@ Here we define simple types for objects representing a connection between the cl
 
 ```typescript
 interface Connection<IncomingMessage, OutgoingMessage> {
-    send(message: OutgoingMessage): void;
-    onMessageReceived(fn: (incomingMessage: IncomingMessage) => void);
+  send(message: OutgoingMessage): void;
+  onMessageReceived(fn: (incomingMessage: IncomingMessage) => void);
 }
 
 type ConnectionToServer<PlayerInput, GameState> = Connection<GameState, PlayerInput>;
@@ -36,25 +38,25 @@ type ConnectionToClient<PlayerInput, GameState> = Connection<PlayerInput, GameSt
 
 ```typescript
 class ClientNetworker<PlayerInput, GameState> {
-    private readonly connectionToServer: ConnectionToServer<PlayerInput, GameState>;
-    private readonly stateChangeListeners: Array<(updatedState: GameState) => void> = [];
+  private readonly connectionToServer: ConnectionToServer<PlayerInput, GameState>;
+  private readonly stateChangeListeners: Array<(updatedState: GameState) => void> = [];
 
-    public constuctor(connectionToServer: ConnectionToServer<PlayerInput, GameState>) {
-        this.connectionToServer = connectionToServer;
-        connectionToServer.onMessageReceived((gameState) => this.emitStateChange(gameState));
-    }
-    
-    public sendInput(input: PlayerInput) {
-        this.connectionToServer.send(input);
-    }
-    
-   	public onStateChange(listener: (updatedState: GameState) => void) {
-        this.stateChangeListeners.push(listener);
-    }
- 
-    private emitStateChange(state: GameState) {
-        this.stateChangeListeners.forEach((listener) => listener(state));
-    }
+  public constuctor(connectionToServer: ConnectionToServer<PlayerInput, GameState>) {
+    this.connectionToServer = connectionToServer;
+    connectionToServer.onMessageReceived((gameState) => this.emitStateChange(gameState));
+  }
+
+  public sendInput(input: PlayerInput) {
+    this.connectionToServer.send(input);
+  }
+
+  public onStateChange(listener: (updatedState: GameState) => void) {
+    this.stateChangeListeners.push(listener);
+  }
+
+  private emitStateChange(state: GameState) {
+    this.stateChangeListeners.forEach((listener) => listener(state));
+  }
 }
 ```
 
@@ -62,25 +64,25 @@ class ClientNetworker<PlayerInput, GameState> {
 
 ```typescript
 class ServerNetworker<PlayerInput, GameState> {
-    private readonly clientConnections = [];
-  	private readonly inputListeners = [];
-  
-    public addClient(connectionToClient) {
-      this.clientConnections.push(connectionToClient);
-      connectionToClient.onMessageReceived((input) => {
-        this.inputListeners.forEach((listener) => listener(input));
-      });
-    }
- 
-    public broadcastState(gameState: GameState) {
-      this.clientConnections.forEach((connection) => {
-        connection.send(gameState);
-      });
-    }
- 
- 		public onInputReceived(fn) {
-      this.inputListeners.push(fn);
-    }
+  private readonly clientConnections = [];
+  private readonly inputListeners = [];
+
+  public addClient(connectionToClient) {
+    this.clientConnections.push(connectionToClient);
+    connectionToClient.onMessageReceived((input) => {
+      this.inputListeners.forEach((listener) => listener(input));
+    });
+  }
+
+  public broadcastState(gameState: GameState) {
+    this.clientConnections.forEach((connection) => {
+      connection.send(gameState);
+    });
+  }
+
+  public onInputReceived(fn) {
+    this.inputListeners.push(fn);
+  }
 }
 ```
 
@@ -226,15 +228,15 @@ Problem: adding `sequenceNumber` pollutes `input`. One could argue that the chan
 
 ```typescript
 {
-	/* ... */
-	send: (input) => {
-  	connectionToServer.send({
-    	input,
-   		sequenceNumber: sequenceNumberOfNextInput,
-  	});
-  	sequenceNumberOfNextInput += 1;
-	}
-	// ...
+  /* ... */
+  send: (input) => {
+    connectionToServer.send({
+      input,
+      sequenceNumber: sequenceNumberOfNextInput,
+    });
+    sequenceNumberOfNextInput += 1;
+  }
+  /* ... */
 }
 ```
 
@@ -248,17 +250,17 @@ As mentioned, 1 is fine, but we should fix 2 and 3. Rather than making this a re
 
 ```typescript
 function addServerReconciliationSupportToClientConnection(connectionToServer) {
-	let sequenceNumberOfNextInput = 0;
+  let sequenceNumberOfNextInput = 0;
   return {
-  	send: (input) => {
+    send: (input) => {
       input.sequenceNumber = sequenceNumberOfNextInput;
       nextInputSequenceNumber += 1;
-    	connectionToServer.send({
+      connectionToServer.send({
         input,
         sequenceNumber: sequenceNumberOfNextInput,
       });
-		},
-		onMessageReceived: connectionToServer.onMessageReceived,
+    },
+    onMessageReceived: connectionToServer.onMessageReceived,
   }
 }
 ```
@@ -271,25 +273,25 @@ We need a way to save the sequence number of the last input we've seen, per clie
 
 ```typescript
 class ServerNetworker<PlayerInput, GameState> {
-    private readonly clientConnections = [];
-  	private readonly inputListeners = [];
-  
-    public addClient(connectionToClient) {
-      this.clientConnections.push(connectionToClient);
-      connectionToClient.onMessageReceived((input) => {
-        this.inputListeners.forEach((listener) => listener(input));
-      });
-    }
- 
-    public broadcastState(state: GameState) {
-      this.clientConnections.forEach((connection) => {
-        connection.send(this.stateSource.read());
-      });
-    }
- 
- 		public onInputReceived(fn) {
-      this.inputListeners.push(fn);
-    }
+  private readonly clientConnections = [];
+  private readonly inputListeners = [];
+
+  public addClient(connectionToClient) {
+    this.clientConnections.push(connectionToClient);
+    connectionToClient.onMessageReceived((input) => {
+      this.inputListeners.forEach((listener) => listener(input));
+    });
+  }
+
+  public broadcastState(state: GameState) {
+    this.clientConnections.forEach((connection) => {
+      connection.send(this.stateSource.read());
+    });
+  }
+
+  public onInputReceived(fn) {
+    this.inputListeners.push(fn);
+  }
 }
 ```
 
@@ -297,37 +299,37 @@ Continuing with how we've been approaching implementation, let's make changes di
 
 ```typescript
 class ServerNetworker<PlayerInput, GameState> {
-    private readonly clientConnections = [];
- 		// Maps connections to the sequence number of the latest processed input
-  	// from that connection. Using functions as keys to a map is a bit silly, but it
-  	// let's us focus on the problem we are currently trying to solve.
-  	private readonly lastProcessedInputSequenceNumbers = new Map();
-  	private readonly inputListeners = [];
-  
-    public addClient(connectionToClient) {
-      this.clientConnections.push(connectionToClient);
-      // rename input to inputMessage, since what's coming over the wire is now more than just the game input
-      connectionToClient.onMessageReceived((/*input*/ inputMessage) => {
-			 const sequenceNumber = inputMessage.sequenceNumber; // new
-        const input = inputMessage.input; // new 
-        this.lastProcessedInputSequenceNumbers.set(connectionToClient, sequenceNumber); // new
-        this.inputListeners.forEach((listener) => listener(input));
+  private readonly clientConnections = [];
+  // Maps connections to the sequence number of the latest processed input
+  // from that connection. Using functions as keys to a map is a bit silly, but it
+  // let's us focus on the problem we are currently trying to solve.
+  private readonly lastProcessedInputSequenceNumbers = new Map();
+  private readonly inputListeners = [];
+
+  public addClient(connectionToClient) {
+    this.clientConnections.push(connectionToClient);
+    // rename input to inputMessage, since what's coming over the wire is now more than just the game input
+    connectionToClient.onMessageReceived((/*input*/ inputMessage) => {
+      const sequenceNumber = inputMessage.sequenceNumber; // new
+      const input = inputMessage.input; // new 
+      this.lastProcessedInputSequenceNumbers.set(connectionToClient, sequenceNumber); // new
+      this.inputListeners.forEach((listener) => listener(input));
+    });
+  }
+
+  public broadcastState(gameState: GameState) {
+    this.clientConnections.forEach((connection) => {
+      // Replaces old call to connection.send
+      connection.send({
+        gameState,
+        lastProcessedInputSequenceNumber: this.lastProcessedInputSequenceNumbers.get(connection),
       });
-    }
- 
-    public broadcastState(gameState: GameState) {
-      this.clientConnections.forEach((connection) => {
-        // Replaces old call to connection.send
-        connection.send({
-          gameState,
-          lastProcessedInputSequenceNumber: this.lastProcessedInputSequenceNumbers.get(connection),
-        });
-      });
-    }
- 
- 		public onInputReceived(fn) {
-      this.inputListeners.push(fn);
-    }
+    });
+  }
+
+  public onInputReceived(fn) {
+    this.inputListeners.push(fn);
+  }
 }
 ```
 
@@ -371,18 +373,18 @@ Let's add this to `addServerReconciliationSupportToClientConnection`. Like we di
 
 ```typescript
 function addServerReconciliationSupportToClientConnection(connectionToServer, localGameInputApplicationStrategy) {
-	let sequenceNumberOfNextInput = 0;
+  let sequenceNumberOfNextInput = 0;
   let pendingInputMessages = [];
-  
+
   connectionToServer.onMessageReceived((gameStateMessage) => {
     const gameState = gameStateMessage.gameState;
- 		const lastProcessedInputSequenceNumber = gameStateMessage.lastProcessedInputSequenceNumber;
-		pendingInputMessages = pendingInputMessages.filter((input) => input.sequenceNumber > lastProcessedInputSequenceNumber);
+    const lastProcessedInputSequenceNumber = gameStateMessage.lastProcessedInputSequenceNumber;
+    pendingInputMessages = pendingInputMessages.filter((input) => input.sequenceNumber > lastProcessedInputSequenceNumber);
     pendingInputMessages.forEach((pim) => localGameInputApplicationStrategy(pim.input));
   });
 
   return {
-  	send: (input) => {
+    send: (input) => {
       input.sequenceNumber = sequenceNumberOfNextInput;
       nextInputSequenceNumber += 1;
       // Save this to a variable instead of passing as a literal to .send.
@@ -390,10 +392,10 @@ function addServerReconciliationSupportToClientConnection(connectionToServer, lo
         input,
         sequenceNumber: sequenceNumberOfNextInput,
       };
-    	connectionToServer.send(inputMessage);
+      connectionToServer.send(inputMessage);
       pendingInputMessages.push(input); // Save the input along with its sequence number.
-		},
-		onMessageReceived: connectionToServer.onMessageReceived,
+    },
+    onMessageReceived: connectionToServer.onMessageReceived,
   }
 }
 ```
