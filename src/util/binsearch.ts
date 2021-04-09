@@ -11,8 +11,8 @@ interface Match<T> {
 export type Comparator<A, T> = (o1: A, o2: T) => number;
 
 export namespace Comparator {
-  export const NUMBER = makeComparator('number');
-  export const STRING = makeComparator('string');
+  export const Number = makeComparator('number');
+  export const String = makeComparator('string');
 }
 
 export function binarySearch<A, T>(arr: A[], target: T, comparator: Comparator<A, T>): number | undefined {

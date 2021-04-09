@@ -22,7 +22,7 @@ class LagCompensatorRoot {
 
     this.history = history;
 
-    const requestValidator: ClientRequestValidator<LagCompRequest> = (request: LagCompRequest) => {
+    const requestValidator: ClientRequestValidator<LagCompRequest, GameState> = (request: LagCompRequest) => {
       const state = history.mostRecentTo(request.timestamp);
 
       if (!this.compedTimestamped.has(state.timestamp)) {
@@ -33,7 +33,7 @@ class LagCompensatorRoot {
       return false;
     };
 
-    const requestApplicator: RequestApplicator<GameState, LagCompRequest> =
+    const requestApplicator: RequestApplicator<LagCompRequest, GameState> =
       (state: GameState, _request: LagCompRequest) => {
         const stateAfterComp: GameState = cloneDumbObject(state);
         stateAfterComp.p1 += 1;

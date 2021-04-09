@@ -1,10 +1,10 @@
-import { EntityMessageKind, ServerEntitySyncer } from '../../../src';
+import { Entity, EntityMessageKind, ServerEntitySyncer } from '../../../src';
 
 describe(nameof(ServerEntitySyncer), () => {
   it('synchronized event should give deep copies of entity states', () => {
     const syncer = new ServerEntitySyncer<number, { foo: number }>({
       clientIdAssigner: (() => { let i = 0; return () => String(i++); })(),
-      inputApplicator: (currentState: { foo: number }, input: number) => ({ foo: currentState.foo + input }),
+      inputApplicator: (currentState: Entity<{ foo: number }>, input: number) => ({ foo: currentState.state.foo + input }),
       inputValidator: () => true,
     });
 
