@@ -62,14 +62,14 @@ export class DemoSyncServer extends EventEmitter<DemoSyncServerEvents> {
   }
 
   private validateInput(entity: Entity<BasicDemoPlayerState>, input: DemoPlayerInput): boolean {
-    const demoPlayerInput = input as DemoPlayerInput;
     const movementRecord = this.playerMovementRecords.get(entity.id);
 
-    if (movementRecord != null && demoPlayerInput.pressTime != null) {
-      return movementRecord.lastInputTimestamp + demoPlayerInput.pressTime <= new Date().getTime();
+    if (movementRecord != null && input.pressTime != null) {
+      // TODO: devise a scheme that factors in client latency, as below will not work for initial inputs.
+      //return movementRecord.lastInputTimestamp + input.pressTime <= new Date().getTime();
     }
 
-    return false;
+    return true;
   }
 
   private applyInput(playerEntity: Entity<BasicDemoPlayerState>, input: BasicDemoPlayerInput): BasicDemoPlayerState {
