@@ -4,7 +4,7 @@ logs
 npm-debug.log*
 
 # Dependencies
-**/node_modules/
+node_modules/
 
 # Coverage
 coverage
@@ -21,8 +21,10 @@ build/
 # Misc
 .DS_Store
 
-demo/build*
+**/bundle*
 
 build/**
+
+dist/**
 
 **/.rpt2_cache/**
