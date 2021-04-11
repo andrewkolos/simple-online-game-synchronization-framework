@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
 import { LcDemoGameState, PlayerId } from '../../lag-compensation-demo/lc-demo-game-state';
-import { Point, Polygon } from '../../lag-compensation-demo/misc/geomtry';
+import { Point } from '../../lag-compensation-demo/misc/geomtry';
 import { GeometryDrawing } from '../common/geometry-drawer';
 
 interface DemoGameRendererProps {
@@ -39,10 +39,10 @@ export class LcDemoGameRendererComponent extends React.Component<DemoGameRendere
       [PlayerId.P2]: 'yellow',
     };
 
-    [{ id: PlayerId.P1, player: game.player1 }, { id: PlayerId.P2, player: game.player2 }].forEach((o) => {
-      const { id, player } = o;
-      const geometry = game.getPlayerGeometry(player, id, game.playfield).asOrderedPolygon();
-      const laser = game.getLaser(id).asSegment();
+    [PlayerId.P1, PlayerId.P2].forEach((id) => {
+      const player = game.getPlayerFromId(id);
+      const geometry = game.getPlayerGeometry(id).asOrderedPolygon();
+      const laser = game.getLaser(id);
 
       (function renderLaser() {
         if (player.timeUntilSpawnMs <= 0) {
@@ -73,8 +73,8 @@ export class LcDemoGameRendererComponent extends React.Component<DemoGameRendere
 
       (function renderSpawnTimer() {
         if (player.timeUntilSpawnMs > 0) {
-          const pLoc = Polygon.findCenter(geometry);
-          const bBox = Polygon.computeBoundingBox(geometry);
+          const pLoc = geometry.findCenter();
+          const bBox = geometry.computeBoundingBox();
           const maxDimension = Math.max(bBox.length, bBox.width);
           const percentTimeUntilSpawn = player.timeUntilSpawnMs / game.respawnTimeMs * 100;
 
@@ -117,5 +117,5 @@ function percentToRad(percent: number): number {
 }
 
 function screenCoord(p: Point, planeHeight: number): Point {
-  return { x: p.x, y: planeHeight - p.y };
+  return new Point(p.x, planeHeight - p.y);
 }

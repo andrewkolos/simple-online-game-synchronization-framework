@@ -25,11 +25,16 @@ export interface LagCompensatorCalculatorArgs<State, ClientRequest extends LcReq
   requestValidator: ClientRequestValidator<ClientRequest, State>;
 }
 
+/**
+ * The `LagCompensator` is responsible for
+ * validating lag compensation requests sent by clients, applying them, and resimulating
+ * the state of the game when requests are accepted.
+ */
 export class LagCompensator<GameState, ClientRequest extends LcRequest> {
 
-  private resimmer: Resimulator<GameState>;
-  private requestApplicator: RequestApplicator<ClientRequest, GameState>;
-  private requestValidator: ClientRequestValidator<ClientRequest, GameState>;
+  private readonly resimmer: Resimulator<GameState>;
+  private readonly requestApplicator: RequestApplicator<ClientRequest, GameState>;
+  private readonly requestValidator: ClientRequestValidator<ClientRequest, GameState>;
 
   public constructor(args: LagCompensatorCalculatorArgs<GameState, ClientRequest>) {
     this.resimmer = args.resimmer;

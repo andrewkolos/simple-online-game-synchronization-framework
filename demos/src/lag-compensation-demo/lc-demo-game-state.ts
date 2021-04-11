@@ -1,4 +1,4 @@
-import { Segment, Polygon, Point } from './misc/geomtry';
+import { Polygon, Point, Segment } from './misc/geomtry';
 import { LcDemoPlayerState } from './player';
 import { LcDemoGameConfig } from './lc-demo-game-config';
 
@@ -19,7 +19,7 @@ export namespace PlayerId {
 // NOTE: All coordinates are standard cartesian coordinates, with the origin residing at the bottom-left of the playfield.
 // Y-offsets should be negated for standard screen-coordinate rendering.
 
-interface PlayerGeometry {
+export interface PlayerGeometry {
   rearLeftSidePoint: Point;
   rearRightSidePoint: Point;
   tipPoint: Point;
@@ -60,53 +60,52 @@ export class LcDemoGameState {
     this.player2 = defaultState(PlayerId.P2);
   }
 
-  public getLaser(player: PlayerId) {
-    const physicalPlayer = PlayerId.playerMux(this.player1, this.player2, player);
-    const geometry = this.getPlayerGeometry(physicalPlayer, player, this.playfield);
-    const center = Polygon.findCenter(geometry.asOrderedPolygon());
-    const laserOrigin = geometry.tipPoint;
-    const laserEndPreRotation = Point.translate(laserOrigin, { x: this.config.playFieldWidth * 1.25, y: 0 });
-    const laserEnd = Point.rotateAboutPoint(laserEndPreRotation, physicalPlayer.rotationRads, center);
-    return {
-      laserOrigin,
-      laserEnd,
-      asSegment(): Segment {
-        return { p: laserOrigin, q: laserEnd };
-      },
-    };
+  public getLaser(player: PlayerId): Segment {
+    const physicalPlayer = this.getPlayerFromId(player);
+    const geometry = this.getPlayerGeometry(player);
+    const center = geometry.asOrderedPolygon().findCenter();
+    const origin = geometry.tipPoint;
+    const laserEndPreRotation = origin.translate(new Point(this.config.playFieldWidth * 1.25, 0));
+    const end = laserEndPreRotation.rotateAboutPoint(physicalPlayer.rotationRads, center);
+    return new Segment(origin, end);
   }
 
-  public getPlayerGeometry(pState: LcDemoPlayerState, player: PlayerId, playfield: { height: number, width: number }): PlayerGeometry {
+  public getPlayerGeometry(player: PlayerId): PlayerGeometry {
+    
+    const pState = PlayerId.playerMux(this.player1, this.player2, player);
+    const playfield = this.playfield;
     const baseGeometry = (() => {
       const unit = this.config.playFieldWidth / 30;
       const distanceCenterBaseToAdjPoint = this.config.playFieldHeight / 20;
 
       return {
-        rearLeftSidePoint: { x: -unit, y: distanceCenterBaseToAdjPoint },
-        rearRightSidePoint: { x: -unit, y: -distanceCenterBaseToAdjPoint },
-        tipPoint: { x: unit * 2, y: 0 },
+        rearLeftSidePoint: new Point(-unit, distanceCenterBaseToAdjPoint),
+        rearRightSidePoint: new Point(-unit, -distanceCenterBaseToAdjPoint),
+        tipPoint: new Point(unit * 2, 0),
         asOrderedPolygon(): Polygon {
-          return { points: [this.rearLeftSidePoint, this.rearRightSidePoint, this.tipPoint] };
+          return new Polygon([this.rearLeftSidePoint, this.rearRightSidePoint, this.tipPoint]);
         },
       };
     })();
 
-    const bBox = Polygon.computeBoundingBox(baseGeometry.asOrderedPolygon());
+    const bBox = baseGeometry.asOrderedPolygon().computeBoundingBox();
     const xPos = player === PlayerId.P1 ? bBox.width : playfield.width - bBox.width * 1.25;
     const defaultYPos = playfield.height / 2;
 
-    const translated = Point.translate(baseGeometry.asOrderedPolygon().points, {
-      x: xPos, y: defaultYPos + pState.yOffset,
-    });
+    const translated = new Polygon(
+      baseGeometry.asOrderedPolygon()
+        .points
+        .map(p => p.translate(new Point(xPos, defaultYPos + pState.yOffset)))
+    );
 
-    const rotated = Polygon.rotate({ points: translated }, pState.rotationRads);
+    const rotated = translated.rotate(pState.rotationRads);
 
     return {
       rearLeftSidePoint: rotated.points[0],
       rearRightSidePoint: rotated.points[1],
       tipPoint: rotated.points[2],
       asOrderedPolygon(): Polygon {
-        return { points: [this.rearLeftSidePoint, this.rearRightSidePoint, this.tipPoint] };
+        return new Polygon([this.rearLeftSidePoint, this.rearRightSidePoint, this.tipPoint]);
       },
     };
   }
@@ -121,10 +120,9 @@ export class LcDemoGameState {
   public isLaserHittingOpponent(offensivePlayer: PlayerId): boolean {
     const laser = this.getLaser(offensivePlayer);
 
-    const opposingPlayer = this.getPlayerFromId(PlayerId.opposite(offensivePlayer));
-    const opposingPlayerGeometry = this.getPlayerGeometry(opposingPlayer, PlayerId.opposite(offensivePlayer), this.playfield);
+    const opposingPlayerGeometry = this.getPlayerGeometry(PlayerId.opposite(offensivePlayer));
 
-    return Segment.intersectsPolygon(laser.asSegment(), opposingPlayerGeometry.asOrderedPolygon());
+    return laser.intersectsPolygon(opposingPlayerGeometry.asOrderedPolygon());
   }
 
   public destroyPlayer(receivingPlayerId: PlayerId) {
@@ -158,7 +156,7 @@ export class LcDemoGameState {
     return collisionResult;
   }
 
-  private getPlayerFromId(playerId: PlayerId) {
+  public getPlayerFromId(playerId: PlayerId): LcDemoPlayerState {
     return PlayerId.playerMux(this.player1, this.player2, playerId);
   }
 }
