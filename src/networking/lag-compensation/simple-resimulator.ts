@@ -1,10 +1,10 @@
 import { cloneDumbObject } from '../../util';
-import { ResimArgs } from './lag-compensator';
+import { ResimulationContext } from './lag-compensator';
 import { Timestamped } from './timestamped-buffer';
 
-export const simpleResimulator = <T>(context: ResimArgs<T>): T => {
+export const simpleResimulator = <T>(context: ResimulationContext<T>): T => {
 
-  const _context = context as AllPropsAny<ResimArgs<T>>; // Note: type checking turned off!
+  const _context = context as AllPropsAny<ResimulationContext<T>>; // Note: type checking turned off!
 
   if (typeof _context.oldCurrentState.value === 'number'
   && typeof _context.newPreviousState.value === 'number'

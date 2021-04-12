@@ -11,6 +11,7 @@ export interface BufferMessage {
 export interface InputMessage<T> extends BufferMessage {
   kind: EntityMessageKind.Input;
   input: T;
+  timestamp: number;
   inputSequenceNumber: number;
   entityId: string;
 }

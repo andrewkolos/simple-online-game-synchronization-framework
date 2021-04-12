@@ -4,7 +4,7 @@ export interface LcRequest {
   timestamp: number;
 }
 
-export interface ResimArgs<State> {
+export interface ResimulationContext<State> {
   /** The state before the current state to be recomputed, as it was before the request. */
   oldPreviousState: Timestamped<State>;
   /** The state before the current state to be recomputed, newly computed after the request. */
@@ -13,16 +13,26 @@ export interface ResimArgs<State> {
   oldCurrentState: Timestamped<State>;
 }
 
-export type Resimulator<G> = (context: ResimArgs<G>) => G;
+export type Resimulator<G> = (context: ResimulationContext<G>) => G;
 
 export type RequestApplicator<Request, State> = (state: State, request: Request) => State;
 
-export type ClientRequestValidator<Request, State> = (request: Request, serverHistory: TimestampedBuffer<State>) => boolean;
+export interface LagCompensationRequestValidationContext<State> {
+  serverHistory: TimestampedBuffer<State>;
+  clientLatency: number;
+}
+
+export type LagCompensationRequestValidator<Request, State> = (request: Request, context: LagCompensationRequestValidationContext<State>) => boolean;
 
 export interface LagCompensatorCalculatorArgs<State, ClientRequest extends LcRequest> {
   resimmer: Resimulator<State>;
   requestApplicator: RequestApplicator<ClientRequest, State>;
-  requestValidator: ClientRequestValidator<ClientRequest, State>;
+  requestValidator: LagCompensationRequestValidator<ClientRequest, State>;
+}
+
+export interface LagCompensationRequestContext<GameState> {
+  serverHistory: TimestampedBuffer<GameState>;
+  clientLatency: number;
 }
 
 /**
@@ -34,7 +44,7 @@ export class LagCompensator<GameState, ClientRequest extends LcRequest> {
 
   private readonly resimmer: Resimulator<GameState>;
   private readonly requestApplicator: RequestApplicator<ClientRequest, GameState>;
-  private readonly requestValidator: ClientRequestValidator<ClientRequest, GameState>;
+  private readonly requestValidator: LagCompensationRequestValidator<ClientRequest, GameState>;
 
   public constructor(args: LagCompensatorCalculatorArgs<GameState, ClientRequest>) {
     this.resimmer = args.resimmer;
@@ -49,7 +59,9 @@ export class LagCompensator<GameState, ClientRequest extends LcRequest> {
    * @param request The request sent by the client.
    * @returns Whether or not the request was accepted.
    */
-  public processRequest(serverHistory: TimestampedBuffer<GameState>, request: ClientRequest): boolean {
+  public processRequest(request: ClientRequest, context: LagCompensationRequestContext<GameState>): boolean {
+
+    const {serverHistory} = context;
 
     const stateHistory = Array.from(serverHistory.slice(request.timestamp));
 
@@ -59,7 +71,7 @@ export class LagCompensator<GameState, ClientRequest extends LcRequest> {
 
     const gameStateAtRequestedTime = stateHistory[0];
 
-    if (!this.requestValidator(request, serverHistory)) return false;
+    if (!this.requestValidator(request, context)) return false;
 
     const stateAfterCompensation = this.requestApplicator(gameStateAtRequestedTime.value, request);
 

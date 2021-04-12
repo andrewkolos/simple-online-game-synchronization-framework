@@ -126,6 +126,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     const inputs = this.playerSyncStrategy.inputSource(forEntities);
     const asMessages: Array<InputMessage<Input>> = inputs.map((ebs) => {
       return {
+        timestamp: new Date().getTime(),
         kind: EntityMessageKind.Input,
         entityId: ebs.entityId,
         input: ebs.input,

@@ -34,13 +34,13 @@ export class LcDemoGameServer extends InheritableEventEmitter<LcDemoGameServerEv
 
   private updateRateHz: number;
   private readonly entitySyncer: ServerEntitySyncer<LcDemoPlayerInput, LcDemoPlayerState>;
-  private readonly game: LcDemoGameState;
+  private readonly gameState: LcDemoGameState;
 
   private loop: IntervalTaskRunner;
 
   public constructor(gameConfig: LcDemoGameConfig) {
     super();
-    this.game = new LcDemoGameState(gameConfig);
+    this.gameState = new LcDemoGameState(gameConfig);
 
     let c1IdAssigned = false;
     this.entitySyncer = new ServerEntitySyncer({
@@ -72,25 +72,25 @@ export class LcDemoGameServer extends InheritableEventEmitter<LcDemoGameServerEv
     const pid = LcDemoClientId.getEntityId(cid);
     this.entitySyncer.addPlayerEntity({
       id: pid,
-      state: cid === LcDemoClientId.P1 ? cloneDumbObject(this.game.player1) : cloneDumbObject(this.game.player2),
+      state: cid === LcDemoClientId.P1 ? cloneDumbObject(this.gameState.player1) : cloneDumbObject(this.gameState.player2),
     }, cid);
   }
 
   private update() {
     const updatedEntities = this.entitySyncer.synchronize() as Array<Entity<LcDemoPlayerState>>;
-    writeLcDemoEntityStatesToGame(updatedEntities, this.game);
-    this.game.advanceSpawnTimers(Interval.fromHz(this.updateRateHz).ms);
-    this.game.performLaserCollisions();
+    writeLcDemoEntityStatesToGame(updatedEntities, this.gameState);
+    this.gameState.advanceSpawnTimers(Interval.fromHz(this.updateRateHz).ms);
+    this.gameState.performLaserCollisions();
     this.writeSpawnTimersToEntities();
-    this.emit('updated', this.game);
+    this.emit('updated', this.gameState);
   }
 
   private writeSpawnTimersToEntities() {
     this.entitySyncer.setEntityState(LcDemoEntityId.P1, {
-      timeUntilSpawnMs: this.game.player1.timeUntilSpawnMs,
+      timeUntilSpawnMs: this.gameState.player1.timeUntilSpawnMs,
     });
     this.entitySyncer.setEntityState(LcDemoEntityId.P2, {
-      timeUntilSpawnMs: this.game.player2.timeUntilSpawnMs,
+      timeUntilSpawnMs: this.gameState.player2.timeUntilSpawnMs,
     });
   }
 }

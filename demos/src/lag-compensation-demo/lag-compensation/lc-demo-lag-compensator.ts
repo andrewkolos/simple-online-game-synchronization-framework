@@ -1,5 +1,4 @@
-// import { Resimulator, RequestApplicator, ClientRequestValidator, TimestampedBuffer, LagCompensator } from '../../../../src';
-// import { cloneDumbObject } from '../../../../src';
+// import { Resimulator, RequestApplicator, LagCompensator, LagCompensationRequestValidator, LagCompensationRequestValidationContext } from '../../../../src';
 // import { isLaserHittingTarget } from '../is-laser-hitting-target';
 // import { LcDemoGameState, PlayerId } from '../lc-demo-game-state';
 // import { LcDemoGameServer } from '../lc-demo-server';
@@ -11,14 +10,14 @@
 //   rotationRads: number;
 // }
 
-// export function CreateLcDemoLagCompensator(): LagCompensator<LcDemoGameState, LcDemoLcRequest> {
+// export function CreateLcDemoLagCompensator(server: LcDemoGameServer): LagCompensator<LcDemoGameState, LcDemoLcRequest> {
 //   const resimmer: Resimulator<LcDemoGameState> = (args) => {
 //     const oldCurrentState = args.oldCurrentState.value;
 //     const oldPreviousState = args.oldPreviousState.value;
 //     const newPreviousState = args.newPreviousState.value;
 //     const dt = args.oldCurrentState.timestamp - args.oldPreviousState.timestamp;
 
-//     const newCurrentState = cloneDumbObject(oldCurrentState);
+//     const newCurrentState = new LcDemoGameState(oldCurrentState);
 //     newCurrentState.players.forEach(({ id, player }) => {
 //       const playerInOldPreviousState = oldPreviousState.getPlayerFromId(id);
 //       const playerInNewPreviousState = newPreviousState.getPlayerFromId(id);
@@ -34,13 +33,17 @@
 //     return newCurrentState;
 //   };
 //   const requestApplicator: RequestApplicator<LcDemoLcRequest, LcDemoGameState> = (state: LcDemoGameState, request: LcDemoLcRequest) => {
-//     const otherPlayer = state.getPlayerGeometry(PlayerId.opposite(request.requestingPlayer));
+//     const opposingPlayerId = PlayerId.opposite(request.requestingPlayer);
+//     const otherPlayer = state.getPlayerGeometry(opposingPlayerId);
 //     isLaserHittingTarget(state.getLaser(request.requestingPlayer), otherPlayer);
-    
-    
+//     const newState = new LcDemoGameState(state);
+//     newState.destroyPlayer(opposingPlayerId);
+//     return newState;
 //   };
-//   const requestValidator: ClientRequestValidator<LcDemoLcRequest> = (request: LcDemoLcRequest, history: TimestampedBuffer<LcDemoGameState>) => {
-//     if 
+//   const requestValidator: LagCompensationRequestValidator<LcDemoLcRequest, LcDemoGameState> = 
+//     (request: LcDemoLcRequest, context: LagCompensationRequestValidationContext<LcDemoLcRequest>) => {
+    
+//     request.timestamp
 //   };
 
 //   return new LagCompensator({resimmer, requestApplicator, requestValidator})

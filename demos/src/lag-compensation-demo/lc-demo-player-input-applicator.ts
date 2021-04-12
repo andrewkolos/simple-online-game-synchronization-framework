@@ -1,9 +1,11 @@
 import { LcMoveInputDirection, LcRotateInputDirection, LcDemoPlayerState, LcDemoPlayerInput } from './player';
 import { Entity } from '../../../src';
 
+export const MOVE_SPEED = 0.1;
+export const TURN_SPEED = Math.PI / 1000 / 8;
+
 export const lcDemoPlayerInputApplicator = (entity: Entity<LcDemoPlayerState>, input: LcDemoPlayerInput): LcDemoPlayerState => {
-  const MOVE_SPEED = 0.1;
-  const TURN_SPEED = Math.PI / 1000 / 8;
+
 
   const currentPosition = entity.state.yOffset;
   const currentRotation = entity.state.rotationRads;
