@@ -48,6 +48,7 @@
     "webpack-cli": "^3.3.7"
   },
   "dependencies": {
+    "@akolos/event-emitter": "^2.0.6",
     "core-js": "^3.2.1",
     "eventemitter3": "^4.0.0",
     "exponential-backoff": "^2.1.1",
@@ -55,7 +56,6 @@
     "keyboardjs": "^2.5.1",
     "mheap": "^1.1.0",
     "priority-deque": "^1.0.3",
-    "queue-typescript": "^1.0.1",
-    "typed-event-emitter": "^2.0.0"
+    "queue-typescript": "^1.0.1"
   }
 }

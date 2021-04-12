@@ -1,4 +1,3 @@
-import { EventEmitter } from 'typed-event-emitter';
 import { Entity, InputApplicator } from '../../entity';
 import { EntityMessageKind, InputMessage, StateMessage } from '../../networking';
 import { singleLineify } from '../../util/singleLineify';
@@ -6,6 +5,7 @@ import { EntityTargetedInput } from '../client';
 import { EntityCollection } from '../entity-collection';
 import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 import { cloneDumbObject } from '../../util';
+import { InheritableEventEmitter } from '@akolos/event-emitter';
 
 type ClientId = string;
 
@@ -45,16 +45,16 @@ export interface ClientInformation {
   lastAcknowledgedInputSeqNumber: number;
 }
 
-type OnSynchronizedHandler<Input, State> = (entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => void;
+export interface ServerEntitySyncerEvents<Input, State> {
+  preSynchronization: [];
+  synchronized: [entities: ReadonlyArray<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>];
+}
 
 /**
  * Creates and synchronizes game entities for clients.
  * @template E The type of entity/entities this synchronizer can work with.
  */
-export class ServerEntitySyncer<Input, State> extends EventEmitter {
-
-  public readonly onPreSynchronization = this.registerEvent<() => void>();
-  public readonly onSynchronized = this.registerEvent<OnSynchronizedHandler<Input, State>>();
+export class ServerEntitySyncer<Input, State> extends InheritableEventEmitter<ServerEntitySyncerEvents<Input, State>> {
 
   private readonly inputValidator: InputValidator<Input, State>;
   private readonly inputApplicator: InputApplicator<Input, State>;
@@ -133,13 +133,13 @@ export class ServerEntitySyncer<Input, State> extends EventEmitter {
    * the states of all entities to all clients.
    */
   public synchronize(): ReadonlyArray<Entity<State>> {
-    this.emit(this.onPreSynchronization);
+    this.emit('preSynchronization');
 
     const inputs = this.retrieveValidInputs();
     this.applyInputs(inputs);
     this.sendStates();
 
-    this.emit(this.onSynchronized, this._entities.asArray(), inputs.map((ci) => ci.inputs).flat());
+    this.emit('synchronized', this._entities.asArray(), inputs.map((ci) => ci.inputs).flat());
     return this._entities.asArray();
   }
 

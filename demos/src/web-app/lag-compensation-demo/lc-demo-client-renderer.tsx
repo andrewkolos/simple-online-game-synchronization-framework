@@ -26,11 +26,11 @@ export class LcDemoClientRenderer extends React.Component<LcDemoClientRendererPr
       numberOfPendingInputs: undefined,
     };
 
-    props.client.onUpdated((gameState: LcDemoGameState) => {
+    props.client.on('updated', ((gameState: LcDemoGameState) => {
       this.setState({
         gameState,
       });
-    });
+    }));
   }
 
   public render() {

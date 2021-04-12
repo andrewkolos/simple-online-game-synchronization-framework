@@ -1,6 +1,5 @@
 import { PlayerClientEntitySyncer, PlayerClientSyncerConnectionToServer } from '../../../src';
 import { Interval, IntervalTaskRunner } from 'interval-task-runner';
-import { EventEmitter } from 'typed-event-emitter';
 import { createKeyboardLcDemoInputCollector, LcKeyboardDemoInputCollectorKeycodes } from './keyboard-LC-demo-input-collector';
 import { LcDemoGameConfig } from './lc-demo-game-config';
 import { LcDemoGameState } from './lc-demo-game-state';
@@ -8,6 +7,7 @@ import { lcDemoPlayerInputApplicator } from './lc-demo-player-input-applicator';
 import { LcDemoPlayerInput, LcDemoPlayerState } from './player';
 import { writeLcDemoEntityStatesToGame } from './write-lc-demo-entity-states-to-game';
 import { makeLcDemoinputValidator } from './lc-demo-input-validator';
+import { InheritableEventEmitter } from '@akolos/event-emitter';
 
 export interface LcDemoClientSyncArgs {
   syncRateHz: number;
@@ -20,9 +20,11 @@ export interface DisconnectedLcDemoClient {
   connect: () => Promise<LcDemoClient>;
 }
 
-export class LcDemoClient extends EventEmitter {
+export interface LcDemoClientEvents {
+  updated: [gameState: LcDemoGameState];
+}
 
-  public onUpdated = this.registerEvent<(gameState: LcDemoGameState) => void>();
+export class LcDemoClient extends InheritableEventEmitter<LcDemoClientEvents> {
 
   private game: LcDemoGameState;
   private readonly syncer: PlayerClientEntitySyncer<LcDemoPlayerInput, LcDemoPlayerState>;
@@ -58,7 +60,7 @@ export class LcDemoClient extends EventEmitter {
   private update() {
     const playerEntities = this.syncer.synchronize();
     writeLcDemoEntityStatesToGame(playerEntities, this.game);
-    this.emit(this.onUpdated, this.game);
+    this.emit('updated', this.game);
   }
 
   // private hitsOccurredOnServer(currentEntityStates: Array<Entity<LcDemoPlayerState>>): LaserCollisionResult {

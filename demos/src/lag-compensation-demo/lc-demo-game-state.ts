@@ -1,6 +1,7 @@
 import { Polygon, Point, Segment } from './misc/geomtry';
 import { LcDemoPlayerState } from './player';
 import { LcDemoGameConfig } from './lc-demo-game-config';
+import { cloneDumbObject } from '@akolos/ts-client-server-game-synchronization';
 
 export enum PlayerId {
   P1,
@@ -47,17 +48,28 @@ export class LcDemoGameState {
     return [{ id: PlayerId.P1, player: this.player1 }, { id: PlayerId.P2, player: this.player2 }];
   }
 
-  public constructor(private readonly config: LcDemoGameConfig) {
-    this.playfield.height = config.playFieldHeight;
-    this.playfield.width = config.playFieldWidth;
-    this.respawnTimeMs = config.respawnTimeMs;
-    const defaultState = (pid: PlayerId): LcDemoPlayerState => ({
-      rotationRads: pid === PlayerId.P1 ? 0 : Math.PI,
-      timeUntilSpawnMs: 0,
-      yOffset: pid === PlayerId.P1 ? this.config.playFieldHeight / 8 : - this.config.playFieldHeight / 8,
-    });
-    this.player1 = defaultState(PlayerId.P1);
-    this.player2 = defaultState(PlayerId.P2);
+  public constructor(config: LcDemoGameConfig);
+  public constructor(state: LcDemoGameState);
+  public constructor(configOrState: LcDemoGameConfig | LcDemoGameState) {
+    if (configOrState instanceof LcDemoGameState) {
+      const state = configOrState;
+      this.playfield = cloneDumbObject(state.playfield);
+      this.player1 = cloneDumbObject(state.player1);
+      this.player2 = cloneDumbObject(state.player2);
+      this.respawnTimeMs = state.respawnTimeMs;
+    } else {
+      const config = configOrState;
+      this.playfield.height = config.playFieldHeight;
+      this.playfield.width = config.playFieldWidth;
+      this.respawnTimeMs = config.respawnTimeMs;
+      const defaultState = (pid: PlayerId): LcDemoPlayerState => ({
+        rotationRads: pid === PlayerId.P1 ? 0 : Math.PI,
+        timeUntilSpawnMs: 0,
+        yOffset: pid === PlayerId.P1 ? config.playFieldHeight / 8 : - config.playFieldHeight / 8,
+      });
+      this.player1 = defaultState(PlayerId.P1);
+      this.player2 = defaultState(PlayerId.P2);
+    }
   }
 
   public getLaser(player: PlayerId): Segment {
@@ -65,18 +77,18 @@ export class LcDemoGameState {
     const geometry = this.getPlayerGeometry(player);
     const center = geometry.asOrderedPolygon().findCenter();
     const origin = geometry.tipPoint;
-    const laserEndPreRotation = origin.translate(new Point(this.config.playFieldWidth * 1.25, 0));
+    const laserEndPreRotation = origin.translate(new Point(this.playfield.width * 1.25, 0));
     const end = laserEndPreRotation.rotateAboutPoint(physicalPlayer.rotationRads, center);
     return new Segment(origin, end);
   }
 
   public getPlayerGeometry(player: PlayerId): PlayerGeometry {
-    
+
     const pState = PlayerId.playerMux(this.player1, this.player2, player);
     const playfield = this.playfield;
     const baseGeometry = (() => {
-      const unit = this.config.playFieldWidth / 30;
-      const distanceCenterBaseToAdjPoint = this.config.playFieldHeight / 20;
+      const unit = this.playfield.width / 30;
+      const distanceCenterBaseToAdjPoint = this.playfield.height / 20;
 
       return {
         rearLeftSidePoint: new Point(-unit, distanceCenterBaseToAdjPoint),
@@ -127,8 +139,7 @@ export class LcDemoGameState {
 
   public destroyPlayer(receivingPlayerId: PlayerId) {
     const receivingPlayer = this.getPlayerFromId(receivingPlayerId);
-    const { respawnTimeMs: timeUntilSpawnMs } = this.config;
-    receivingPlayer.timeUntilSpawnMs = timeUntilSpawnMs;
+    receivingPlayer.timeUntilSpawnMs = this.respawnTimeMs;
   }
 
   public performLaserCollisions(): LaserCollisionResult {

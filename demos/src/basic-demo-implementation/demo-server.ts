@@ -36,7 +36,7 @@ export class DemoSyncServer extends EventEmitter<DemoSyncServerEvents> {
     });
 
     this.syncerRunner = new ServerEntitySyncerRunner(this.syncer);
-    this.syncerRunner.onSynchronized(((e) => this.emit('synchronized', e)));
+    this.syncerRunner.on('synchronized', (((e) => this.emit('synchronized', e))));
   }
 
   public addClient(connection: TwoWayMessageBuffer<InputMessage<BasicDemoPlayerInput>, StateMessage<BasicDemoPlayerState>>): string {

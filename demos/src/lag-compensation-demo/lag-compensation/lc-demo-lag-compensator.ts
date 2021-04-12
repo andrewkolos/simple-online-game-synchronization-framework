@@ -40,7 +40,7 @@
     
 //   };
 //   const requestValidator: ClientRequestValidator<LcDemoLcRequest> = (request: LcDemoLcRequest, history: TimestampedBuffer<LcDemoGameState>) => {
-
+//     if 
 //   };
 
 //   return new LagCompensator({resimmer, requestApplicator, requestValidator})

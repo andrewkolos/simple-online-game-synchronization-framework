@@ -14,12 +14,12 @@ export class StateHistoryRecorder<Input, State> {
 
   public constructor(serverEntitySyncer: ServerEntitySyncer<Input, State>,
     public readonly recordLengthMs: number) {
-    serverEntitySyncer.onSynchronized((entities: Array<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => {
+    serverEntitySyncer.on('synchronized', ((entities: Array<Entity<State>>, inputsApplied: Array<EntityTargetedInput<Input>>) => {
       this.history.record({
         entities,
         inputsApplied,
       });
-    });
+    }));
   }
 
 }

@@ -27,12 +27,12 @@ export class BasicDemoClientRenderer extends React.Component<ClientRendererProps
       numberOfPendingInputs: 0,
     };
 
-    props.demoClientRunner.onSynchronized((entities: Array<Entity<BasicDemoPlayerState>>) => {
+    props.demoClientRunner.on('synchronized', ((entities: Array<Entity<BasicDemoPlayerState>>) => {
       this.setState({
         entities,
         numberOfPendingInputs: props.demoClientRunner.synchronizer.getNumberOfPendingInputs(),
       });
-    });
+    }));
   }
 
   public render() {

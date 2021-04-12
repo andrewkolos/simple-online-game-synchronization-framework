@@ -21,9 +21,9 @@ export class LcDemoServerRenderer extends React.Component<ServerRendererProps, L
     this.state = {
       gameState: undefined,
     };
-    props.server.onUpdated((gameState) => {
+    props.server.on('updated', ((gameState) => {
       this.setState({ gameState });
-    });
+    }));
   }
 
   public render() {

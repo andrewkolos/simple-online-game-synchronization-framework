@@ -1,6 +1,5 @@
 import { Entity, InputMessage, ServerEntitySyncer, StateMessage, TwoWayMessageBuffer, cloneDumbObject } from '../../../src';
 import { Interval, IntervalTaskRunner } from 'interval-task-runner';
-import { EventEmitter } from 'typed-event-emitter';
 import { LcDemoEntityId } from './lc-demo-entity-ids';
 import { LcDemoGameConfig } from './lc-demo-game-config';
 import { LcDemoGameState } from './lc-demo-game-state';
@@ -8,6 +7,7 @@ import { lcDemoPlayerInputApplicator } from './lc-demo-player-input-applicator';
 import { LcDemoPlayerInput, LcDemoPlayerState } from './player';
 import { writeLcDemoEntityStatesToGame } from './write-lc-demo-entity-states-to-game';
 import { makeLcDemoinputValidator} from './lc-demo-input-validator';
+import { InheritableEventEmitter } from '@akolos/event-emitter';
 
 enum LcDemoClientId {
   P1 = 'P1',
@@ -26,9 +26,11 @@ namespace LcDemoClientId {
   }
 }
 
-export class LcDemoGameServer extends EventEmitter {
+export interface LcDemoGameServerEvents {
+  updated: [gameState: LcDemoGameState];
+}
 
-  public readonly onUpdated = this.registerEvent<(gameState: LcDemoGameState) => void>();
+export class LcDemoGameServer extends InheritableEventEmitter<LcDemoGameServerEvents> {
 
   private updateRateHz: number;
   private readonly entitySyncer: ServerEntitySyncer<LcDemoPlayerInput, LcDemoPlayerState>;
@@ -80,7 +82,7 @@ export class LcDemoGameServer extends EventEmitter {
     this.game.advanceSpawnTimers(Interval.fromHz(this.updateRateHz).ms);
     this.game.performLaserCollisions();
     this.writeSpawnTimersToEntities();
-    this.emit(this.onUpdated, this.game);
+    this.emit('updated', this.game);
   }
 
   private writeSpawnTimersToEntities() {

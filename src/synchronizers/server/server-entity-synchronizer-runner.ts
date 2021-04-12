@@ -1,14 +1,16 @@
+import { InheritableEventEmitter } from '@akolos/event-emitter';
 import { Interval, IntervalTaskRunner } from 'interval-task-runner';
-import { EventEmitter } from 'typed-event-emitter';
 import { Entity } from '../../entity';
 import { NumericObject } from '../../interpolate-linearly';
 import { ServerEntitySyncer, ClientInfo } from './server-entity-synchronizer';
 
 type ClientId = string;
 
-export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends EventEmitter {
+export interface ServerEntitySyncerRunnerEvents<State> {
+  'synchronized': [entities: ReadonlyArray<Entity<State>>]
+}
 
-  public readonly onSynchronized = this.registerEvent<(entities: ReadonlyArray<Entity<State>>) => void>();
+export class ServerEntitySyncerRunner<Input, State extends NumericObject> extends InheritableEventEmitter<ServerEntitySyncerRunnerEvents<State>> {
 
   private updateInterval?: IntervalTaskRunner;
 
@@ -33,6 +35,6 @@ export class ServerEntitySyncerRunner<Input, State extends NumericObject> extend
   }
 
   private update() {
-    this.emit(this.onSynchronized, this.synchronizer.synchronize());
+    this.emit('synchronized', this.synchronizer.synchronize());
   }
 }

@@ -1,20 +1,18 @@
-import { EventEmitter } from 'typed-event-emitter';
+import { InheritableEventEmitter } from '@akolos/event-emitter';
 
 export type TickHandler = (tickNumber: number) => void;
 
 export interface GameLoopEvents {
-  preStep(): void;
-  postStep(): void;
+  preStep: [];
+  postStep: [];
 }
 
 /**
  * Executes (game) logic at a constant rate using safe fixed time steps across
  * any hardware.
  */
-export class GameLoop extends EventEmitter {
+export class GameLoop extends InheritableEventEmitter<GameLoopEvents> {
 
-  public readonly onPreStep = this.registerEvent<() => void>();
-  public readonly onPostStep = this.registerEvent<() => void>();
 
   public get tickRateHz(): number {
     return this._tickRateHz;
@@ -61,9 +59,9 @@ export class GameLoop extends EventEmitter {
   }
 
   private tick() {
-    this.emit(this.onPreStep);
+    this.emit('preStep');
     this.tickCount += 1;
     this.tickHandler(this.tickCount);
-    this.emit(this.onPostStep);
+    this.emit('postStep');
   }
 }
