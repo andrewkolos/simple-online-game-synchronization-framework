@@ -1,5 +1,5 @@
 import React from 'react';
-import { InMemoryClientServerNetwork } from '@akolos/ts-client-server-game-synchronization';
+import { InMemoryClientServerNetwork } from '../../../../src';
 
 type NetworkStatDisplayProps = {
   network: InMemoryClientServerNetwork<unknown, unknown>;
@@ -13,12 +13,14 @@ type NetworkStatDisplayState = {
 export class NetworkStatDisplay extends React.Component<NetworkStatDisplayProps, NetworkStatDisplayState> {
   constructor(props: NetworkStatDisplayProps) {
     super(props);
-    props.network.onMessageSent(() => {
+    props.network.on('clientSentMessages', () => updateState());
+    props.network.on('serverSentMessages', () => updateState());
+    const updateState = () => {
       this.setState({
         pendingClientSentMessageQueueLengths: props.network.getClientSentMessageQueueLengths(),
-        pendingServerSentMessageQueueLengths: props.network.getServerSentMessageQueueLengths(),
+        pendingServerSentMessageQueueLengths: props.network.getServerSentMessageQueueLengths()
       });
-    });
+    };
   }
 
   public render() {

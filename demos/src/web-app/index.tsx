@@ -1,11 +1,6 @@
 import * as React from 'react';
 import ReactDom from 'react-dom';
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link,
-} from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
 import { BasicDemo } from './basic-demo/basic-demo.component';
 import { LcDemo } from './lag-compensation-demo/lc-demo.component';
 
@@ -15,18 +10,18 @@ const App = () => (
       <nav>
         <ul>
           <li>
-            <Link to='/demo'>Basic Demo</Link>
+            <Link to="/demo">Basic Demo</Link>
           </li>
           <li>
-            <Link to='/lagCompensationDemo'>Lag Compensation Demo</Link>
+            <Link to="/laserDemo">Laser Demo</Link>
           </li>
         </ul>
       </nav>
       <Switch>
-        <Route path='/demo'>
+        <Route path="/demo">
           <BasicDemo />
         </Route>
-        <Route path='/lagCompensationDemo'>
+        <Route path="/laserDemo">
           <LcDemo />
         </Route>
       </Switch>
@@ -34,7 +29,4 @@ const App = () => (
   </Router>
 );
 
-ReactDom.render(
-  <App />,
-  document.getElementById('app'),
-);
+ReactDom.render(<App />, document.getElementById('app'));

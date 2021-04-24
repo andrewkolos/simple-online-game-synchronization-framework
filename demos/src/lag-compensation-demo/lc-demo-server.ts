@@ -6,7 +6,7 @@ import { LcDemoGameState } from './lc-demo-game-state';
 import { lcDemoPlayerInputApplicator } from './lc-demo-player-input-applicator';
 import { LcDemoPlayerInput, LcDemoPlayerState } from './player';
 import { writeLcDemoEntityStatesToGame } from './write-lc-demo-entity-states-to-game';
-import { makeLcDemoinputValidator} from './lc-demo-input-validator';
+import { makeLcDemoinputValidator } from './lc-demo-input-validator';
 import { InheritableEventEmitter } from '@akolos/event-emitter';
 
 enum LcDemoClientId {

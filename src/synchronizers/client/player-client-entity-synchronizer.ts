@@ -16,8 +16,10 @@ export interface EntityInfo<State> {
   local: boolean;
 }
 
+export type InputSource<Input, State> = (entities: Array<EntityInfo<State>>) => Array<EntityTargetedInput<Input>>;
+
 export interface LocalPlayerInputStrategy<Input, State> {
-  inputSource: (entities: Array<EntityInfo<State>>) => Array<EntityTargetedInput<Input>>;
+  inputSource: InputSource<Input, State>;
   inputValidator: InputValidator<Input, State>;
   inputApplicator: InputApplicator<Input, State>;
 }

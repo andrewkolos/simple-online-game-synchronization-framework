@@ -1,7 +1,7 @@
 import { Polygon, Point, Segment } from './misc/geomtry';
 import { LcDemoPlayerState } from './player';
 import { LcDemoGameConfig } from './lc-demo-game-config';
-import { cloneDumbObject } from '@akolos/ts-client-server-game-synchronization';
+import { cloneDumbObject } from '../../../src';
 
 export enum PlayerId {
   P1,
@@ -65,7 +65,7 @@ export class LcDemoGameState {
       const defaultState = (pid: PlayerId): LcDemoPlayerState => ({
         rotationRads: pid === PlayerId.P1 ? 0 : Math.PI,
         timeUntilSpawnMs: 0,
-        yOffset: pid === PlayerId.P1 ? config.playFieldHeight / 8 : - config.playFieldHeight / 8,
+        yOffset: pid === PlayerId.P1 ? 15 : -15,
       });
       this.player1 = defaultState(PlayerId.P1);
       this.player2 = defaultState(PlayerId.P2);

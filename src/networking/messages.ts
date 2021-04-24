@@ -18,7 +18,7 @@ export interface InputMessage<T> extends BufferMessage {
 
 export type StateMessage<T> = StateMessageWithoutSyncInfo<T> | StateMessageWithSyncInfo<T>;
 
-type StateMessageWithoutSyncInfo<T> = BufferMessage & {
+export type StateMessageWithoutSyncInfo<T> = BufferMessage & {
   /** Identifies this buffer message object as an entity state message. */
   kind: EntityMessageKind.State;
   /** Information regarding the entity. */
