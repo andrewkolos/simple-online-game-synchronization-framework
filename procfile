@@ -1,0 +1,1 @@
+web: cd demos && npm i && npm run start

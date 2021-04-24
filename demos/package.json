@@ -13,13 +13,10 @@
     "@akolos/event-emitter": "^2.0.6",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-router-dom": "^5.1.2"
-  },
-  "devDependencies": {
-    "@types/node": "^12.12.36",
-    "@types/react": "^16.9.34",
-    "@types/react-dom": "^16.9.6",
-    "@types/react-router-dom": "^5.1.4",
+    "react-router-dom": "^5.1.2",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.7",
+    "webpack-dev-server": "^3.11.2",
     "awesome-typescript-loader": "^5.2.1",
     "css-loader": "^3.5.2",
     "http-server": "^0.11.1",
@@ -27,11 +24,15 @@
     "sass-loader": "^8.0.2",
     "source-map-loader": "^0.2.4",
     "style-loader": "^1.1.4",
+        "@types/node": "^12.12.36",
+    "@types/react": "^16.9.34",
+    "@types/react-dom": "^16.9.6",
+    "@types/react-router-dom": "^5.1.4",
+    "typescript": "^4.2.4"
+  },
+  "devDependencies": {
+
     "tslint": "^5.20.1",
-    "tslint-clean-code": "^0.2.10",
-    "typescript": "^4.2.4",
-    "webpack": "^4.42.1",
-    "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "^3.10.3"
+    "tslint-clean-code": "^0.2.10"
   }
 }

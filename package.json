@@ -25,7 +25,6 @@
     "@types/mockdate": "^2.0.0",
     "@types/node": "^12.7.3",
     "@types/ts-nameof": "^4.2.0",
-    "awesome-typescript-loader": "^5.2.1",
     "jest": "~24.9.0",
     "mockdate": "^2.0.5",
     "prettier": "^1.18.2",
@@ -44,10 +43,7 @@
     "tslint-microsoft-contrib": "^6.2.0",
     "tstl": "^2.2.3",
     "tsutils": "~3.17.1",
-    "typescript": "^4.2.4",
-    "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.7",
-    "webpack-dev-server": "^3.11.2"
+    "typescript": "^4.2.4"
   },
   "dependencies": {
     "@akolos/event-emitter": "^2.0.6",
