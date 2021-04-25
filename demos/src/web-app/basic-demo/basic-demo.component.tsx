@@ -1,17 +1,29 @@
 import React from 'react';
-import { InMemoryClientServerNetwork, InputMessage, StateMessage, ClientEntitySyncerRunner, PlayerClientEntitySyncer } from '../../../../src';
-import { BasicDemoPlayerInput, BasicDemoPlayerState, demoPlayerInputApplicator } from '../../basic-demo-implementation/player';
-import { createKeyboardBasicDemoInputCollector, KeyboardDemoinputCollectorKeycodes } from '../../basic-demo-implementation/keyboard-demo-input-collector';
+import {
+  InMemoryClientServerNetwork,
+  InputMessage,
+  StateMessage,
+  ClientEntitySyncerRunner,
+  PlayerClientEntitySyncer
+} from '../../../../src';
+import {
+  BasicDemoPlayerInput,
+  BasicDemoPlayerState,
+  demoPlayerInputApplicator
+} from '../../basic-demo-implementation/player';
+import {
+  createKeyboardBasicDemoInputCollector,
+  KeyboardDemoinputCollectorKeycodes
+} from '../../basic-demo-implementation/keyboard-demo-input-collector';
 import { BasicDemoClientRenderer } from './basic-demo-client-renderer';
 import { ServerRenderer } from './basic-demo-server-renderer';
 import { DemoSyncServer } from '../../basic-demo-implementation/demo-server';
 
-const SERVER_SYNC_UPDATE_RATE = 60;
+const SERVER_SYNC_UPDATE_RATE = 10;
 const CLIENT_UPDATE_RATE = 60;
 const CLIENT_LATENCY_MS = 150;
 
 export class BasicDemo extends React.Component {
-
   private readonly server: DemoSyncServer;
   private readonly clients: Array<ClientEntitySyncerRunner<BasicDemoPlayerInput, BasicDemoPlayerState>>;
 
@@ -19,7 +31,10 @@ export class BasicDemo extends React.Component {
     super(props);
 
     const demoServer = new DemoSyncServer();
-    const network = new InMemoryClientServerNetwork<InputMessage<BasicDemoPlayerInput>, StateMessage<BasicDemoPlayerState>>();
+    const network = new InMemoryClientServerNetwork<
+      InputMessage<BasicDemoPlayerInput>,
+      StateMessage<BasicDemoPlayerState>
+    >();
 
     demoServer.addClient(network.getNewClientConnection());
     demoServer.addClient(network.getNewClientConnection());
@@ -37,26 +52,32 @@ export class BasicDemo extends React.Component {
 
   public componentWillUnmount() {
     this.server.stop();
-    this.clients.forEach((c) => c.stop());
+    this.clients.forEach(c => c.stop());
   }
 
   public render() {
-
     return (
       <div>
-        <BasicDemoClientRenderer borderColor='blue' title={<p>Player One's view. Move with A and D keys</p>}
-          demoClientRunner={this.clients[0]} />
-        <ServerRenderer borderColor='gray' demoSyncServer={this.server} />
-        <BasicDemoClientRenderer borderColor='red' title={<p>Player Two's view. Move with arrow keys</p>}
-          demoClientRunner={this.clients[1]} />
+        <BasicDemoClientRenderer
+          borderColor="blue"
+          title={<p>Player One's view. Move with A and D keys</p>}
+          demoClientRunner={this.clients[0]}
+        />
+        <ServerRenderer borderColor="gray" demoSyncServer={this.server} />
+        <BasicDemoClientRenderer
+          borderColor="red"
+          title={<p>Player Two's view. Move with arrow keys</p>}
+          demoClientRunner={this.clients[1]}
+        />
       </div>
     );
   }
 }
 
-function createClient(keyMappings: KeyboardDemoinputCollectorKeycodes,
-  network: InMemoryClientServerNetwork<InputMessage<BasicDemoPlayerInput>, StateMessage<BasicDemoPlayerState>>) {
-
+function createClient(
+  keyMappings: KeyboardDemoinputCollectorKeycodes,
+  network: InMemoryClientServerNetwork<InputMessage<BasicDemoPlayerInput>, StateMessage<BasicDemoPlayerState>>
+) {
   const inputCollector = createKeyboardBasicDemoInputCollector(keyMappings);
 
   const client = new PlayerClientEntitySyncer({
@@ -64,9 +85,9 @@ function createClient(keyMappings: KeyboardDemoinputCollectorKeycodes,
     localPlayerInputStrategy: {
       inputApplicator: demoPlayerInputApplicator,
       inputSource: inputCollector,
-      inputValidator: () => true,
+      inputValidator: () => true
     },
-    serverUpdateRateHz: SERVER_SYNC_UPDATE_RATE,
+    serverUpdateRateHz: SERVER_SYNC_UPDATE_RATE
   });
 
   return client;

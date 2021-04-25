@@ -42,9 +42,16 @@ export class MultiEntityStateInterpolator<State> {
 
     const interpolatedStates: Array<Entity<State>> = [];
 
-    for (const [id, states] of statesByEntityId) {
-      const interpolator = this.singleInterpolators.get(id);
-      interpolatedStates.push({ id, state: interpolator.interpolate(...states) });
+    // Create interpolators for new entities.
+    for (const [id, _] of statesByEntityId) {
+      if (!this.singleInterpolators.has(id)) {
+        this.singleInterpolators.set(id, SingleEntityStateInterpolator.withCustomInterpolationStrategy(this.serverUpdateRateHz, this.interpolationStrategy));
+      }
+    }
+
+    for (const [id, interpolator] of this.singleInterpolators) {
+      const newStatesForEntity = statesByEntityId.get(id);
+      interpolatedStates.push({ id, state: interpolator.interpolate(...newStatesForEntity) });
     }
 
     return interpolatedStates;

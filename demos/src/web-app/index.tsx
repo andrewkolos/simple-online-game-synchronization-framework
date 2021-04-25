@@ -10,7 +10,7 @@ const App = () => (
       <nav>
         <ul>
           <li>
-            <Link to="/demo">Basic Demo</Link>
+            <Link to="/">Basic Demo</Link>
           </li>
           <li>
             <Link to="/laserDemo">Laser Demo</Link>
@@ -18,10 +18,10 @@ const App = () => (
         </ul>
       </nav>
       <Switch>
-        <Route path="/demo">
+        <Route path="/" exact>
           <BasicDemo />
         </Route>
-        <Route path="/laserDemo">
+        <Route path="/laserDemo" exact>
           <LcDemo />
         </Route>
       </Switch>

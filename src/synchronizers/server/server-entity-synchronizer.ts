@@ -97,7 +97,7 @@ export class ServerEntitySyncer<Input, State> extends InheritableEventEmitter<Se
    * @param entity The entity to add to the server.
    */
   public addNonPlayerEntity(entity: Entity<State>) {
-    this._entities.set(entity);
+    this._entities.add(entity);
   }
 
   /**
@@ -106,7 +106,7 @@ export class ServerEntitySyncer<Input, State> extends InheritableEventEmitter<Se
    * @param playerClientId
    */
   public addPlayerEntity(entity: Entity<State>, playerClientId: string) {
-    this._entities.set(entity);
+    this._entities.add(entity);
     const client = this.clients.get(playerClientId);
 
     if (client != null) {
@@ -191,7 +191,7 @@ export class ServerEntitySyncer<Input, State> extends InheritableEventEmitter<Se
         const { entityId } = input;
         const state = this._entities.getState(entityId);
         if (state == null) throw Error(`Cannot apply input to unknown entity '${entityId}'.`);
-        this._entities.set({ id: entityId, state: this.inputApplicator({id: entityId, state}, input.input) });
+        this._entities.add({ id: entityId, state: this.inputApplicator({ id: entityId, state }, input.input) });
       }
     }
   }

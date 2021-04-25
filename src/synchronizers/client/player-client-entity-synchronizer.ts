@@ -1,12 +1,12 @@
-import { StateMessage, InputMessage, StateMessageWithSyncInfo, EntityMessageKind } from '../../networking';
-import { DefaultMap } from '../../util/default-map';
-import { MultiEntityStateInterpolator } from './state-interpolator';
-import { NumericObject } from '../../interpolate-linearly';
-import { findLatestMessage } from '../../util/findLatestMessage';
-import { TwoWayMessageBuffer } from '../../networking/message-buffer';
 import { Entity, InputApplicator } from '../../entity';
-import { EntityTargetedInput } from './entity-targeted-input';
+import { NumericObject } from '../../interpolate-linearly';
+import { EntityMessageKind, InputMessage, StateMessage, StateMessageWithSyncInfo } from '../../networking';
+import { TwoWayMessageBuffer } from '../../networking/message-buffer';
+import { cloneDumbObject } from '../../util';
+import { EntityCollection } from '../entity-collection';
 import { InputValidator } from '../server';
+import { EntityTargetedInput } from './entity-targeted-input';
+import { MultiEntityStateInterpolator } from './state-interpolator';
 
 type EntityId = string;
 
@@ -45,7 +45,8 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   private readonly interpolator: MultiEntityStateInterpolator<State>;
   private readonly playerSyncStrategy: LocalPlayerInputStrategy<Input, State>;
   private currentInputSequenceNumber = 0;
-  private pendingInputs: Array<SequencedEntityBoundInput<Input>> = [];
+  private pendingInputs = new Map<string, Array<SequencedEntityBoundInput<Input>>>();
+  private readonly localEntities = new EntityCollection<State>();
 
   public constructor(args: PlayerClientEntitySyncerArgs<Input, State>) {
     this.connection = args.connection;
@@ -54,7 +55,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   }
 
   public getNumberOfPendingInputs(): number {
-    return this.pendingInputs.length;
+    return [...this.pendingInputs.values()].reduce((sum, currEntitiesPendingInputs) => sum + currEntitiesPendingInputs.length, 0);
   }
 
   public synchronize(): Array<Entity<State>> {
@@ -77,7 +78,7 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     };
   }
 
-  private synchronizeNonLocalEntities(stateMessages: Array<StateMessage<State>>): Array<Entity<State>> {
+  private synchronizeNonLocalEntities(stateMessages: Array<StateMessage<State>>): ReadonlyArray<Entity<State>> {
     const asEntities: Array<Entity<State>> = stateMessages.map((sm: StateMessage<State>) => ({
       id: sm.entity.id,
       state: sm.entity.state,
@@ -85,43 +86,41 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     return this.interpolator.interpolate(asEntities);
   }
 
-  private synchronizeLocalPlayerEntities(stateMessages: Array<StateMessageWithSyncInfo<State>>): Array<Entity<State>> {
-    const latestStateMessages = this.pickLatestMessagesIndexedByEntityId(stateMessages);
-    const newInputs: Array<InputMessage<Input>> = this.collectInputs([...latestStateMessages.values()].map((sm) => ({
-      ...sm.entity,
-      local: sm.entityBelongsToRecipientClient,
-    })));
-    const inputsToApply: Array<SequencedEntityBoundInput<Input>> = [...this.determinePendingInputs(latestStateMessages), ...newInputs];
+  private synchronizeLocalPlayerEntities(stateMessages: Array<StateMessageWithSyncInfo<State>>): ReadonlyArray<Entity<State>> {
+    // Apply updates from server, reapply pending inputs.
+    stateMessages.forEach((sm) => {
+      const { entity } = cloneDumbObject(sm);
+      const pendingInputs = this.pendingInputs.get(sm.entity.id) ?? [];
 
-    const entitiesAfterSync: Map<EntityId, Entity<State>> =
-      new Map([...latestStateMessages.entries()].map(([entityId, message]) => [entityId, message.entity]));
-
-    for (const sebInput of inputsToApply) {
-      const targetEntityMessage = entitiesAfterSync.get(sebInput.entityId);
-      if (targetEntityMessage == null || !this.playerSyncStrategy.inputValidator(targetEntityMessage, sebInput.input))
-        continue;
-      const stateAfterInput = this.playerSyncStrategy.inputApplicator(targetEntityMessage, sebInput.input);
-      entitiesAfterSync.set(targetEntityMessage.id, ({ id: targetEntityMessage.id, state: stateAfterInput }));
-    }
-
-    this.pendingInputs = inputsToApply;
-    this.connection.send(newInputs);
-    return [...entitiesAfterSync.values()];
-  }
-
-  private determinePendingInputs(latestStateMessages: Map<EntityId, StateMessageWithSyncInfo<State>>) {
-    return this.pendingInputs.filter((sebInput: SequencedEntityBoundInput<Input>) => {
-      const latestStateMessageForEntity = latestStateMessages.get(sebInput.entityId);
-      if (latestStateMessageForEntity == null)
-        return false;
-      return latestStateMessageForEntity.lastProcessedInputSequenceNumber < sebInput.inputSequenceNumber;
+      let j = 0;
+      while (j < pendingInputs.length) {
+        const input = pendingInputs[j];
+        if (input.inputSequenceNumber <= sm.lastProcessedInputSequenceNumber || !this.playerSyncStrategy.inputValidator(entity, input.input)) {
+          pendingInputs.splice(j, 1); // Drop this input.
+        } else {
+          entity.state = this.playerSyncStrategy.inputApplicator(entity, input.input);
+          j++;
+        }
+      }
+      this.localEntities.add(entity);
     });
-  }
 
-  private pickLatestMessagesIndexedByEntityId<M extends StateMessage<State>>(stateMessages: M[]): Map<EntityId, M> {
-    const grouped = groupByEntityId(stateMessages, (sm) => sm.entity.id);
-    const latest = grouped.map((messages) => findLatestMessage(messages));
-    return new Map(latest.map((message: M) => [message.entity.id, message]));
+    // Collect new inputs, send them to the server, and store them as pending.
+    const localEntityInfos = this.localEntities.asArray().map((e) => ({ ...e, local: true }));
+    const nonLocalEntityInfos = this.interpolator.interpolate([]).map((e => ({ ...e, local: false })));
+    const newInputs = this.collectInputs([...localEntityInfos, ...nonLocalEntityInfos]);
+    newInputs.forEach((ni) => {
+      this.connection.send(newInputs);
+
+      const entity = this.localEntities.getAsEntity(ni.entityId);
+      if (entity == null) return;
+      this.localEntities.set(ni.entityId, this.playerSyncStrategy.inputApplicator(entity, ni.input));
+      const alreadyPendingInputs = this.pendingInputs.get(ni.entityId) ?? [];
+      alreadyPendingInputs.push(ni);
+      this.pendingInputs.set(ni.entityId, alreadyPendingInputs);
+    });
+
+    return this.localEntities.asArray();
   }
 
   private collectInputs(forEntities: Array<EntityInfo<State>>): Array<InputMessage<Input>> {
@@ -138,16 +137,4 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
     this.currentInputSequenceNumber += 1;
     return asMessages;
   }
-}
-
-function groupByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): T[][] {
-  return Array.from(indexByEntityId(collection, entityIdPicker).values());
-}
-
-function indexByEntityId<T>(collection: Iterable<T>, entityIdPicker: (item: T) => EntityId): Map<EntityId, T[]> {
-  const map = new DefaultMap<EntityId, T[]>(() => []);
-  for (const item of collection) {
-    map.get(entityIdPicker(item)).push(item);
-  }
-  return map;
 }

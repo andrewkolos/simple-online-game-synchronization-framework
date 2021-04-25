@@ -16,27 +16,25 @@ interface ServerRendererState {
 }
 
 export class ServerRenderer extends React.Component<ServerRendererProps, ServerRendererState> {
-
   constructor(props: ServerRendererProps) {
     super(props);
 
     this.state = {
-      entities: [],
+      entities: []
     };
-    props.demoSyncServer.on('synchronized', (e => {
+    props.demoSyncServer.on('synchronized', e => {
       this.setState({
         entities: e
       });
-    }));
+    });
   }
 
   public render() {
-
     return (
       <RendererFrame borderColor={this.props.borderColor}>
         <p>Server View</p>
         <DemoGameRenderer entities={this.state.entities} />
-        {createPositionParagraphTags(this.state.entities)}
+        <div className="demoText">{createPositionParagraphTags(this.state.entities)}</div>
       </RendererFrame>
     );
   }

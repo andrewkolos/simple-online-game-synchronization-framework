@@ -31,6 +31,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
     return {
       send: (messages: ClientSendType | ClientSendType[]) => {
         const asArray = arrayify(messages);
+        if (asArray.length === 0) return;
 
         const inputMessageQueue = this.clientSentMessageQueues[clientIndex];
         if (inputMessageQueue == null) {
@@ -41,18 +42,27 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
         this.emit('clientSentMessages', asArray);
       },
       receive: () => {
-        if (stateMessageQueue.length > 0) {
-          const nextMessages = stateMessageQueue[0];
-          const sendTime = this.serverSentMessageSendTimes.get(nextMessages)!.valueOf();
-          if (sendTime + lagMs <= new Date().getTime()) {
-            stateMessageQueue.splice(0, 1);
-            decrementOrRemove(this.serverSentMessageReferenceCounts, nextMessages);
-            return nextMessages;
-          } else {
-            return [];
+        const pullNext = () => {
+          if (stateMessageQueue.length > 0) {
+            const nextMessages = stateMessageQueue[0];
+            const sendTime = this.serverSentMessageSendTimes.get(nextMessages)!.valueOf();
+            if (sendTime + lagMs <= new Date().getTime()) {
+              stateMessageQueue.splice(0, 1);
+              decrementOrRemove(this.serverSentMessageReferenceCounts, nextMessages);
+              return nextMessages;
+            } else {
+              return [];
+            }
           }
+          return [];
         }
-        return [];
+        let next = pullNext();
+        let result: ServerSendType[] = [];
+        while (next.length > 0) {
+          result = result.concat(next);
+          next = pullNext();
+        }
+        return result;
       },
       [Symbol.iterator]() {
         return this.receive().values();
@@ -71,6 +81,7 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
     return {
       send: (messages: ServerSendType | ServerSendType[]) => {
         const asArray = arrayify(messages);
+        if (asArray.length === 0) return;
         this.serverSentMessageQueues[clientIndex].push(asArray);
 
         this.serverSentMessageSendTimes.set(asArray, new Date().getTime());
@@ -78,18 +89,28 @@ export class InMemoryClientServerNetwork<ClientSendType, ServerSendType>
         this.emit('serverSentMessages', asArray);
       },
       receive: () => {
-        if (imQueue.length > 0) {
-          const nextMessages = imQueue[0];
-          const readyTime = this.clientSentMessageReadyTimes.get(nextMessages)!;
+        const pullNext = () => {
+          if (imQueue.length > 0) {
+            const nextMessages = imQueue[0];
+            const readyTime = this.clientSentMessageReadyTimes.get(nextMessages)!;
 
-          if (readyTime <= new Date().getTime()) {
-            imQueue.splice(0, 1);
-            return nextMessages;
-          } else {
-            return [];
+            if (readyTime <= new Date().getTime()) {
+              imQueue.splice(0, 1);
+              return nextMessages;
+            } else {
+              return [];
+            }
           }
+          return [];
         }
-        return [];
+
+        let next = pullNext();
+        let result: ClientSendType[] = [];
+        while (next.length > 0) {
+          result = result.concat(next);
+          next = pullNext();
+        }
+        return result;
       },
       [Symbol.iterator]() {
         return this.receive().values();

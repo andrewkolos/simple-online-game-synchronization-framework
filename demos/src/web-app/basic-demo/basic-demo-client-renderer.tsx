@@ -18,31 +18,31 @@ interface ClientRendererState {
 }
 
 export class BasicDemoClientRenderer extends React.Component<ClientRendererProps, ClientRendererState> {
-
   constructor(props: ClientRendererProps) {
     super(props);
 
     this.state = {
       entities: [],
-      numberOfPendingInputs: 0,
+      numberOfPendingInputs: 0
     };
 
-    props.demoClientRunner.on('synchronized', ((entities: Array<Entity<BasicDemoPlayerState>>) => {
+    props.demoClientRunner.on('synchronized', (entities: Array<Entity<BasicDemoPlayerState>>) => {
       this.setState({
         entities,
-        numberOfPendingInputs: props.demoClientRunner.synchronizer.getNumberOfPendingInputs(),
+        numberOfPendingInputs: props.demoClientRunner.synchronizer.getNumberOfPendingInputs()
       });
-    }));
+    });
   }
 
   public render() {
-
     return (
       <RendererFrame borderColor={this.props.borderColor}>
         {this.props.title}
         <DemoGameRenderer entities={this.state.entities} />
-        {createPositionParagraphTags(this.state.entities)}
-        <p>{`Non-acknowledged inputs: ${this.state.numberOfPendingInputs}`}</p>
+        <div className="demoText">
+          {createPositionParagraphTags(this.state.entities)}
+          <p>{`Non-acknowledged inputs: ${this.state.numberOfPendingInputs}`}</p>
+        </div>
       </RendererFrame>
     );
   }

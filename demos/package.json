@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "webpack-dev-server --port 80",
+    "start": "webpack-dev-server --port 8080",
+    "publish:heroku": "webpack && cd public && git add . && git commit -m update && git push heroku master",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Andrew Kolos",

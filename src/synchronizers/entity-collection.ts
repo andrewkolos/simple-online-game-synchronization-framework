@@ -26,8 +26,12 @@ export class EntityCollection<State> {
    * Adds/overwrites the entity.
    * @param entity The entity to add.
    */
-  public set(entity: Entity<State>) {
-    this.entities.set(entity.id, entity.state);
+  public add(entity: Entity<State>) {
+    this.set(entity.id, entity.state);
+  }
+
+  public set(id: EntityId, state: State) {
+    this.entities.set(id, state);
   }
 
   /**
@@ -39,12 +43,21 @@ export class EntityCollection<State> {
     return this.entities.get(id);
   }
 
+  public getAsEntity(id: EntityId): Entity<State> | undefined {
+    const state = this.getState(id);
+    if (state == null) return undefined;
+    return {
+      id,
+      state,
+    };
+  }
+
   /**
    * Gets all entities in this collection, as an array.
    * @returns The entities in this collection.
    */
   public asArray(): Array<Entity<State>> {
-    return [...this.entities].map(([id, state]) => ({id, state}));
+    return [...this.entities].map(([id, state]) => ({ id, state }));
   }
 
   /**
@@ -53,5 +66,9 @@ export class EntityCollection<State> {
    */
   public asIdKeyedMap(): Map<EntityId, State> {
     return new Map(this.entities);
+  }
+
+  public has(id: EntityId): boolean {
+    return this.entities.has(id);
   }
 }
