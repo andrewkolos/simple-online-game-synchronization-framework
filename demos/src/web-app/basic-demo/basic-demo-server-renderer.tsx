@@ -1,41 +1,68 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DemoGameRenderer } from './basic-demo-game-renderer';
 import { BasicDemoPlayerState } from '../../basic-demo-implementation/player';
 import { Entity } from '../../../../src';
 import { createPositionParagraphTags } from './create-position-paragraph-tags';
 import { DemoSyncServer } from '../../basic-demo-implementation/demo-server';
 import { RendererFrame } from '../common/renderer-frame.component';
+import { makeStyles, TextField } from '@material-ui/core';
+import { Key } from 'ts-keycode-enum';
+
+const useStyles = makeStyles({
+  textField: {
+    width: 125,
+    marginBottom: 10
+  }
+});
 
 interface ServerRendererProps {
   demoSyncServer: DemoSyncServer;
   borderColor: string;
+  updateRateHz: number;
+  onUpdateRateChanged: (value: number) => void;
 }
 
-interface ServerRendererState {
-  entities: ReadonlyArray<Entity<BasicDemoPlayerState>>;
-}
+export const ServerRenderer: React.FC<ServerRendererProps> = props => {
+  const [entities, setEntities] = useState<ReadonlyArray<Entity<BasicDemoPlayerState>>>([]);
+  const [updateRate, setUpdateRate] = useState(String(props.updateRateHz));
+  const updateRateFieldRef = useRef<HTMLInputElement>();
 
-export class ServerRenderer extends React.Component<ServerRendererProps, ServerRendererState> {
-  constructor(props: ServerRendererProps) {
-    super(props);
+  useEffect(() => {
+    const handler = (e: ReadonlyArray<Entity<BasicDemoPlayerState>>) => setEntities(e);
+    props.demoSyncServer.on('synchronized', handler);
 
-    this.state = {
-      entities: []
+    return () => {
+      props.demoSyncServer.off('synchronized', handler);
     };
-    props.demoSyncServer.on('synchronized', e => {
-      this.setState({
-        entities: e
-      });
-    });
-  }
+  }, []);
 
-  public render() {
-    return (
-      <RendererFrame borderColor={this.props.borderColor}>
-        <p>Server View</p>
-        <DemoGameRenderer entities={this.state.entities} />
-        <div className="demoText">{createPositionParagraphTags(this.state.entities)}</div>
-      </RendererFrame>
-    );
-  }
-}
+  const classes = useStyles();
+
+  return (
+    <RendererFrame borderColor={props.borderColor}>
+      <p style={{ marginTop: 0 }}>Server View</p>
+      <TextField
+        className={classes.textField}
+        value={updateRate}
+        inputRef={updateRateFieldRef}
+        type="number"
+        variant="outlined"
+        label="Update Rate (hz)"
+        size="small"
+        onChange={e => {
+          setUpdateRate(e.target.value);
+        }}
+        onBlur={e => {
+          props.onUpdateRateChanged(Number(e.target.value));
+        }}
+        onKeyDown={e => {
+          if (e.which === Key.Enter || e.which === Key.Tab) {
+            updateRateFieldRef.current?.blur();
+          }
+        }}
+      />
+      <DemoGameRenderer entities={entities} />
+      <div className="demoText">{createPositionParagraphTags(entities)}</div>
+    </RendererFrame>
+  );
+};

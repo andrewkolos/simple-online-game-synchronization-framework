@@ -5,29 +5,25 @@ interface RendererFrameProps {
 }
 
 export class RendererFrame extends React.Component<RendererFrameProps> {
-
   constructor(props: RendererFrameProps) {
     super(props);
 
     this.state = {
       entities: [],
-      numberOfPendingInputs: 0,
+      numberOfPendingInputs: 0
     };
   }
 
   public render() {
     const outerStyle = {
       border: `5px solid ${this.props.borderColor}`,
+      borderRadius: '3px',
       padding: '15px',
       margin: '15px',
       display: 'inline-block',
-      verticalAlign: 'top',
+      verticalAlign: 'top'
     };
 
-    return (
-      <div style={outerStyle}>
-        {this.props.children}
-      </div>
-    );
+    return <div style={outerStyle}>{this.props.children}</div>;
   }
 }

@@ -30,6 +30,9 @@ export interface PlayerClientEntitySyncerArgs<Input, State> {
   connection: TwoWayMessageBuffer<StateMessage<State>, InputMessage<Input>>;
   localPlayerInputStrategy: LocalPlayerInputStrategy<Input, State>;
   serverUpdateRateHz: number;
+  disableServerReconciliation?: boolean;
+  disableClientSidePrediction?: boolean;
+  disableEntityInterpolation?: boolean;
 }
 
 interface SortedStateMessages<State> {
@@ -48,10 +51,18 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
   private pendingInputs = new Map<string, Array<SequencedEntityBoundInput<Input>>>();
   private readonly localEntities = new EntityCollection<State>();
 
+  private readonly serverReconciliation: boolean;
+  private readonly clientSidePrediction: boolean;
+
   public constructor(args: PlayerClientEntitySyncerArgs<Input, State>) {
     this.connection = args.connection;
-    this.interpolator = MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
+    this.interpolator = args.disableEntityInterpolation ?
+      MultiEntityStateInterpolator.withCustomInterpolationStrategy(args.serverUpdateRateHz, (_past, future, _ratio) => future) :
+      MultiEntityStateInterpolator.withBasicInterpolationStrategy(args.serverUpdateRateHz);
     this.playerSyncStrategy = args.localPlayerInputStrategy;
+
+    this.serverReconciliation = !(args.disableServerReconciliation);
+    this.clientSidePrediction = !(args.disableClientSidePrediction);
   }
 
   public getNumberOfPendingInputs(): number {
@@ -92,20 +103,23 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
       const { entity } = cloneDumbObject(sm);
       const pendingInputs = this.pendingInputs.get(sm.entity.id) ?? [];
 
-      let j = 0;
-      while (j < pendingInputs.length) {
-        const input = pendingInputs[j];
-        if (input.inputSequenceNumber <= sm.lastProcessedInputSequenceNumber || !this.playerSyncStrategy.inputValidator(entity, input.input)) {
-          pendingInputs.splice(j, 1); // Drop this input.
-        } else {
-          entity.state = this.playerSyncStrategy.inputApplicator(entity, input.input);
-          j++;
+      if (this.serverReconciliation) {
+        let j = 0;
+        while (j < pendingInputs.length) {
+          const input = pendingInputs[j];
+          if (input.inputSequenceNumber <= sm.lastProcessedInputSequenceNumber || !this.playerSyncStrategy.inputValidator(entity, input.input)) {
+            pendingInputs.splice(j, 1); // Drop this input.
+          } else {
+            entity.state = this.playerSyncStrategy.inputApplicator(entity, input.input);
+            j++;
+          }
         }
       }
+
       this.localEntities.add(entity);
     });
 
-    // Collect new inputs, send them to the server, and store them as pending.
+    // Collect new inputs, send them to the server,.
     const localEntityInfos = this.localEntities.asArray().map((e) => ({ ...e, local: true }));
     const nonLocalEntityInfos = this.interpolator.interpolate([]).map((e => ({ ...e, local: false })));
     const newInputs = this.collectInputs([...localEntityInfos, ...nonLocalEntityInfos]);
@@ -113,7 +127,8 @@ export class PlayerClientEntitySyncer<Input, State extends NumericObject> {
       this.connection.send(newInputs);
 
       const entity = this.localEntities.getAsEntity(ni.entityId);
-      if (entity == null) return;
+      if (entity == null || !this.clientSidePrediction) return;
+
       this.localEntities.set(ni.entityId, this.playerSyncStrategy.inputApplicator(entity, ni.input));
       const alreadyPendingInputs = this.pendingInputs.get(ni.entityId) ?? [];
       alreadyPendingInputs.push(ni);

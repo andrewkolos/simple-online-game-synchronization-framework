@@ -23,7 +23,7 @@ export class MultiEntityStateInterpolator<State> {
   }
 
   private readonly serverUpdateRateHz: number;
-  private readonly interpolationStrategy: Interpolator<State>;
+  private interpolationStrategy: Interpolator<State>;
 
   private readonly singleInterpolators: DefaultMap<EntityId, SingleEntityStateInterpolator<State>> =
     new DefaultMap(() => SingleEntityStateInterpolator
@@ -32,6 +32,10 @@ export class MultiEntityStateInterpolator<State> {
   private constructor(serverUpdateRateHz: number, interpolationStrategy: Interpolator<State>) {
     this.serverUpdateRateHz = serverUpdateRateHz;
     this.interpolationStrategy = interpolationStrategy;
+  }
+
+  public setInterpolationStrategy(strategy: Interpolator<State>) {
+    this.interpolationStrategy = strategy;
   }
 
   public interpolate(newStatesFromServer: Array<Entity<State>>): Array<Entity<State>> {

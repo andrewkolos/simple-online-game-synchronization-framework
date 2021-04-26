@@ -4,10 +4,9 @@ import { BasicDemoPlayerState, DemoPlayer } from '../../basic-demo-implementatio
 
 interface DemoGameRendererProps {
   entities: ReadonlyArray<Entity<BasicDemoPlayerState>>;
-};
+}
 
 export class DemoGameRenderer extends React.Component<DemoGameRendererProps> {
-
   private canvasRef: RefObject<HTMLCanvasElement>;
 
   constructor(props: DemoGameRendererProps) {
@@ -24,14 +23,14 @@ export class DemoGameRenderer extends React.Component<DemoGameRendererProps> {
     if (ctx == null) throw Error('Canvas context is undefined');
 
     ctx.fillStyle = 'gray';
-    ctx.fillRect(0, 0, 1000, 1000);
+    ctx.fillRect(0, 0, 800, 800);
     const colors = {
       c0: 'blue',
-      c1: 'red',
+      c1: 'red'
     };
 
     props.entities.forEach((entity: DemoPlayer) => {
-      const entityRadius = canvas.height * 0.9 / 2;
+      const entityRadius = (canvas.height * 0.9) / 2;
       const entityPosition = entity.state.position;
 
       ctx.beginPath();
@@ -45,8 +44,6 @@ export class DemoGameRenderer extends React.Component<DemoGameRendererProps> {
   }
 
   public render() {
-    return (
-      <canvas width='920' height='75' ref={this.canvasRef}></canvas>
-    );
+    return <canvas width="700" height="75" ref={this.canvasRef}></canvas>;
   }
 }

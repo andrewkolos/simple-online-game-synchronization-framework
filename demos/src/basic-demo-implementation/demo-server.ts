@@ -44,7 +44,8 @@ export class DemoSyncServer extends EventEmitter<DemoSyncServerEvents> {
     const newEntityid = clientId;
 
     this.playerMovementRecords.set(newEntityid, new DemoPlayerMovementRecord());
-    this.syncer.addPlayerEntity({ id: newEntityid, state: { position: 0 } }, clientId);
+    const position = newEntityid === "c0" ? 275 : 425;
+    this.syncer.addPlayerEntity({ id: newEntityid, state: { position } }, clientId);
 
     return clientId;
   }
