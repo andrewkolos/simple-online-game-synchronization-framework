@@ -62,7 +62,13 @@ export class LcDemo extends React.Component {
 
   public render() {
     return (
-      <div>
+      <div style={{ maxWidth: 1200 }}>
+        <p style={{ marginLeft: 15, maxWidth: 1000 }}>
+          This (incomplete) demo can be used to demonstrate problems when players interact with each other with high
+          latency. Try hitting the Red triangle with the Blue triangle's laser while simultaneously dodging it on Red's
+          client. On Blue's client, it will look like you hit Red, but nothing will happen. This is because no lag
+          compensation is implemented. I hope to get around to finishing this someday.
+        </p>
         <LcDemoClientRenderer
           borderColor="blue"
           title={<p>Player One's view. Move with WASD.</p>}

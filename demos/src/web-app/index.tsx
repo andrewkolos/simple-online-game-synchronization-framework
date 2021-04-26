@@ -15,7 +15,7 @@ const App = () => (
   <ThemeProvider theme={theme}>
     <Router>
       <div>
-        <nav>
+        <nav style={{ paddingTop: 4 }}>
           <ul>
             <li>
               <Link to="/">Basic Demo</Link>
