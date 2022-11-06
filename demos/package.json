@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "webpack",
-    "publish:heroku": "webpack && cd public && git add . && git commit -m update && git push heroku master",
+    "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Andrew Kolos",
